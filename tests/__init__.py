@@ -1,0 +1,1 @@
+"""Test package for Talk 2 Tables MCP Server."""

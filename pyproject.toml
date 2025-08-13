@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "talk-2-tables-mcp"
+version = "0.1.0"
+description = "MCP server for SQLite database query execution with resource discovery"
+authors = [
+    {name = "Talk 2 Tables Team"}
+]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "mcp>=1.0.0",
+    "pydantic>=2.0.0",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.scripts]
+talk-2-tables-mcp = "talk_2_tables_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/talk_2_tables_mcp"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.git",
+    "/test_data",
+    "/scripts",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v"
+asyncio_mode = "auto"
