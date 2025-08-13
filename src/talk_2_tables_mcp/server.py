@@ -4,6 +4,7 @@ This module implements the MCP server that exposes SQLite database query
 capabilities and resource discovery functionality.
 """
 
+import argparse
 import asyncio
 import json
 import logging
@@ -242,17 +243,181 @@ class Talk2TablesMCP:
             **kwargs: Additional arguments to pass to FastMCP.run()
         """
         logger.info(f"Starting {self.config.server_name} server")
-        self.mcp.run(**kwargs)
+        
+        # Prepare server configuration based on transport type
+        run_kwargs = {}
+        
+        if self.config.transport == "stdio":
+            # Default stdio transport (no additional config needed)
+            run_kwargs["transport"] = "stdio"
+            
+        elif self.config.transport == "sse":
+            # Server-Sent Events transport
+            run_kwargs["transport"] = "sse"
+            run_kwargs["host"] = self.config.host
+            run_kwargs["port"] = self.config.port
+            
+        elif self.config.transport == "streamable-http":
+            # Streamable HTTP transport
+            run_kwargs["transport"] = "streamable-http"
+            run_kwargs["host"] = self.config.host
+            run_kwargs["port"] = self.config.port
+            
+            # Configure stateless mode if enabled
+            if self.config.stateless_http:
+                self.mcp.settings.stateless_http = True
+                
+            # Configure JSON responses if enabled
+            if self.config.json_response:
+                self.mcp.settings.json_response = True
+        
+        # Override with any additional kwargs
+        run_kwargs.update(kwargs)
+        
+        # Log server startup information
+        if self.config.transport != "stdio":
+            logger.info(f"Server will be accessible at http://{self.config.host}:{self.config.port}")
+            if self.config.stateless_http:
+                logger.info("Running in stateless HTTP mode")
+            if self.config.json_response:
+                logger.info("Using JSON responses instead of SSE streams")
+        
+        self.mcp.run(**run_kwargs)
 
 
-def create_server() -> Talk2TablesMCP:
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments.
+    
+    Returns:
+        Parsed command-line arguments
+    """
+    parser = argparse.ArgumentParser(
+        description="Talk 2 Tables MCP Server - SQLite database query server with MCP protocol",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Run with default stdio transport (local usage)
+  %(prog)s
+  
+  # Run with SSE transport for remote access
+  %(prog)s --transport sse --host 0.0.0.0 --port 8000
+  
+  # Run with streamable HTTP transport
+  %(prog)s --transport streamable-http --host 0.0.0.0 --port 8000
+  
+  # Run in stateless mode for scalability
+  %(prog)s --transport streamable-http --stateless --port 8000
+  
+  # Use JSON responses instead of SSE
+  %(prog)s --transport streamable-http --json-response --port 8000
+
+Environment Variables:
+  DATABASE_PATH       Path to SQLite database file
+  METADATA_PATH       Path to metadata JSON file
+  HOST               Server host address
+  PORT               Server port number
+  TRANSPORT          Transport type (stdio/sse/streamable-http)
+  LOG_LEVEL          Logging level (DEBUG/INFO/WARNING/ERROR)
+        """
+    )
+    
+    # Database options
+    parser.add_argument(
+        "--database", "--db", 
+        help="Path to SQLite database file"
+    )
+    
+    parser.add_argument(
+        "--metadata",
+        help="Path to metadata JSON file"
+    )
+    
+    # Network options
+    parser.add_argument(
+        "--host",
+        help="Host address to bind (default: localhost, use 0.0.0.0 for all interfaces)"
+    )
+    
+    parser.add_argument(
+        "--port", "-p",
+        type=int,
+        help="Port number for the server (default: 8000)"
+    )
+    
+    parser.add_argument(
+        "--transport", "-t",
+        choices=["stdio", "sse", "streamable-http"],
+        help="Transport type (default: stdio)"
+    )
+    
+    # HTTP-specific options
+    parser.add_argument(
+        "--stateless",
+        action="store_true",
+        help="Enable stateless HTTP mode (no session persistence)"
+    )
+    
+    parser.add_argument(
+        "--json-response",
+        action="store_true",
+        help="Use JSON responses instead of SSE streams"
+    )
+    
+    parser.add_argument(
+        "--no-cors",
+        action="store_true",
+        help="Disable CORS headers"
+    )
+    
+    # Server options
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set logging level"
+    )
+    
+    parser.add_argument(
+        "--server-name",
+        help="Server name identifier"
+    )
+    
+    return parser.parse_args()
+
+
+def create_server(args: argparse.Namespace = None) -> Talk2TablesMCP:
     """Create and configure the MCP server.
+    
+    Args:
+        args: Command-line arguments to override configuration
     
     Returns:
         Configured Talk2TablesMCP server instance
     """
-    # Load configuration
+    # Load base configuration
     config = load_config()
+    
+    # Override with command-line arguments if provided
+    if args:
+        if args.database:
+            config.database_path = args.database
+        if args.metadata:
+            config.metadata_path = args.metadata
+        if args.host:
+            config.host = args.host
+        if args.port:
+            config.port = args.port
+        if args.transport:
+            config.transport = args.transport
+        if args.stateless:
+            config.stateless_http = True
+        if args.json_response:
+            config.json_response = True
+        if args.no_cors:
+            config.allow_cors = False
+        if args.log_level:
+            config.log_level = args.log_level
+        if args.server_name:
+            config.server_name = args.server_name
     
     # Setup logging
     setup_logging(config)
@@ -266,8 +431,15 @@ def create_server() -> Talk2TablesMCP:
 def main() -> None:
     """Main entry point for the application."""
     try:
-        server = create_server()
+        # Parse command-line arguments
+        args = parse_args()
+        
+        # Create and configure server
+        server = create_server(args)
+        
+        # Run server
         server.run()
+        
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
     except Exception as e:

@@ -38,6 +38,37 @@ class ServerConfig(BaseModel):
         description="Version of the MCP server"
     )
     
+    # Network configuration
+    host: str = Field(
+        default="localhost",
+        description="Host address to bind the server (use 0.0.0.0 for all interfaces)"
+    )
+    
+    port: int = Field(
+        default=8000,
+        description="Port number for the server"
+    )
+    
+    transport: str = Field(
+        default="stdio",
+        description="Transport type: stdio, sse, or streamable-http"
+    )
+    
+    stateless_http: bool = Field(
+        default=False,
+        description="Enable stateless HTTP mode (no session persistence)"
+    )
+    
+    allow_cors: bool = Field(
+        default=True,
+        description="Enable CORS for browser clients"
+    )
+    
+    json_response: bool = Field(
+        default=False,
+        description="Use JSON responses instead of SSE streams (for streamable-http)"
+    )
+    
     # Logging configuration
     log_level: str = Field(
         default="INFO",
@@ -101,6 +132,23 @@ class ServerConfig(BaseModel):
             raise ValueError("max_result_rows must be positive")
         return v
     
+    @field_validator("transport")
+    @classmethod
+    def validate_transport(cls, v):
+        """Validate transport type."""
+        valid_transports = ["stdio", "sse", "streamable-http"]
+        if v not in valid_transports:
+            raise ValueError(f"transport must be one of {valid_transports}")
+        return v
+    
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, v):
+        """Validate port number."""
+        if not (1 <= v <= 65535):
+            raise ValueError("port must be between 1 and 65535")
+        return v
+    
     def get_absolute_database_path(self, base_path: Optional[Path] = None) -> Path:
         """Get absolute path to database file.
         
@@ -152,6 +200,12 @@ def load_config() -> ServerConfig:
         "METADATA_PATH": "metadata_path",
         "SERVER_NAME": "server_name", 
         "SERVER_VERSION": "server_version",
+        "HOST": "host",
+        "PORT": "port",
+        "TRANSPORT": "transport",
+        "STATELESS_HTTP": "stateless_http",
+        "ALLOW_CORS": "allow_cors",
+        "JSON_RESPONSE": "json_response",
         "LOG_LEVEL": "log_level",
         "LOG_FORMAT": "log_format",
         "MAX_QUERY_LENGTH": "max_query_length",
@@ -163,12 +217,16 @@ def load_config() -> ServerConfig:
         value = os.getenv(env_var)
         if value is not None:
             # Convert numeric values
-            if config_field in ["max_query_length", "max_result_rows"]:
+            if config_field in ["max_query_length", "max_result_rows", "port"]:
                 try:
                     value = int(value)
                 except ValueError:
                     logging.warning(f"Invalid numeric value for {env_var}: {value}")
                     continue
+            
+            # Convert boolean values
+            elif config_field in ["stateless_http", "allow_cors", "json_response"]:
+                value = value.lower() in ("true", "1", "yes", "on")
             
             config_dict[config_field] = value
     

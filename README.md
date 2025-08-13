@@ -52,14 +52,81 @@ pip install -e ".[dev]"
 
 ## Usage
 
-### Running the Server
+### Local Usage (Default)
 
 ```bash
-# Start the MCP server
+# Start with default stdio transport (for local CLI usage)
 talk-2-tables-mcp
 
 # Or run directly with Python
 python -m talk_2_tables_mcp.server
+```
+
+### Remote Access
+
+The server supports multiple transport protocols for remote access:
+
+#### 1. Server-Sent Events (SSE)
+```bash
+# Basic SSE server (localhost only)
+python -m talk_2_tables_mcp.server --transport sse --port 8000
+
+# SSE server accessible from network
+python -m talk_2_tables_mcp.server --transport sse --host 0.0.0.0 --port 8000
+```
+
+#### 2. Streamable HTTP
+```bash
+# Basic HTTP server
+python -m talk_2_tables_mcp.server --transport streamable-http --host 0.0.0.0 --port 8000
+
+# Stateless HTTP (for scalability)
+python -m talk_2_tables_mcp.server --transport streamable-http --stateless --port 8000
+
+# JSON responses (instead of SSE streams)
+python -m talk_2_tables_mcp.server --transport streamable-http --json-response --port 8000
+```
+
+#### 3. Using the Remote Server Script
+```bash
+# Quick remote deployment with optimized defaults
+python -m talk_2_tables_mcp.remote_server
+```
+
+### Docker Deployment
+
+#### Quick Start with Docker
+```bash
+# Build and run with Docker Compose
+docker-compose up -d
+
+# Or build and run manually
+docker build -t talk-2-tables-mcp .
+docker run -p 8000:8000 talk-2-tables-mcp
+```
+
+#### Production Deployment
+```bash
+# Run with nginx reverse proxy
+docker-compose --profile production up -d
+
+# With monitoring
+docker-compose --profile monitoring up -d
+```
+
+### Environment Variables
+
+Configure the server using environment variables:
+
+```bash
+export DATABASE_PATH="/path/to/your/database.db"
+export METADATA_PATH="/path/to/metadata.json"
+export HOST="0.0.0.0"
+export PORT="8000"
+export TRANSPORT="streamable-http"
+export LOG_LEVEL="INFO"
+export STATELESS_HTTP="true"
+export ALLOW_CORS="true"
 ```
 
 ### Setup Test Database
@@ -107,6 +174,101 @@ The server can be configured through environment variables:
 - `DATABASE_PATH`: Path to the SQLite database file (default: `test_data/sample.db`)
 - `METADATA_PATH`: Path to the metadata JSON file (default: `resources/metadata.json`)
 - `LOG_LEVEL`: Logging level (default: `INFO`)
+
+## Client Connectivity
+
+### Connecting to Remote Server
+
+Once the server is running remotely, clients can connect using different methods:
+
+#### HTTP Clients
+```python
+import asyncio
+from mcp.client.streamablehttp import streamablehttp_client
+from mcp.client.session import ClientSession
+
+async def connect_to_remote_server():
+    async with streamablehttp_client("http://your-server:8000/mcp") as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            
+            # List available tools
+            tools = await session.list_tools()
+            print(f"Available tools: {[tool.name for tool in tools.tools]}")
+            
+            # Execute a query
+            result = await session.call_tool("execute_query", {
+                "query": "SELECT COUNT(*) FROM customers"
+            })
+            print(result)
+
+asyncio.run(connect_to_remote_server())
+```
+
+#### Using curl (for testing)
+```bash
+# Test server health
+curl http://your-server:8000/health
+
+# Test MCP endpoint (if JSON responses enabled)
+curl -X POST http://your-server:8000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"method": "tools/list", "params": {}}'
+```
+
+### Server URLs
+
+- **SSE**: `http://your-server:8000/sse`
+- **Streamable HTTP**: `http://your-server:8000/mcp`
+- **Health Check**: `http://your-server:8000/health`
+
+## Security Considerations
+
+### Network Security
+- **Firewall**: Only expose necessary ports (8000 by default)
+- **Network Isolation**: Use VPNs or private networks for sensitive data
+- **Rate Limiting**: Configure nginx or application-level rate limiting
+
+### Data Security
+- **Read-Only Access**: Server only allows SELECT queries by design
+- **Input Validation**: All queries are validated and sanitized
+- **SQL Injection Protection**: Dangerous keywords and patterns are blocked
+
+### Production Recommendations
+- Use HTTPS with proper SSL certificates
+- Implement authentication for sensitive databases
+- Monitor server logs and metrics
+- Regular security updates and dependency scanning
+- Consider running behind a VPN for private data
+
+### Environment Variables for Security
+```bash
+# For production, consider:
+export ALLOW_CORS="false"  # Disable CORS if not needed
+export LOG_LEVEL="WARNING"  # Reduce log verbosity
+export MAX_RESULT_ROWS="100"  # Limit result size
+```
+
+## Monitoring and Observability
+
+### Health Checks
+The server exposes a health endpoint at `/health` that returns:
+```json
+{
+  "status": "healthy",
+  "database": "connected",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+### Logging
+Configure logging levels for different environments:
+- **Development**: `DEBUG`
+- **Production**: `INFO` or `WARNING`
+- **Critical Issues**: `ERROR`
+
+### Metrics (with monitoring profile)
+Access Prometheus metrics at `http://your-server:9090` when using the monitoring profile.
 
 ## Development
 

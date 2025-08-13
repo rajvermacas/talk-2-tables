@@ -34,6 +34,7 @@ dev = [
 
 [project.scripts]
 talk-2-tables-mcp = "talk_2_tables_mcp.server:main"
+talk-2-tables-mcp-remote = "talk_2_tables_mcp.remote_server:run_remote_server"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/talk_2_tables_mcp"]
