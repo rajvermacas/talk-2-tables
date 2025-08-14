@@ -52,8 +52,8 @@ const Message: React.FC<MessageProps> = ({ message, className = '' }) => {
             key={index}
             component="pre"
             sx={{
-              backgroundColor: 'grey.900',
-              color: 'common.white',
+              backgroundColor: '#000000', // Pure black background
+              color: '#FFFFFF', // White text
               p: 2,
               borderRadius: 1,
               my: 1,
@@ -61,7 +61,7 @@ const Message: React.FC<MessageProps> = ({ message, className = '' }) => {
               fontFamily: 'monospace',
               fontSize: '0.875rem',
               border: '1px solid',
-              borderColor: 'grey.700',
+              borderColor: '#424242', // Dark gray border
             }}
           >
             <code>{codeContent}</code>
@@ -166,9 +166,9 @@ const Message: React.FC<MessageProps> = ({ message, className = '' }) => {
           elevation={1}
           sx={{
             flex: 1,
-            bgcolor: isUser ? 'primary.50' : 'background.paper',
+            bgcolor: isUser ? 'rgba(211, 47, 47, 0.05)' : 'background.paper', // Light red tint for user messages
             border: 1,
-            borderColor: isUser ? 'primary.200' : 'divider',
+            borderColor: isUser ? 'primary.main' : 'divider',
             '&:hover': {
               elevation: 2,
             },

@@ -105,14 +105,24 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
       <Chip
         icon={getStatusIcon(overallStatus)}
         label={status.isConnected ? 'Connected' : 'Offline'}
-        color={overallColor as 'success' | 'error' | 'warning' | 'default'}
         size="small"
-        variant="outlined"
+        variant="filled"
         onClick={() => setIsExpanded(!isExpanded)}
         sx={{
           cursor: 'pointer',
+          backgroundColor: status.isConnected ? '#FFFFFF' : '#FFEBEE', // White for connected, light pink for disconnected
+          color: status.isConnected ? '#000000' : '#D32F2F', // Black text for connected, red for disconnected
+          border: '1px solid',
+          borderColor: status.isConnected ? '#E0E0E0' : '#F44336',
           '& .MuiChip-label': {
             px: 1,
+            fontWeight: 500,
+          },
+          '& .MuiSvgIcon-root': {
+            color: status.isConnected ? '#4CAF50' : '#F44336', // Green icon for connected, red for disconnected
+          },
+          '&:hover': {
+            backgroundColor: status.isConnected ? '#F5F5F5' : '#FFCDD2',
           },
         }}
       />
@@ -123,8 +133,16 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         onClick={onRefresh}
         disabled={isChecking}
         title="Refresh connection status"
-        color="inherit"
-        sx={{ p: 0.5 }}
+        sx={{ 
+          p: 0.5,
+          color: '#FFFFFF', // White icon for visibility on red background
+          '&:hover': {
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          },
+          '&:disabled': {
+            color: 'rgba(255, 255, 255, 0.5)',
+          },
+        }}
       >
         <RefreshIcon 
           fontSize="small"
@@ -139,8 +157,13 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
       <IconButton
         size="small"
         onClick={() => setIsExpanded(!isExpanded)}
-        color="inherit"
-        sx={{ p: 0.5 }}
+        sx={{ 
+          p: 0.5,
+          color: '#FFFFFF', // White icon for visibility on red background
+          '&:hover': {
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          },
+        }}
       >
         {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
       </IconButton>

@@ -9,51 +9,51 @@ export const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#1976d2', // Material Blue
-      light: '#42a5f5',
-      dark: '#1565c0',
+      main: '#D32F2F', // Red primary
+      light: '#FF6659',
+      dark: '#B71C1C',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#009688', // Material Teal
-      light: '#4db6ac',
-      dark: '#00695c',
+      main: '#424242', // Dark gray
+      light: '#6D6D6D',
+      dark: '#212121',
       contrastText: '#ffffff',
     },
     background: {
-      default: '#f5f5f5',
-      paper: '#ffffff',
+      default: '#f5f5f5', // Light gray background
+      paper: '#ffffff', // White paper
     },
     surface: '#ffffff',
     error: {
-      main: '#f44336',
-      light: '#ef5350',
-      dark: '#c62828',
+      main: '#D32F2F', // Red for errors
+      light: '#FF6659',
+      dark: '#B71C1C',
       contrastText: '#ffffff',
     },
     warning: {
-      main: '#ff9800',
-      light: '#ffb74d',
-      dark: '#f57c00',
+      main: '#757575', // Gray for warnings
+      light: '#A4A4A4',
+      dark: '#424242',
       contrastText: '#ffffff',
     },
     success: {
-      main: '#4caf50',
-      light: '#66bb6a',
-      dark: '#388e3c',
+      main: '#616161', // Dark gray for success
+      light: '#8E8E8E',
+      dark: '#373737',
       contrastText: '#ffffff',
     },
     info: {
-      main: '#2196f3',
-      light: '#64b5f6',
-      dark: '#1976d2',
-      contrastText: '#ffffff',
+      main: '#9E9E9E', // Gray for info
+      light: '#CFCFCF',
+      dark: '#616161',
+      contrastText: '#000000',
     },
     text: {
-      primary: 'rgba(0, 0, 0, 0.87)',
-      secondary: 'rgba(0, 0, 0, 0.6)',
+      primary: '#000000', // Pure black text
+      secondary: '#757575', // Gray text
     },
-    divider: 'rgba(0, 0, 0, 0.12)',
+    divider: '#E0E0E0', // Light gray divider
   },
   typography: {
     fontFamily: [
@@ -200,25 +200,25 @@ export const darkTheme = createTheme({
     ...theme.palette,
     mode: 'dark',
     primary: {
-      main: '#90caf9', // Lighter blue for dark mode
-      light: '#e3f2fd',
-      dark: '#42a5f5',
+      main: '#FF5252', // Lighter red for dark mode visibility
+      light: '#FF867C',
+      dark: '#C62828',
       contrastText: '#000000',
     },
     secondary: {
-      main: '#26a69a', // Lighter teal for dark mode
-      light: '#80cbc4',
-      dark: '#00695c',
+      main: '#BDBDBD', // Light gray for dark mode
+      light: '#EEEEEE',
+      dark: '#757575',
       contrastText: '#000000',
     },
     background: {
-      default: '#121212',
-      paper: '#1d1d1d',
+      default: '#121212', // Pure black background
+      paper: '#1E1E1E', // Dark gray cards
     },
     text: {
-      primary: 'rgba(255, 255, 255, 0.87)',
-      secondary: 'rgba(255, 255, 255, 0.6)',
+      primary: '#FFFFFF', // White text
+      secondary: '#BDBDBD', // Light gray secondary text
     },
-    divider: 'rgba(255, 255, 255, 0.12)',
+    divider: '#424242', // Dark gray divider
   },
 });

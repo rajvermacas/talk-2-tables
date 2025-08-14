@@ -29,9 +29,9 @@ pre code {
 
 /* Ensure proper text selection styling */
 ::selection {
-  background-color: rgba(25, 118, 210, 0.3);
+  background-color: rgba(211, 47, 47, 0.3); /* Red selection */
 }
 
 ::-moz-selection {
-  background-color: rgba(25, 118, 210, 0.3);
+  background-color: rgba(211, 47, 47, 0.3); /* Red selection for Firefox */
 }
