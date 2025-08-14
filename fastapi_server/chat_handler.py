@@ -120,19 +120,35 @@ class ChatCompletionHandler:
         except Exception as e:
             logger.error(f"Error processing chat completion: {str(e)}")
             
+            # Check if it's a rate limit error and provide appropriate response
+            error_message = "I apologize, but I encountered an error processing your request."
+            
+            if "rate limit" in str(e).lower() or "429" in str(e):
+                error_message = ("I'm currently experiencing high demand and need to wait a moment before "
+                               "processing your request. Please try again in a few seconds.")
+            elif "timeout" in str(e).lower():
+                error_message = ("Your request took too long to process. Please try again with a "
+                               "simpler question or try again later.")
+            elif "api" in str(e).lower():
+                error_message = ("I'm having trouble connecting to the AI service. Please try again "
+                               "in a moment.")
+            else:
+                error_message = f"I encountered an unexpected error: {str(e)}"
+            
             # Return error response in OpenAI format
+            from .models import Choice
             error_response = ChatCompletionResponse(
                 id=f"chatcmpl-error-{uuid4()}",
                 created=int(time.time()),
                 model=request.model or "qwen/qwen3-coder:free",
-                choices=[{
-                    "index": 0,
-                    "message": ChatMessage(
+                choices=[Choice(
+                    index=0,
+                    message=ChatMessage(
                         role=MessageRole.ASSISTANT,
-                        content=f"I apologize, but I encountered an error processing your request: {str(e)}"
+                        content=error_message
                     ),
-                    "finish_reason": "error"
-                }]
+                    finish_reason="error"
+                )]
             )
             return error_response
     
@@ -255,7 +271,15 @@ class ChatCompletionHandler:
                 temperature=0.1  # Low temperature for more deterministic SQL
             )
             
-            if response.choices and response.choices[0].message.content:
+            if (response and 
+                hasattr(response, 'choices') and 
+                response.choices and 
+                len(response.choices) > 0 and
+                response.choices[0] and
+                hasattr(response.choices[0], 'message') and
+                response.choices[0].message and
+                hasattr(response.choices[0].message, 'content') and
+                response.choices[0].message.content):
                 sql_content = response.choices[0].message.content.strip()
                 
                 # Extract SQL from the response
@@ -349,7 +373,15 @@ class ChatCompletionHandler:
                 )
                 
                 response = await self.process_chat_completion(test_request)
-                if response.choices and response.choices[0].message.content:
+                if (response and 
+                    hasattr(response, 'choices') and 
+                    response.choices and 
+                    len(response.choices) > 0 and
+                    response.choices[0] and
+                    hasattr(response.choices[0], 'message') and
+                    response.choices[0].message and
+                    hasattr(response.choices[0].message, 'content') and
+                    response.choices[0].message.content):
                     results["integration_test"] = True
                     results["test_response"] = response.choices[0].message.content
             

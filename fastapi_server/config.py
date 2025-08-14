@@ -82,6 +82,24 @@ class FastAPIServerConfig(BaseSettings):
         description="Temperature for LLM responses"
     )
     
+    # Retry and Rate Limiting Configuration
+    max_retries: int = Field(
+        default=3,
+        description="Maximum number of retry attempts for API calls"
+    )
+    initial_retry_delay: float = Field(
+        default=1.0,
+        description="Initial delay in seconds before first retry"
+    )
+    max_retry_delay: float = Field(
+        default=30.0,
+        description="Maximum delay in seconds between retries"
+    )
+    retry_backoff_factor: float = Field(
+        default=2.0,
+        description="Exponential backoff factor for retry delays"
+    )
+    
     @field_validator("mcp_transport")
     @classmethod
     def validate_transport(cls, v: str) -> str:
@@ -105,6 +123,38 @@ class FastAPIServerConfig(BaseSettings):
         """Validate OpenRouter API key is provided."""
         if not v or v == "your_openrouter_api_key_here":
             raise ValueError("OpenRouter API key must be provided")
+        return v
+    
+    @field_validator("max_retries")
+    @classmethod
+    def validate_max_retries(cls, v: int) -> int:
+        """Validate max retries is reasonable."""
+        if v < 0 or v > 10:
+            raise ValueError("Max retries must be between 0 and 10")
+        return v
+    
+    @field_validator("initial_retry_delay")
+    @classmethod
+    def validate_initial_retry_delay(cls, v: float) -> float:
+        """Validate initial retry delay is positive."""
+        if v <= 0:
+            raise ValueError("Initial retry delay must be positive")
+        return v
+    
+    @field_validator("max_retry_delay")
+    @classmethod
+    def validate_max_retry_delay(cls, v: float) -> float:
+        """Validate max retry delay is reasonable."""
+        if v <= 0 or v > 300:  # Max 5 minutes
+            raise ValueError("Max retry delay must be between 0 and 300 seconds")
+        return v
+    
+    @field_validator("retry_backoff_factor")
+    @classmethod
+    def validate_retry_backoff_factor(cls, v: float) -> float:
+        """Validate backoff factor is reasonable."""
+        if v < 1.0 or v > 5.0:
+            raise ValueError("Retry backoff factor must be between 1.0 and 5.0")
         return v
     
     class Config:

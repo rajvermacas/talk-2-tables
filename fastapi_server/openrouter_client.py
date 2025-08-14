@@ -5,11 +5,12 @@ OpenRouter client integration using OpenAI SDK.
 import logging
 import time
 from typing import List, Dict, Any, Optional, AsyncGenerator
-from openai import OpenAI
+from openai import OpenAI, RateLimitError, APIError
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
 from .config import config
 from .models import ChatMessage, ChatCompletionResponse, ChatCompletionStreamResponse, Choice, StreamChoice, Usage
+from .retry_utils import RetryConfig, retry_with_backoff, is_retryable_error
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,17 @@ class OpenRouterClient:
         self.max_tokens = config.max_tokens
         self.temperature = config.temperature
         
+        # Initialize retry configuration
+        self.retry_config = RetryConfig(
+            max_retries=config.max_retries,
+            initial_delay=config.initial_retry_delay,
+            max_delay=config.max_retry_delay,
+            backoff_factor=config.retry_backoff_factor
+        )
+        
         logger.info(f"Initialized OpenRouter client with model: {self.model}")
+        logger.info(f"Retry config: max_retries={self.retry_config.max_retries}, "
+                   f"initial_delay={self.retry_config.initial_delay}s")
     
     def _prepare_messages(self, messages: List[ChatMessage]) -> List[Dict[str, str]]:
         """Convert ChatMessage objects to OpenAI format."""
@@ -59,7 +70,7 @@ class OpenRouterClient:
         **kwargs
     ) -> ChatCompletionResponse:
         """
-        Create a chat completion using OpenRouter.
+        Create a chat completion using OpenRouter with retry logic.
         
         Args:
             messages: List of chat messages
@@ -72,69 +83,117 @@ class OpenRouterClient:
         Returns:
             ChatCompletionResponse object
         """
-        try:
-            # Prepare parameters
-            model = model or self.model
-            max_tokens = max_tokens or self.max_tokens
-            temperature = temperature or self.temperature
-            
-            # Convert messages to OpenAI format
-            openai_messages = self._prepare_messages(messages)
-            
-            logger.info(f"Creating chat completion with model: {model}")
-            logger.debug(f"Messages: {openai_messages}")
-            
-            # Create completion
-            completion = self.client.chat.completions.create(
-                model=model,
-                messages=openai_messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                stream=stream,
-                extra_headers=self._create_headers(),
-                **kwargs
-            )
-            
-            if stream:
-                # Handle streaming response
-                return self._handle_streaming_response(completion, model)
-            else:
-                # Handle regular response
-                return self._convert_completion_response(completion, model)
+        # Prepare parameters
+        model = model or self.model
+        max_tokens = max_tokens or self.max_tokens
+        temperature = temperature or self.temperature
+        
+        # Convert messages to OpenAI format
+        openai_messages = self._prepare_messages(messages)
+        
+        logger.info(f"Creating chat completion with model: {model}")
+        logger.debug(f"Messages: {openai_messages}")
+        
+        # Use retry decorator for the API call
+        @retry_with_backoff(self.retry_config)
+        async def _make_api_call():
+            try:
+                # Create completion
+                completion = self.client.chat.completions.create(
+                    model=model,
+                    messages=openai_messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    stream=stream,
+                    extra_headers=self._create_headers(),
+                    **kwargs
+                )
                 
-        except Exception as e:
-            logger.error(f"Error creating chat completion: {str(e)}")
-            raise
+                if stream:
+                    # Handle streaming response
+                    return self._handle_streaming_response(completion, model)
+                else:
+                    # Handle regular response
+                    return self._convert_completion_response(completion, model)
+                    
+            except RateLimitError as e:
+                logger.warning(f"Rate limit error: {e}")
+                raise
+            except APIError as e:
+                logger.warning(f"API error: {e}")
+                # Check if it's a retryable error
+                if hasattr(e, 'status_code') and e.status_code in {429, 500, 502, 503, 504}:
+                    raise
+                else:
+                    # Non-retryable API error, don't retry
+                    logger.error(f"Non-retryable API error: {e}")
+                    raise
+            except Exception as e:
+                logger.error(f"Unexpected error creating chat completion: {str(e)}")
+                # Only retry if it's a known retryable error
+                if is_retryable_error(e):
+                    raise
+                else:
+                    # Don't retry unknown errors
+                    raise
+        
+        return await _make_api_call()
     
     def _convert_completion_response(
         self,
         completion: ChatCompletion,
         model: str
     ) -> ChatCompletionResponse:
-        """Convert OpenAI ChatCompletion to our response format."""
-        choices = []
-        for i, choice in enumerate(completion.choices):
-            chat_message = ChatMessage(
-                role=choice.message.role,
-                content=choice.message.content or ""
-            )
-            choices.append(Choice(
-                index=i,
-                message=chat_message,
-                finish_reason=choice.finish_reason
-            ))
+        """Convert OpenAI ChatCompletion to our response format with defensive programming."""
+        if completion is None:
+            raise ValueError("Completion response is None")
         
+        choices = []
+        completion_choices = getattr(completion, 'choices', None)
+        if completion_choices:
+            for i, choice in enumerate(completion_choices):
+                if choice is None:
+                    logger.warning(f"Choice {i} is None, skipping")
+                    continue
+                
+                choice_message = getattr(choice, 'message', None)
+                if choice_message is None:
+                    logger.warning(f"Choice {i} message is None, using empty message")
+                    chat_message = ChatMessage(role="assistant", content="")
+                else:
+                    # Safely extract message content
+                    message_role = getattr(choice_message, 'role', 'assistant')
+                    message_content = getattr(choice_message, 'content', None) or ""
+                    
+                    chat_message = ChatMessage(
+                        role=message_role,
+                        content=message_content
+                    )
+                
+                finish_reason = getattr(choice, 'finish_reason', None)
+                choices.append(Choice(
+                    index=i,
+                    message=chat_message,
+                    finish_reason=finish_reason
+                ))
+        
+        # Handle usage information safely
         usage = None
-        if completion.usage:
+        completion_usage = getattr(completion, 'usage', None)
+        if completion_usage:
             usage = Usage(
-                prompt_tokens=completion.usage.prompt_tokens,
-                completion_tokens=completion.usage.completion_tokens,
-                total_tokens=completion.usage.total_tokens
+                prompt_tokens=getattr(completion_usage, 'prompt_tokens', 0),
+                completion_tokens=getattr(completion_usage, 'completion_tokens', 0),
+                total_tokens=getattr(completion_usage, 'total_tokens', 0)
             )
+        
+        # Safely extract other fields
+        completion_id = getattr(completion, 'id', f"chatcmpl-{int(time.time())}")
+        completion_created = getattr(completion, 'created', int(time.time()))
         
         return ChatCompletionResponse(
-            id=completion.id,
-            created=completion.created,
+            id=completion_id,
+            created=completion_created,
             model=model,
             choices=choices,
             usage=usage
@@ -252,15 +311,22 @@ class OpenRouterClient:
         return "\n".join(context_parts) if context_parts else ""
     
     async def test_connection(self) -> bool:
-        """Test the connection to OpenRouter API."""
+        """Test the connection to OpenRouter API with retry logic."""
         try:
             test_messages = [ChatMessage(role="user", content="Hello")]
             response = await self.create_chat_completion(
                 messages=test_messages,
                 max_tokens=10
             )
-            logger.info("OpenRouter connection test successful")
-            return True
+            
+            # Validate response structure
+            if response and response.choices and len(response.choices) > 0:
+                logger.info("OpenRouter connection test successful")
+                return True
+            else:
+                logger.error("OpenRouter connection test failed: Invalid response structure")
+                return False
+                
         except Exception as e:
             logger.error(f"OpenRouter connection test failed: {str(e)}")
             return False
