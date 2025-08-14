@@ -53,7 +53,7 @@ react-chatbot/             # Frontend Interface
 ### System Integration
 - **MCP Protocol**: FastMCP framework with stdio/SSE/HTTP transports
 - **AI Agent**: OpenRouter LLM integration with retry logic and rate limiting
-- **Frontend**: React TypeScript UI with real-time chat interface
+- **Frontend**: React TypeScript UI with glassmorphism design and red/black/gray/white theme
 - **Database**: SQLite with read-only SELECT queries and security validation
 - **Deployment**: Full Docker stack with nginx reverse proxy
 
@@ -80,13 +80,39 @@ Read the instructions at `/root/.claude/commands/persist-session.md` to get an u
 
 ## Development Commands
 
-### Local Development
-**Always use venv**
+### Prerequisites
+**Always use venv for Python development**
 
 ```bash
-# Install in development mode (MCP server + FastAPI dependencies)
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install all dependencies
 pip install -e ".[dev,fastapi]"
 
+# Install React dependencies (if not already installed)
+cd react-chatbot && npm install && cd ..
+```
+
+### Local Development - Full Stack
+
+The system requires three components running simultaneously. Use these commands in **separate terminals**:
+
+```bash
+# Terminal 1: MCP Server (database interface)
+python -m talk_2_tables_mcp.remote_server
+
+# Terminal 2: FastAPI Backend (AI agent with OpenRouter)
+cd fastapi_server && python main.py
+
+# Terminal 3: React Frontend (user interface)
+./start-chatbot.sh
+```
+
+### Component-Specific Development
+
+```bash
 # === MCP Server Only ===
 # Start local server (stdio transport for MCP clients)
 python -m talk_2_tables_mcp.server
@@ -96,54 +122,68 @@ python -m talk_2_tables_mcp.remote_server
 # OR with specific options:
 python -m talk_2_tables_mcp.server --transport streamable-http --host 0.0.0.0 --port 8000
 
-# === Full Stack Development ===
-# 1. Start MCP server (in one terminal)
-python -m talk_2_tables_mcp.remote_server
-
-# 2. Start FastAPI server (in another terminal)
+# === FastAPI Server Only ===
 cd fastapi_server
 python main.py
+# OR with hot reload:
+uvicorn main:app --reload --port 8001
 
-# 3. Start React chatbot (in third terminal)
-./start-chatbot.sh
-# OR manually:
+# === React App Only ===
 cd react-chatbot && npm start
 
-# === Testing FastAPI Integration ===
+# === Quick Testing ===
 python scripts/test_fastapi_server.py
+python scripts/test_remote_server.py
 ```
 
 ### Testing
+
+**Important**: Ensure OpenRouter API key is set for E2E tests involving LLM integration.
+
 ```bash
-# === Unit and Integration Tests ===
-# Run all tests
-pytest
+# === Unit Tests (fastest, no external dependencies) ===
+pytest tests/test_database.py tests/test_config.py tests/test_server.py -v
 
-# Run with coverage
-pytest --cov=talk_2_tables_mcp
+# === Integration Tests ===
+pytest tests/test_fastapi_server.py tests/test_retry_logic.py -v
 
-# Run specific test file
-pytest tests/test_server.py -v
-
-# === End-to-End Tests ===
+# === End-to-End Tests (require running servers) ===
 # Full system E2E test (MCP + FastAPI + React)
 pytest tests/e2e_feature_test.py -v
 
-# React chatbot E2E test
+# React chatbot E2E test (automated browser testing)
 pytest tests/e2e_react_chatbot_test.py -v
 
-# Rate limiting and retry logic
+# Rate limiting and retry logic validation
 pytest tests/e2e_rate_limit_handling_test.py -v
 
-# Comprehensive system test
+# Comprehensive system test (all components)
 pytest tests/e2e_comprehensive_test.py -v
 
-# === Component-Specific Tests ===
-# FastAPI server tests
-pytest tests/test_fastapi_server.py -v
+# === Run All Tests ===
+# Quick test (unit + integration only)
+pytest tests/test_*.py -v
 
-# Retry logic tests
-pytest tests/test_retry_logic.py -v
+# Full test suite (including E2E)
+pytest
+
+# With coverage report
+pytest --cov=talk_2_tables_mcp --cov-report=html
+```
+
+### React Frontend Testing
+
+```bash
+cd react-chatbot
+
+# Run React test suite
+npm test
+
+# Run tests with coverage
+npm test -- --coverage --watchAll=false
+
+# Build for production (validates TypeScript)
+npm run build
 ```
 
 ### Docker Deployment
@@ -313,3 +353,59 @@ This server is designed to be discovered and used by MCP clients:
 - **Vertical**: Increase database connection limits and memory
 - **Caching**: Add query result caching for frequently accessed data
 - **Database optimization**: Index optimization for common query patterns
+
+## Common Development Workflows
+
+### Starting Fresh Development Session
+```bash
+# 1. Activate environment and check status
+source venv/bin/activate
+git status
+
+# 2. Update session context (ALWAYS READ FIRST)
+cat .dev-resources/context/session-scratchpad.md
+
+# 3. Install any missing dependencies
+pip install -e ".[dev,fastapi]" && cd react-chatbot && npm install && cd ..
+
+# 4. Start development stack (3 terminals)
+python -m talk_2_tables_mcp.remote_server  # Terminal 1
+cd fastapi_server && python main.py        # Terminal 2  
+./start-chatbot.sh                          # Terminal 3
+```
+
+### Debugging Common Issues
+
+**MCP Connection Issues:**
+```bash
+# Test MCP server directly
+python scripts/test_remote_server.py
+
+# Check transport protocol match (FastAPI uses streamablehttp)
+python -m talk_2_tables_mcp.server --transport streamable-http --port 8000
+```
+
+**React Build Failures:**
+```bash
+cd react-chatbot
+npm run build  # Validates TypeScript compilation
+npm test       # Runs test suite
+```
+
+**FastAPI Server Issues:**
+```bash
+# Test FastAPI endpoints directly
+python scripts/test_fastapi_server.py
+
+# Check OpenRouter API key is set
+echo $OPENROUTER_API_KEY
+```
+
+### Essential File Locations
+- **Session context**: `.dev-resources/context/session-scratchpad.md` (READ FIRST)
+- **MCP server**: `src/talk_2_tables_mcp/server.py`
+- **FastAPI backend**: `fastapi_server/main.py`
+- **React frontend**: `react-chatbot/src/components/ChatInterface.tsx`
+- **Database**: `test_data/sample.db`
+- **Test database setup**: `scripts/setup_test_db.py`
+- **Configuration**: `pyproject.toml` (Python), `react-chatbot/package.json` (React)
