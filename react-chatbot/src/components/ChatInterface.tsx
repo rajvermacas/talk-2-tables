@@ -1,28 +1,15 @@
 /**
- * Main chat interface component using Material UI
+ * Main chat interface component with modern Tailwind CSS design
  */
 
 import React from 'react';
-import {
-  Box,
-  AppBar,
-  Toolbar,
-  Typography,
-  IconButton,
-  Container,
-  Paper,
-  Alert,
-  AlertTitle,
-} from '@mui/material';
-import {
-  Refresh as RefreshIcon,
-  Clear as ClearIcon,
-} from '@mui/icons-material';
+import { RotateCcw, Trash2, AlertTriangle } from 'lucide-react';
 import { useChat } from '../hooks/useChat';
 import { useConnectionStatus } from '../hooks/useConnectionStatus';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import ConnectionStatus from './ConnectionStatus';
+import clsx from 'clsx';
 
 interface ChatInterfaceProps {
   className?: string;
@@ -69,80 +56,99 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) => {
   };
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* App Bar Header */}
-      <AppBar position="static" elevation={2}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            {process.env.REACT_APP_CHAT_TITLE || 'Talk2Tables'}
-          </Typography>
+    <div className={clsx('h-screen flex flex-col overflow-hidden', className)}>
+      {/* Header */}
+      <header className="glass-dark border-b border-gray-700/50 relative z-10">
+        <div className="flex items-center justify-between px-6 py-4">
+          {/* Logo/Title */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-primary-600 to-primary-700 flex items-center justify-center">
+              <span className="text-white font-bold text-sm">T2T</span>
+            </div>
+            <h1 className="text-xl font-semibold text-gradient">
+              {process.env.REACT_APP_CHAT_TITLE || 'Talk2Tables'}
+            </h1>
+          </div>
           
-          <ConnectionStatus
-            status={connectionStatus}
-            onRefresh={checkStatus}
-            isChecking={!isMonitoring}
-          />
-          
-          <IconButton
-            color="inherit"
-            onClick={handleClearChat}
-            disabled={messages.length === 0}
-            title="Clear chat history"
-            sx={{ ml: 1 }}
-          >
-            <ClearIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
+          {/* Header Actions */}
+          <div className="flex items-center gap-3">
+            <ConnectionStatus
+              status={connectionStatus}
+              onRefresh={checkStatus}
+              isChecking={!isMonitoring}
+            />
+            
+            <button
+              onClick={handleClearChat}
+              disabled={messages.length === 0}
+              title="Clear chat history"
+              className={clsx(
+                'p-2 rounded-lg transition-all duration-200',
+                'glass-dark hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-primary-500/50',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'text-gray-300 hover:text-white'
+              )}
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
 
-      {/* Connection Warning */}
-      {!connectionStatus.isConnected && (
-        <Alert severity="warning" sx={{ borderRadius: 0 }}>
-          <AlertTitle>Connection Issues</AlertTitle>
-          Some features may not work properly.
-          <IconButton
-            size="small"
-            onClick={checkStatus}
-            sx={{ ml: 1 }}
-            title="Retry Connection"
-          >
-            <RefreshIcon fontSize="small" />
-          </IconButton>
-        </Alert>
-      )}
+        {/* Connection Warning */}
+        {!connectionStatus.isConnected && (
+          <div className="bg-yellow-400/10 border-t border-yellow-400/50 px-6 py-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-yellow-400 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-yellow-200">Connection Issues</p>
+                <p className="text-xs text-yellow-300">Some features may not work properly.</p>
+              </div>
+              <button
+                onClick={checkStatus}
+                title="Retry Connection"
+                className="p-1.5 rounded-lg bg-yellow-400/20 hover:bg-yellow-400/30 transition-colors"
+              >
+                <RotateCcw className="h-3 w-3 text-yellow-400" />
+              </button>
+            </div>
+          </div>
+        )}
+      </header>
 
       {/* Main Chat Area */}
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Messages Container */}
-        <Box sx={{ flex: 1, overflow: 'hidden' }}>
+        <div className="flex-1 overflow-hidden">
           <MessageList 
             messages={messages}
             isTyping={isTyping}
           />
-        </Box>
+        </div>
 
         {/* Error Display */}
         {error && (
-          <Alert 
-            severity="error" 
-            action={
-              <IconButton
-                color="inherit"
-                size="small"
-                onClick={handleRetry}
-              >
-                <RefreshIcon />
-              </IconButton>
-            }
-            sx={{ mx: 2, mb: 1, borderRadius: 2 }}
-          >
-            {error}
-          </Alert>
+          <div className="mx-4 mb-3">
+            <div className="bg-red-400/10 border border-red-400/50 rounded-xl p-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-red-200">{error}</p>
+                </div>
+                <button
+                  onClick={handleRetry}
+                  className="p-1.5 rounded-lg bg-red-400/20 hover:bg-red-400/30 transition-colors"
+                  title="Retry"
+                >
+                  <RotateCcw className="h-3 w-3 text-red-400" />
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Input Area */}
-        <Paper elevation={3} sx={{ borderRadius: 0 }}>
-          <Container maxWidth="md" sx={{ py: 2 }}>
+        <div className="glass-dark border-t border-gray-700/50 relative z-10">
+          <div className="max-w-4xl mx-auto p-4">
             <MessageInput
               onSendMessage={handleSendMessage}
               disabled={isLoading || !connectionStatus.isConnected}
@@ -153,10 +159,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) => {
               }
               maxLength={parseInt(process.env.REACT_APP_MAX_MESSAGE_LENGTH || '5000')}
             />
-          </Container>
-        </Paper>
-      </Box>
-    </Box>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

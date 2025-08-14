@@ -1,32 +1,20 @@
 /**
- * Component for displaying connection status using Material UI
+ * Component for displaying connection status with modern Tailwind CSS design
  */
 
 import React, { useState } from 'react';
 import {
-  Box,
-  Chip,
-  IconButton,
-  Collapse,
-  Paper,
-  Typography,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Alert,
-} from '@mui/material';
-import {
-  CheckCircle as ConnectedIcon,
-  Error as ErrorIcon,
-  Warning as WarningIcon,
-  Refresh as RefreshIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-  Wifi as WifiIcon,
-  Storage as StorageIcon,
-} from '@mui/icons-material';
+  CheckCircle,
+  AlertCircle,
+  AlertTriangle,
+  RotateCcw,
+  ChevronDown,
+  ChevronUp,
+  Wifi,
+  Database,
+} from 'lucide-react';
 import { ConnectionStatus as ConnectionStatusType } from '../types/chat.types';
+import clsx from 'clsx';
 
 interface ConnectionStatusProps {
   status: ConnectionStatusType;
@@ -43,16 +31,17 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const getStatusIcon = (connectionStatus: 'connected' | 'disconnected' | 'error') => {
+  const getStatusIcon = (connectionStatus: 'connected' | 'disconnected' | 'error', size = 'h-4 w-4') => {
+    const iconClass = size;
     switch (connectionStatus) {
       case 'connected':
-        return <ConnectedIcon fontSize="small" />;
+        return <CheckCircle className={clsx(iconClass, 'text-green-400')} />;
       case 'disconnected':
-        return <ErrorIcon fontSize="small" />;
+        return <AlertCircle className={clsx(iconClass, 'text-red-400')} />;
       case 'error':
-        return <WarningIcon fontSize="small" />;
+        return <AlertTriangle className={clsx(iconClass, 'text-yellow-400')} />;
       default:
-        return <WarningIcon fontSize="small" />;
+        return <AlertTriangle className={clsx(iconClass, 'text-yellow-400')} />;
     }
   };
 
@@ -69,16 +58,16 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
     }
   };
 
-  const getStatusColor = (connectionStatus: 'connected' | 'disconnected' | 'error') => {
+  const getStatusColorClasses = (connectionStatus: 'connected' | 'disconnected' | 'error') => {
     switch (connectionStatus) {
       case 'connected':
-        return 'success';
+        return 'text-green-400 border-green-400/50 bg-green-400/10';
       case 'disconnected':
-        return 'error';
+        return 'text-red-400 border-red-400/50 bg-red-400/10';
       case 'error':
-        return 'warning';
+        return 'text-yellow-400 border-yellow-400/50 bg-yellow-400/10';
       default:
-        return 'default';
+        return 'text-gray-400 border-gray-400/50 bg-gray-400/10';
     }
   };
 
@@ -97,145 +86,96 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   };
 
   const overallStatus = status.isConnected ? 'connected' : 'error';
-  const overallColor = getStatusColor(overallStatus);
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <div className={clsx('relative flex items-center gap-2', className)}>
       {/* Main Status Chip */}
-      <Chip
-        icon={getStatusIcon(overallStatus)}
-        label={status.isConnected ? 'Connected' : 'Offline'}
-        size="small"
-        variant="filled"
+      <button
         onClick={() => setIsExpanded(!isExpanded)}
-        sx={{
-          cursor: 'pointer',
-          backgroundColor: status.isConnected ? '#FFFFFF' : '#FFEBEE', // White for connected, light pink for disconnected
-          color: status.isConnected ? '#000000' : '#D32F2F', // Black text for connected, red for disconnected
-          border: '1px solid',
-          borderColor: status.isConnected ? '#E0E0E0' : '#F44336',
-          '& .MuiChip-label': {
-            px: 1,
-            fontWeight: 500,
-          },
-          '& .MuiSvgIcon-root': {
-            color: status.isConnected ? '#4CAF50' : '#F44336', // Green icon for connected, red for disconnected
-          },
-          '&:hover': {
-            backgroundColor: status.isConnected ? '#F5F5F5' : '#FFCDD2',
-          },
-        }}
-      />
+        className={clsx(
+          'flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-200 text-sm font-medium',
+          'glass-dark hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-primary-500/50',
+          getStatusColorClasses(overallStatus)
+        )}
+      >
+        {getStatusIcon(overallStatus)}
+        <span>{status.isConnected ? 'Connected' : 'Offline'}</span>
+        {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+      </button>
 
       {/* Refresh Button */}
-      <IconButton
-        size="small"
+      <button
         onClick={onRefresh}
         disabled={isChecking}
         title="Refresh connection status"
-        sx={{ 
-          p: 0.5,
-          color: '#FFFFFF', // White icon for visibility on red background
-          '&:hover': {
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          },
-          '&:disabled': {
-            color: 'rgba(255, 255, 255, 0.5)',
-          },
-        }}
+        className={clsx(
+          'p-2 rounded-lg transition-all duration-200 text-gray-300 hover:text-white',
+          'glass-dark hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-primary-500/50',
+          'disabled:opacity-50 disabled:cursor-not-allowed'
+        )}
       >
-        <RefreshIcon 
-          fontSize="small"
-          sx={{
-            transform: isChecking ? 'rotate(360deg)' : 'none',
-            transition: 'transform 1s linear',
-          }}
+        <RotateCcw 
+          className={clsx(
+            'h-4 w-4 transition-transform duration-1000',
+            isChecking && 'rotate-360'
+          )} 
         />
-      </IconButton>
-
-      {/* Expand/Collapse Button */}
-      <IconButton
-        size="small"
-        onClick={() => setIsExpanded(!isExpanded)}
-        sx={{ 
-          p: 0.5,
-          color: '#FFFFFF', // White icon for visibility on red background
-          '&:hover': {
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          },
-        }}
-      >
-        {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-      </IconButton>
+      </button>
 
       {/* Expanded Status Details */}
-      <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-        <Paper
-          elevation={2}
-          sx={{
-            position: 'absolute',
-            top: '100%',
-            right: 0,
-            mt: 1,
-            minWidth: 280,
-            zIndex: 1300,
-            bgcolor: 'background.paper',
-          }}
-        >
-          <Box sx={{ p: 2 }}>
+      {isExpanded && (
+        <div className="absolute top-full right-0 mt-2 w-80 z-50 animate-fade-in">
+          <div className="glass-dark rounded-xl border border-gray-700/50 p-4 shadow-2xl">
             {/* Header */}
-            <Typography variant="subtitle2" gutterBottom>
+            <h3 className="text-sm font-semibold text-gray-200 mb-3">
               Service Status
-            </Typography>
+            </h3>
 
             {/* Service List */}
-            <List dense sx={{ mb: 1 }}>
-              <ListItem disablePadding>
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                  <WifiIcon 
-                    fontSize="small" 
-                    color={getStatusColor(status.fastapi_status) as 'success' | 'error' | 'warning'}
-                  />
-                </ListItemIcon>
-                <ListItemText
-                  primary="FastAPI Server"
-                  secondary={getStatusText(status.fastapi_status)}
-                />
+            <div className="space-y-3 mb-4">
+              {/* FastAPI Server */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Wifi className={clsx('h-4 w-4', getStatusColorClasses(status.fastapi_status).split(' ')[0])} />
+                  <div>
+                    <div className="text-sm font-medium text-gray-200">FastAPI Server</div>
+                    <div className="text-xs text-gray-400">{getStatusText(status.fastapi_status)}</div>
+                  </div>
+                </div>
                 {getStatusIcon(status.fastapi_status)}
-              </ListItem>
+              </div>
 
-              <ListItem disablePadding>
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                  <StorageIcon 
-                    fontSize="small" 
-                    color={getStatusColor(status.mcp_status) as 'success' | 'error' | 'warning'}
-                  />
-                </ListItemIcon>
-                <ListItemText
-                  primary="MCP Server"
-                  secondary={getStatusText(status.mcp_status)}
-                />
+              {/* MCP Server */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Database className={clsx('h-4 w-4', getStatusColorClasses(status.mcp_status).split(' ')[0])} />
+                  <div>
+                    <div className="text-sm font-medium text-gray-200">MCP Server</div>
+                    <div className="text-xs text-gray-400">{getStatusText(status.mcp_status)}</div>
+                  </div>
+                </div>
                 {getStatusIcon(status.mcp_status)}
-              </ListItem>
-            </List>
+              </div>
+            </div>
 
             {/* Error Details */}
             {status.error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                <Typography variant="body2">
-                  {status.error}
-                </Typography>
-              </Alert>
+              <div className="bg-red-400/10 border border-red-400/50 rounded-lg p-3 mb-4">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-200">{status.error}</p>
+                </div>
+              </div>
             )}
 
             {/* Footer */}
-            <Typography variant="caption" color="text.secondary">
+            <p className="text-xs text-gray-500">
               Last checked: {formatLastChecked(status.lastChecked)}
-            </Typography>
-          </Box>
-        </Paper>
-      </Collapse>
-    </Box>
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

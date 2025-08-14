@@ -1,21 +1,10 @@
 /**
- * Input component for sending chat messages using Material UI
+ * Input component for sending chat messages with modern styling
  */
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import {
-  Box,
-  TextField,
-  Fab,
-  IconButton,
-  Chip,
-  Typography,
-  InputAdornment,
-} from '@mui/material';
-import {
-  Send as SendIcon,
-  Clear as ClearIcon,
-} from '@mui/icons-material';
+import React, { useState, useRef } from 'react';
+import { Send, X, Sparkles } from 'lucide-react';
+import clsx from 'clsx';
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void;
@@ -33,14 +22,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
   className = ''
 }) => {
   const [message, setMessage] = useState('');
-  const [isExpanded, setIsExpanded] = useState(false);
-  const textFieldRef = useRef<HTMLInputElement>(null);
+  const textFieldRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     if (value.length <= maxLength) {
       setMessage(value);
-      setIsExpanded(value.split('\n').length > 2 || value.length > 100);
     }
   };
 
@@ -51,11 +38,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
     if (trimmedMessage && !disabled) {
       onSendMessage(trimmedMessage);
       setMessage('');
-      setIsExpanded(false);
+      
+      // Reset textarea height
+      if (textFieldRef.current) {
+        textFieldRef.current.style.height = 'auto';
+        textFieldRef.current.style.height = '3rem';
+      }
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Send on Enter (but allow Shift+Enter for new line)
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -65,14 +57,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
     // Handle Escape to clear
     if (e.key === 'Escape') {
       setMessage('');
-      setIsExpanded(false);
+      if (textFieldRef.current) {
+        textFieldRef.current.style.height = 'auto';
+        textFieldRef.current.style.height = '3rem';
+      }
     }
   };
 
   const handleClear = () => {
     setMessage('');
-    setIsExpanded(false);
-    textFieldRef.current?.focus();
+    if (textFieldRef.current) {
+      textFieldRef.current.style.height = 'auto';
+      textFieldRef.current.style.height = '3rem';
+      textFieldRef.current.focus();
+    }
   };
 
   const insertSampleQuery = (query: string) => {
@@ -90,117 +88,124 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const isMessageEmpty = message.trim().length === 0;
 
   return (
-    <Box sx={{ width: '100%' }}>
+    <div className="w-full">
       {/* Sample queries (show when input is empty) */}
       {isMessageEmpty && (
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-            Quick examples:
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-4 w-4 text-primary-400" />
+            <p className="text-sm text-gray-400 font-medium">Quick examples:</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
             {sampleQueries.map((query, index) => (
-              <Chip
+              <button
                 key={index}
-                label={query}
                 onClick={() => insertSampleQuery(query)}
                 disabled={disabled}
-                variant="outlined"
-                size="small"
-                sx={{
-                  cursor: disabled ? 'default' : 'pointer',
-                  '&:hover': {
-                    bgcolor: disabled ? 'transparent' : 'action.hover',
-                  },
-                }}
-              />
+                className={clsx(
+                  'px-3 py-1.5 text-sm rounded-lg border transition-all duration-200',
+                  'glass-dark border-gray-600/50 text-gray-300 hover:text-white',
+                  'hover:border-primary-500/50 hover:bg-primary-500/10',
+                  'focus:outline-none focus:ring-2 focus:ring-primary-500/50',
+                  'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-600/50 disabled:hover:bg-transparent'
+                )}
+              >
+                {query}
+              </button>
             ))}
-          </Box>
-        </Box>
+          </div>
+        </div>
       )}
 
       {/* Input Form */}
-      <Box component="form" onSubmit={handleSubmit} sx={{ position: 'relative' }}>
-        <TextField
-          inputRef={textFieldRef}
-          fullWidth
-          multiline
-          minRows={1}
-          maxRows={6}
-          value={message}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled}
-          variant="outlined"
-          size="small"
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              pr: message ? 12 : 6, // Space for buttons
-              borderRadius: 3,
-            },
-          }}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end" sx={{ alignSelf: 'flex-end', pb: 0.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  {/* Clear button */}
-                  {message && (
-                    <IconButton
-                      size="small"
-                      onClick={handleClear}
-                      disabled={disabled}
-                      title="Clear message (Esc)"
-                      sx={{ p: 0.5 }}
-                    >
-                      <ClearIcon fontSize="small" />
-                    </IconButton>
-                  )}
-                  
-                  {/* Send button */}
-                  <Fab
-                    size="small"
-                    color="primary"
-                    type="submit"
-                    disabled={disabled || isMessageEmpty}
-                    title="Send message (Enter)"
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      minHeight: 32,
-                      boxShadow: 1,
-                      '&:hover': {
-                        boxShadow: 2,
-                      },
-                    }}
-                  >
-                    <SendIcon fontSize="small" />
-                  </Fab>
-                </Box>
-              </InputAdornment>
-            ),
-          }}
-        />
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="relative">
+          <textarea
+            ref={textFieldRef}
+            value={message}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={disabled}
+            rows={1}
+            className={clsx(
+              'w-full resize-none pr-20 py-4 pl-4',
+              'input-glass text-gray-100 placeholder-gray-400',
+              'focus:border-primary-500 focus:ring-1 focus:ring-primary-500',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'min-h-[3rem] max-h-32 overflow-y-auto scrollbar-thin'
+            )}
+            style={{
+              height: 'auto',
+              minHeight: '3rem'
+            }}
+            onInput={(e) => {
+              const target = e.target as HTMLTextAreaElement;
+              target.style.height = 'auto';
+              target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
+            }}
+          />
+          
+          {/* Action Buttons */}
+          <div className="absolute right-2 bottom-2 flex items-center gap-1">
+            {/* Clear button */}
+            {message && (
+              <button
+                type="button"
+                onClick={handleClear}
+                disabled={disabled}
+                title="Clear message (Esc)"
+                className={clsx(
+                  'p-2 rounded-lg transition-all duration-200',
+                  'text-gray-400 hover:text-gray-300 hover:bg-gray-700/50',
+                  'focus:outline-none focus:ring-2 focus:ring-primary-500/50',
+                  'disabled:opacity-50 disabled:cursor-not-allowed'
+                )}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+            
+            {/* Send button */}
+            <button
+              type="submit"
+              disabled={disabled || isMessageEmpty}
+              title="Send message (Enter)"
+              className={clsx(
+                'p-2 rounded-lg transition-all duration-200',
+                'bg-gradient-to-r from-primary-600 to-primary-700',
+                'hover:from-primary-700 hover:to-primary-800',
+                'text-white shadow-lg hover:shadow-glow-red',
+                'focus:outline-none focus:ring-2 focus:ring-primary-500/50',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'disabled:hover:from-primary-600 disabled:hover:to-primary-700',
+                'disabled:hover:shadow-lg'
+              )}
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
 
         {/* Input Footer */}
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            mt: 0.5,
-            px: 1,
-          }}
-        >
-          <Typography variant="caption" color="text.secondary">
+        <div className="flex justify-between items-center mt-2 px-1">
+          <span className={clsx(
+            'text-xs',
+            message.length > maxLength * 0.9 
+              ? 'text-yellow-400' 
+              : message.length > maxLength * 0.8 
+              ? 'text-orange-400' 
+              : 'text-gray-500'
+          )}>
             {message.length}/{maxLength}
-          </Typography>
+          </span>
           
-          <Typography variant="caption" color="text.secondary">
+          <span className="text-xs text-gray-500">
             Press Enter to send, Shift+Enter for new line
-          </Typography>
-        </Box>
-      </Box>
-    </Box>
+          </span>
+        </div>
+      </form>
+    </div>
   );
 };
 

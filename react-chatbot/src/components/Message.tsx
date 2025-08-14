@@ -1,27 +1,12 @@
 /**
- * Individual message component using Material UI
+ * Individual message component with glassmorphism effects
  */
 
 import React from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Avatar,
-  IconButton,
-  Chip,
-  Alert,
-  CircularProgress,
-} from '@mui/material';
-import {
-  Person as PersonIcon,
-  SmartToy as BotIcon,
-  ContentCopy as CopyIcon,
-  Schedule as TimeIcon,
-} from '@mui/icons-material';
+import { User, Bot, Copy, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import { ChatMessage } from '../types/chat.types';
 import QueryResults from './QueryResults';
+import clsx from 'clsx';
 
 interface MessageProps {
   message: ChatMessage;
@@ -48,24 +33,19 @@ const Message: React.FC<MessageProps> = ({ message, className = '' }) => {
         const codeContent = codeLines.join('\n');
         
         return (
-          <Box
+          <div
             key={index}
-            component="pre"
-            sx={{
-              backgroundColor: '#000000', // Pure black background
-              color: '#FFFFFF', // White text
-              p: 2,
-              borderRadius: 1,
-              my: 1,
-              overflow: 'auto',
-              fontFamily: 'monospace',
-              fontSize: '0.875rem',
-              border: '1px solid',
-              borderColor: '#424242', // Dark gray border
-            }}
+            className="bg-gray-950 border border-gray-800 rounded-lg p-4 my-3 overflow-auto font-mono text-sm"
           >
-            <code>{codeContent}</code>
-          </Box>
+            {language && (
+              <div className="text-xs text-gray-400 mb-2 font-sans uppercase tracking-wide">
+                {language}
+              </div>
+            )}
+            <pre className="text-gray-100 overflow-auto">
+              <code>{codeContent}</code>
+            </pre>
+          </div>
         );
       } else {
         // Regular text - preserve line breaks
@@ -96,120 +76,87 @@ const Message: React.FC<MessageProps> = ({ message, className = '' }) => {
   const isUser = message.role === 'user';
   
   return (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        flexDirection: 'column',
-        alignItems: isUser ? 'flex-end' : 'flex-start',
-        mb: 3,
-        mx: 2,
-        maxWidth: '100%'
-      }}
-    >
+    <div className={clsx(
+      'group flex flex-col mb-6 px-4 animate-fade-in',
+      isUser ? 'items-end' : 'items-start'
+    )}>
       {/* Message Header */}
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 1, 
-          mb: 0.5,
-          opacity: 0,
-          transition: 'opacity 0.2s',
-          '&:hover': { opacity: 1 },
-          '.message-container:hover &': { opacity: 1 }
-        }}
-      >
-        <Chip
-          icon={<TimeIcon fontSize="small" />}
-          label={formatTimestamp(message.timestamp)}
-          size="small"
-          variant="outlined"
-          sx={{ fontSize: '0.75rem', height: '24px' }}
-        />
-        <IconButton
-          size="small"
+      <div className={clsx(
+        'flex items-center gap-2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200',
+        isUser ? 'flex-row-reverse' : 'flex-row'
+      )}>
+        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gray-800/50 text-xs text-gray-400">
+          <Clock className="h-3 w-3" />
+          <span>{formatTimestamp(message.timestamp)}</span>
+        </div>
+        <button
           onClick={() => copyToClipboard(message.content)}
           title="Copy message"
-          sx={{ p: 0.5 }}
+          className="p-1.5 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors text-gray-400 hover:text-gray-300"
         >
-          <CopyIcon fontSize="small" />
-        </IconButton>
-      </Box>
+          <Copy className="h-3 w-3" />
+        </button>
+      </div>
       
       {/* Message Content */}
-      <Box
-        className="message-container"
-        sx={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: 1,
-          maxWidth: '70%',
-          minWidth: '200px',
-          flexDirection: isUser ? 'row-reverse' : 'row',
-        }}
-      >
+      <div className={clsx(
+        'flex items-start gap-3 max-w-4xl',
+        isUser ? 'flex-row-reverse' : 'flex-row'
+      )}>
         {/* Avatar */}
-        <Avatar
-          sx={{
-            bgcolor: isUser ? 'primary.main' : 'secondary.main',
-            width: 32,
-            height: 32,
-            fontSize: '0.875rem',
-            flexShrink: 0,
-          }}
-        >
-          {isUser ? <PersonIcon fontSize="small" /> : <BotIcon fontSize="small" />}
-        </Avatar>
+        <div className={clsx(
+          'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
+          isUser 
+            ? 'bg-gradient-to-r from-primary-600 to-primary-700' 
+            : 'bg-gradient-to-r from-gray-600 to-gray-700'
+        )}>
+          {isUser ? (
+            <User className="h-4 w-4 text-white" />
+          ) : (
+            <Bot className="h-4 w-4 text-white" />
+          )}
+        </div>
 
-        {/* Message Card */}
-        <Card
-          elevation={1}
-          sx={{
-            flex: 1,
-            bgcolor: isUser ? 'rgba(211, 47, 47, 0.05)' : 'background.paper', // Light red tint for user messages
-            border: 1,
-            borderColor: isUser ? 'primary.main' : 'divider',
-            '&:hover': {
-              elevation: 2,
-            },
-          }}
-        >
-          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-            {message.isLoading ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CircularProgress size={16} />
-                <Typography variant="body2" color="text.secondary">
-                  Thinking...
-                </Typography>
-              </Box>
-            ) : (
-              <>
-                <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
-                  {formatContent(message.content)}
-                </Typography>
-                
-                {/* Show query results if available */}
-                {message.queryResult && (
-                  <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Query Results:
-                    </Typography>
-                    <QueryResults queryResult={message.queryResult} />
-                  </Box>
-                )}
-                
-                {/* Show error if present */}
-                {message.error && (
-                  <Alert severity="error" sx={{ mt: 1 }}>
-                    {message.error}
-                  </Alert>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </Box>
-    </Box>
+        {/* Message Bubble */}
+        <div className={clsx(
+          'message-bubble max-w-3xl min-w-0',
+          isUser ? 'message-bubble-user' : 'message-bubble-assistant'
+        )}>
+          {message.isLoading ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+              <span className="text-sm text-gray-400">Thinking...</span>
+            </div>
+          ) : (
+            <>
+              <div className="text-sm leading-relaxed">
+                {formatContent(message.content)}
+              </div>
+              
+              {/* Show query results if available */}
+              {message.queryResult && (
+                <div className="mt-4 pt-4 border-t border-gray-700/50">
+                  <h4 className="text-sm font-medium text-gray-300 mb-3">
+                    Query Results:
+                  </h4>
+                  <QueryResults queryResult={message.queryResult} />
+                </div>
+              )}
+              
+              {/* Show error if present */}
+              {message.error && (
+                <div className="mt-3 bg-red-400/10 border border-red-400/50 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-200">{message.error}</p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 

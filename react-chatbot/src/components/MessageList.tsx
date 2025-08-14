@@ -1,22 +1,9 @@
 /**
- * Component for displaying the list of chat messages using Material UI
+ * Component for displaying the list of chat messages with modern design
  */
 
 import React, { useEffect, useRef } from 'react';
-import {
-  Box,
-  Container,
-  Typography,
-  Paper,
-  List,
-  ListItem,
-  Avatar,
-  CircularProgress,
-} from '@mui/material';
-import {
-  SmartToy as BotIcon,
-  Chat as ChatIcon,
-} from '@mui/icons-material';
+import { MessageCircle, Bot } from 'lucide-react';
 import { ChatMessage } from '../types/chat.types';
 import Message from './Message';
 
@@ -58,77 +45,53 @@ const MessageList: React.FC<MessageListProps> = ({
 
   if (messages.length === 0) {
     return (
-      <Box
-        sx={{
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: 'background.default',
-        }}
-      >
-        <Container maxWidth="md">
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            {/* Welcome Header */}
-            <Box sx={{ mb: 4 }}>
-              <ChatIcon sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
-              <Typography variant="h3" component="h1" gutterBottom>
-                Welcome to Talk2Tables
-              </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem', mb: 4 }}>
-                Ask me questions about your database or type SQL queries directly.
-              </Typography>
-            </Box>
+      <div className="h-full flex items-center justify-center p-8">
+        <div className="max-w-2xl mx-auto text-center">
+          {/* Welcome Header */}
+          <div className="mb-8">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-700 flex items-center justify-center animate-glow">
+              <MessageCircle className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="text-4xl font-bold text-gradient mb-4">
+              Welcome to Talk2Tables
+            </h1>
+            <p className="text-gray-400 text-lg mb-8">
+              Ask me questions about your database or type SQL queries directly.
+            </p>
+          </div>
 
-            {/* Example Queries */}
-            <Paper 
-              elevation={1}
-              sx={{ 
-                p: 3, 
-                textAlign: 'left', 
-                maxWidth: 600, 
-                mx: 'auto',
-                bgcolor: 'background.paper',
-                border: 1,
-                borderColor: 'divider',
-              }}
-            >
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <BotIcon color="primary" />
-                Try asking:
-              </Typography>
-              <List dense>
-                {[
-                  "Show me all customers",
-                  "What are our top selling products?",
-                  "How many orders were placed last month?",
-                  'Or type SQL directly: "SELECT * FROM customers LIMIT 10"'
-                ].map((example, index) => (
-                  <ListItem key={index} sx={{ py: 0.5, pl: 0 }}>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      • {example}
-                    </Typography>
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
-          </Box>
-        </Container>
-      </Box>
+          {/* Example Queries */}
+          <div className="glass-dark rounded-2xl p-6 text-left max-w-lg mx-auto border border-gray-700/50">
+            <div className="flex items-center gap-2 mb-4">
+              <Bot className="h-5 w-5 text-primary-400" />
+              <h3 className="text-lg font-semibold text-gray-200">Try asking:</h3>
+            </div>
+            <div className="space-y-2">
+              {[
+                "Show me all customers",
+                "What are our top selling products?",
+                "How many orders were placed last month?",
+                'Or type SQL directly: "SELECT * FROM customers LIMIT 10"'
+              ].map((example, index) => (
+                <div key={index} className="flex items-start gap-2">
+                  <span className="text-primary-400 mt-1">•</span>
+                  <p className="text-gray-300 text-sm">{example}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Box
+    <div
       ref={containerRef}
-      sx={{
-        height: '100%',
-        overflow: 'auto',
-        bgcolor: 'background.default',
-      }}
+      className="h-full overflow-auto scrollbar-thin"
       onScroll={handleScroll}
     >
-      <Container maxWidth="md" sx={{ py: 2 }}>
+      <div className="max-w-4xl mx-auto py-4">
         {/* Messages */}
         {messages.map((message) => (
           <Message 
@@ -139,53 +102,30 @@ const MessageList: React.FC<MessageListProps> = ({
         
         {/* Typing indicator */}
         {isTyping && (
-          <Box 
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'flex-start',
-              gap: 1,
-              mb: 3,
-              mx: 2,
-            }}
-          >
+          <div className="flex items-start gap-3 mb-6 px-4 animate-fade-in">
             {/* Bot Avatar */}
-            <Avatar
-              sx={{
-                bgcolor: 'secondary.main',
-                width: 32,
-                height: 32,
-                fontSize: '0.875rem',
-                flexShrink: 0,
-              }}
-            >
-              <BotIcon fontSize="small" />
-            </Avatar>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-gray-600 to-gray-700 flex items-center justify-center flex-shrink-0">
+              <Bot className="h-4 w-4 text-white" />
+            </div>
 
             {/* Typing Content */}
-            <Paper
-              elevation={1}
-              sx={{
-                p: 2,
-                border: 1,
-                borderColor: 'divider',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                bgcolor: 'background.paper',
-              }}
-            >
-              <CircularProgress size={16} color="secondary" />
-              <Typography variant="body2" color="text.secondary">
-                Assistant is typing...
-              </Typography>
-            </Paper>
-          </Box>
+            <div className="message-bubble-assistant max-w-xs">
+              <div className="flex items-center gap-2">
+                <div className="typing-indicator text-gray-400">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <span className="text-sm text-gray-400">Assistant is typing...</span>
+              </div>
+            </div>
+          </div>
         )}
         
         {/* Scroll anchor */}
         <div ref={messagesEndRef} />
-      </Container>
-    </Box>
+      </div>
+    </div>
   );
 };
 

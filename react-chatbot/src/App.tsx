@@ -1,18 +1,11 @@
 import React from 'react';
-import { ThemeProvider, CssBaseline } from '@mui/material';
-import { theme } from './theme';
 import ChatInterface from './components/ChatInterface';
-import '@fontsource/roboto/300.css';
-import '@fontsource/roboto/400.css';
-import '@fontsource/roboto/500.css';
-import '@fontsource/roboto/700.css';
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       <ChatInterface />
-    </ThemeProvider>
+    </div>
   );
 }
 

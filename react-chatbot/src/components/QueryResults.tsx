@@ -1,35 +1,23 @@
 /**
- * Component for displaying database query results using Material UI
+ * Component for displaying database query results with modern table design
  */
 
 import React, { useState, useMemo } from 'react';
 import {
-  Box,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TableSortLabel,
-  TextField,
-  Button,
-  Typography,
-  IconButton,
-  Pagination,
-  Chip,
-  Alert,
-  Toolbar,
-  InputAdornment,
-} from '@mui/material';
-import {
-  Search as SearchIcon,
-  Download as DownloadIcon,
-  ContentCopy as CopyIcon,
-  Schedule as TimeIcon,
-} from '@mui/icons-material';
+  Search,
+  Download,
+  Copy,
+  Clock,
+  AlertCircle,
+  ChevronUp,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-react';
 import { QueryResult } from '../types/chat.types';
+import clsx from 'clsx';
 
 interface QueryResultsProps {
   queryResult: QueryResult;
@@ -103,9 +91,14 @@ const QueryResults: React.FC<QueryResultsProps> = ({
   // Handle empty or error results (after all hooks are defined)
   if (!queryResult.success || !queryResult.data || queryResult.data.length === 0) {
     return (
-      <Alert severity="error" sx={{ mt: 1 }}>
-        {queryResult.error || 'No data returned from query'}
-      </Alert>
+      <div className="bg-red-400/10 border border-red-400/50 rounded-xl p-3 mt-2">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-200">
+            {queryResult.error || 'No data returned from query'}
+          </p>
+        </div>
+      </div>
     );
   }
 
@@ -124,7 +117,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({
     setCurrentPage(1); // Reset to first page when searching
   };
 
-  const handlePageChange = (_: React.ChangeEvent<unknown>, page: number) => {
+  const handlePageChange = (_: React.ChangeEvent<unknown> | null, page: number) => {
     setCurrentPage(page);
   };
 
@@ -169,163 +162,210 @@ const QueryResults: React.FC<QueryResultsProps> = ({
   };
 
   return (
-    <Paper 
-      variant="outlined" 
-      sx={{ 
-        mt: 2,
-        overflow: 'hidden',
-        border: 1,
-        borderColor: 'divider',
-      }}
-    >
+    <div className="table-glass mt-4 border border-gray-700/50 overflow-hidden">
       {/* Header Toolbar */}
-      <Toolbar
-        variant="dense"
-        sx={{
-          bgcolor: 'background.default',
-          borderBottom: 1,
-          borderColor: 'divider',
-          px: 2,
-          py: 1,
-        }}
-      >
-        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+      <div className="bg-gray-800/30 border-b border-gray-700/50 px-4 py-3">
+        <div className="flex items-center justify-between">
           {/* Results Info */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Chip
-              label={`${sortedData.length} rows`}
-              size="small"
-              color="primary"
-              variant="outlined"
-            />
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary-500/20 text-primary-300 text-sm font-medium">
+              <span>{sortedData.length} rows</span>
+            </div>
             {queryResult.execution_time && (
-              <Chip
-                icon={<TimeIcon />}
-                label={`${queryResult.execution_time}ms`}
-                size="small"
-                color="success"
-                variant="outlined"
-              />
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/20 text-green-300 text-sm">
+                <Clock className="h-3 w-3" />
+                <span>{queryResult.execution_time}ms</span>
+              </div>
             )}
-          </Box>
-        </Box>
+          </div>
 
-        {/* Actions */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {/* Search */}
-          <TextField
-            size="small"
-            placeholder="Search results..."
-            value={searchTerm}
-            onChange={handleSearch}
-            sx={{ width: 200 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-          />
+          {/* Actions */}
+          <div className="flex items-center gap-2">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search results..."
+                value={searchTerm}
+                onChange={handleSearch}
+                className="pl-9 pr-3 py-2 w-48 glass-dark border-gray-600/50 rounded-lg text-sm text-gray-100 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+              />
+            </div>
 
-          {/* Copy Button */}
-          <IconButton
-            size="small"
-            onClick={copyToClipboard}
-            title="Copy to clipboard"
-          >
-            <CopyIcon fontSize="small" />
-          </IconButton>
+            {/* Copy Button */}
+            <button
+              onClick={copyToClipboard}
+              title="Copy to clipboard"
+              className="p-2 rounded-lg glass-dark hover:bg-white/20 text-gray-400 hover:text-white transition-colors"
+            >
+              <Copy className="h-4 w-4" />
+            </button>
 
-          {/* Export Button */}
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<DownloadIcon />}
-            onClick={exportToCSV}
-          >
-            CSV
-          </Button>
-        </Box>
-      </Toolbar>
+            {/* Export Button */}
+            <button
+              onClick={exportToCSV}
+              className="flex items-center gap-2 px-3 py-2 btn-secondary text-sm"
+            >
+              <Download className="h-4 w-4" />
+              CSV
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Table */}
-      <TableContainer sx={{ maxHeight: 400 }}>
-        <Table size="small" stickyHeader>
-          <TableHead>
-            <TableRow>
+      <div className="overflow-auto max-h-96 scrollbar-thin">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 bg-gray-800/50 backdrop-blur-sm">
+            <tr className="border-b border-gray-700/50">
               {columns.map(column => (
-                <TableCell
+                <th
                   key={column}
-                  sortDirection={sortColumn === column ? sortDirection : false}
+                  className="text-left px-4 py-3 font-semibold text-gray-200"
                 >
-                  <TableSortLabel
-                    active={sortColumn === column}
-                    direction={sortColumn === column ? sortDirection : 'asc'}
+                  <button
                     onClick={() => handleSort(column)}
-                    sx={{ fontWeight: 600 }}
+                    className="flex items-center gap-1 hover:text-white transition-colors group"
                   >
-                    {column}
-                  </TableSortLabel>
-                </TableCell>
+                    <span>{column}</span>
+                    <div className="flex flex-col">
+                      {sortColumn === column ? (
+                        sortDirection === 'asc' ? (
+                          <ChevronUp className="h-3 w-3 text-primary-400" />
+                        ) : (
+                          <ChevronDown className="h-3 w-3 text-primary-400" />
+                        )
+                      ) : (
+                        <div className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity">
+                          <ChevronUp className="h-3 w-3 absolute" />
+                          <ChevronDown className="h-3 w-3 absolute" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                </th>
               ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
+            </tr>
+          </thead>
+          <tbody>
             {paginatedData.map((row, index) => (
-              <TableRow 
+              <tr 
                 key={index}
-                hover
-                sx={{ '&:nth-of-type(odd)': { bgcolor: 'action.hover' } }}
+                className={clsx(
+                  'border-b border-gray-800/50 hover:bg-gray-700/30 transition-colors',
+                  index % 2 === 0 ? 'bg-gray-800/20' : 'bg-gray-800/10'
+                )}
               >
                 {columns.map(column => (
-                  <TableCell 
+                  <td 
                     key={column}
-                    sx={{
-                      maxWidth: 200,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
+                    className="px-4 py-3 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap text-gray-300"
                     title={String(row[column] ?? '')}
                   >
                     {row[column] ?? ''}
-                  </TableCell>
+                  </td>
                 ))}
-              </TableRow>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+          </tbody>
+        </table>
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            p: 2,
-            borderTop: 1,
-            borderColor: 'divider',
-            bgcolor: 'background.default',
-          }}
-        >
-          <Pagination
-            count={totalPages}
-            page={currentPage}
-            onChange={handlePageChange}
-            color="primary"
-            size="small"
-            showFirstButton
-            showLastButton
-          />
-          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-            Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, sortedData.length)} of {sortedData.length} rows
-          </Typography>
-        </Box>
+        <div className="bg-gray-800/30 border-t border-gray-700/50 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-400">
+              Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, sortedData.length)} of {sortedData.length} rows
+            </p>
+            
+            <div className="flex items-center gap-1">
+              {/* First Page */}
+              <button
+                onClick={() => handlePageChange(null, 1)}
+                disabled={currentPage === 1}
+                className={clsx(
+                  'p-2 rounded-lg transition-colors',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                  'enabled:hover:bg-gray-700/50 text-gray-400 enabled:hover:text-white'
+                )}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </button>
+              
+              {/* Previous Page */}
+              <button
+                onClick={() => handlePageChange(null, currentPage - 1)}
+                disabled={currentPage === 1}
+                className={clsx(
+                  'p-2 rounded-lg transition-colors',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                  'enabled:hover:bg-gray-700/50 text-gray-400 enabled:hover:text-white'
+                )}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              
+              {/* Page Numbers */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(page => {
+                    return Math.abs(page - currentPage) <= 2 || page === 1 || page === totalPages;
+                  })
+                  .map((page, index, array) => {
+                    const showEllipsis = index > 0 && page - array[index - 1] > 1;
+                    return (
+                      <React.Fragment key={page}>
+                        {showEllipsis && (
+                          <span className="px-2 text-gray-500">...</span>
+                        )}
+                        <button
+                          onClick={() => handlePageChange(null, page)}
+                          className={clsx(
+                            'px-3 py-1 rounded-lg text-sm transition-colors',
+                            page === currentPage
+                              ? 'bg-primary-600 text-white'
+                              : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                          )}
+                        >
+                          {page}
+                        </button>
+                      </React.Fragment>
+                    );
+                  })}
+              </div>
+              
+              {/* Next Page */}
+              <button
+                onClick={() => handlePageChange(null, currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={clsx(
+                  'p-2 rounded-lg transition-colors',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                  'enabled:hover:bg-gray-700/50 text-gray-400 enabled:hover:text-white'
+                )}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              
+              {/* Last Page */}
+              <button
+                onClick={() => handlePageChange(null, totalPages)}
+                disabled={currentPage === totalPages}
+                className={clsx(
+                  'p-2 rounded-lg transition-colors',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                  'enabled:hover:bg-gray-700/50 text-gray-400 enabled:hover:text-white'
+                )}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-    </Paper>
+    </div>
   );
 };
 
