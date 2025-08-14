@@ -109,8 +109,8 @@ class RemoteServerManager:
     async def _server_runner(self) -> None:
         """Run the actual MCP server."""
         try:
-            # The run method will block until the server stops
-            self.server.run()
+            # Use the async run method for proper asyncio handling
+            await self.server.run_async()
         except Exception as e:
             logger.error(f"Server runtime error: {e}")
             raise

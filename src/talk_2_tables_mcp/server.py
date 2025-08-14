@@ -244,32 +244,26 @@ class Talk2TablesMCP:
         """
         logger.info(f"Starting {self.config.server_name} server")
         
-        # Prepare server configuration based on transport type
-        run_kwargs = {}
-        
-        if self.config.transport == "stdio":
-            # Default stdio transport (no additional config needed)
-            run_kwargs["transport"] = "stdio"
-            
-        elif self.config.transport == "sse":
-            # Server-Sent Events transport
-            run_kwargs["transport"] = "sse"
-            run_kwargs["host"] = self.config.host
-            run_kwargs["port"] = self.config.port
-            
-        elif self.config.transport == "streamable-http":
-            # Streamable HTTP transport
-            run_kwargs["transport"] = "streamable-http"
-            run_kwargs["host"] = self.config.host
-            run_kwargs["port"] = self.config.port
-            
+        # Configure server settings before running
+        if self.config.transport in ["sse", "streamable-http"]:
+            # Set host and port in server settings
+            if hasattr(self.mcp.settings, 'host'):
+                self.mcp.settings.host = self.config.host
+            if hasattr(self.mcp.settings, 'port'):
+                self.mcp.settings.port = self.config.port
+                
             # Configure stateless mode if enabled
-            if self.config.stateless_http:
+            if self.config.stateless_http and hasattr(self.mcp.settings, 'stateless_http'):
                 self.mcp.settings.stateless_http = True
                 
             # Configure JSON responses if enabled
-            if self.config.json_response:
+            if self.config.json_response and hasattr(self.mcp.settings, 'json_response'):
                 self.mcp.settings.json_response = True
+        
+        # Prepare run arguments
+        run_kwargs = {
+            "transport": self.config.transport
+        }
         
         # Override with any additional kwargs
         run_kwargs.update(kwargs)
@@ -283,6 +277,47 @@ class Talk2TablesMCP:
                 logger.info("Using JSON responses instead of SSE streams")
         
         self.mcp.run(**run_kwargs)
+    
+    async def run_async(self, **kwargs) -> None:
+        """Run the MCP server asynchronously.
+        
+        Args:
+            **kwargs: Additional arguments to pass to FastMCP async methods
+        """
+        logger.info(f"Starting {self.config.server_name} server (async)")
+        
+        # Configure server settings before running
+        if self.config.transport in ["sse", "streamable-http"]:
+            # Set host and port in server settings
+            if hasattr(self.mcp.settings, 'host'):
+                self.mcp.settings.host = self.config.host
+            if hasattr(self.mcp.settings, 'port'):
+                self.mcp.settings.port = self.config.port
+                
+            # Configure stateless mode if enabled
+            if self.config.stateless_http and hasattr(self.mcp.settings, 'stateless_http'):
+                self.mcp.settings.stateless_http = True
+                
+            # Configure JSON responses if enabled
+            if self.config.json_response and hasattr(self.mcp.settings, 'json_response'):
+                self.mcp.settings.json_response = True
+        
+        # Log server startup information
+        if self.config.transport != "stdio":
+            logger.info(f"Server will be accessible at http://{self.config.host}:{self.config.port}")
+            if self.config.stateless_http:
+                logger.info("Running in stateless HTTP mode")
+            if self.config.json_response:
+                logger.info("Using JSON responses instead of SSE streams")
+        
+        # Run appropriate async method based on transport
+        if self.config.transport == "sse":
+            await self.mcp.run_sse_async()
+        elif self.config.transport == "streamable-http":
+            await self.mcp.run_streamable_http_async()
+        else:
+            # For stdio, we need to use the sync version
+            raise ValueError(f"Async mode not supported for transport: {self.config.transport}")
 
 
 def parse_args() -> argparse.Namespace:
