@@ -81,6 +81,8 @@ Read the instructions at `/root/.claude/commands/persist-session.md` to get an u
 ## Development Commands
 
 ### Local Development
+**Always use venv**
+
 ```bash
 # Install in development mode (MCP server + FastAPI dependencies)
 pip install -e ".[dev,fastapi]"

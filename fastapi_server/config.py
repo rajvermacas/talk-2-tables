@@ -26,7 +26,7 @@ class FastAPIServerConfig(BaseSettings):
         description="URL of the MCP server"
     )
     mcp_transport: str = Field(
-        default="http",
+        default="sse",
         description="Transport protocol for MCP connection (stdio or http)"
     )
     
