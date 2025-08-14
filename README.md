@@ -309,7 +309,7 @@ This project is licensed under the MIT License.
 
 
 # Execution Steps
-Run these three commands in separate terminals in .venv:
+Run these three commands in separate terminals in venv:
 1. Start remote mcp server with sse transport prtocol
 python3 -m talk_2_tables_mcp.server --transport sse
 
@@ -317,5 +317,5 @@ python3 -m talk_2_tables_mcp.server --transport sse
 python3 -m fastapi_server.main
 
 3. Start React Frontend (Terminal 3)  
-cd react-chatbot && npm start
+./start-chatbot.sh
 

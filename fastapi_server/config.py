@@ -11,13 +11,30 @@ from pydantic_settings import BaseSettings
 class FastAPIServerConfig(BaseSettings):
     """Configuration for the FastAPI server."""
     
+    # LLM Provider Configuration
+    llm_provider: str = Field(
+        default="openrouter",
+        description="LLM provider to use (openrouter, gemini)"
+    )
+    
     # OpenRouter API Configuration
-    openrouter_api_key: str = Field(
+    openrouter_api_key: Optional[str] = Field(
+        default=None,
         description="OpenRouter API key for LLM access"
     )
     openrouter_model: str = Field(
         default="qwen/qwen3-coder:free",
         description="OpenRouter model to use"
+    )
+    
+    # Google Gemini API Configuration
+    gemini_api_key: Optional[str] = Field(
+        default=None,
+        description="Google Gemini API key for LLM access"
+    )
+    gemini_model: str = Field(
+        default="gemini-pro",
+        description="Google Gemini model to use"
     )
     
     # MCP Server Configuration
@@ -117,12 +134,33 @@ class FastAPIServerConfig(BaseSettings):
             raise ValueError(f"Log level must be one of: {valid_levels}")
         return v.upper()
     
+    @field_validator("llm_provider")
+    @classmethod
+    def validate_llm_provider(cls, v: str) -> str:
+        """Validate LLM provider is supported."""
+        valid_providers = ["openrouter", "gemini"]
+        if v not in valid_providers:
+            raise ValueError(f"LLM provider must be one of: {valid_providers}")
+        return v
+    
     @field_validator("openrouter_api_key")
     @classmethod
-    def validate_api_key(cls, v: str) -> str:
-        """Validate OpenRouter API key is provided."""
-        if not v or v == "your_openrouter_api_key_here":
-            raise ValueError("OpenRouter API key must be provided")
+    def validate_openrouter_api_key(cls, v: Optional[str], info) -> Optional[str]:
+        """Validate OpenRouter API key is provided when using OpenRouter."""
+        provider = info.data.get("llm_provider", "openrouter")
+        if provider == "openrouter":
+            if not v or v == "your_openrouter_api_key_here":
+                raise ValueError("OpenRouter API key must be provided when using openrouter provider")
+        return v
+    
+    @field_validator("gemini_api_key")
+    @classmethod
+    def validate_gemini_api_key(cls, v: Optional[str], info) -> Optional[str]:
+        """Validate Gemini API key is provided when using Gemini."""
+        provider = info.data.get("llm_provider", "openrouter")
+        if provider == "gemini":
+            if not v or v == "your_gemini_api_key_here":
+                raise ValueError("Gemini API key must be provided when using gemini provider")
         return v
     
     @field_validator("max_retries")

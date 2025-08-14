@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from fastapi_server.main import app
 from fastapi_server.models import ChatMessage, ChatCompletionRequest, MessageRole
 from fastapi_server.config import FastAPIServerConfig
-from fastapi_server.openrouter_client import OpenRouterClient
+from fastapi_server.llm_manager import LLMManager
 from fastapi_server.mcp_client import MCPDatabaseClient
 from fastapi_server.chat_handler import ChatCompletionHandler
 
@@ -28,8 +28,11 @@ class TestFastAPIServer:
     def mock_config(self):
         """Mock configuration for testing."""
         with patch('fastapi_server.config.config') as mock_config:
+            mock_config.llm_provider = "openrouter"
             mock_config.openrouter_api_key = "test_key"
             mock_config.openrouter_model = "qwen/qwen3-coder:free"
+            mock_config.gemini_api_key = "test_gemini_key"
+            mock_config.gemini_model = "gemini-pro"
             mock_config.mcp_server_url = "http://localhost:8000"
             mock_config.mcp_transport = "http"
             mock_config.max_tokens = 2000
@@ -45,14 +48,24 @@ class TestFastAPIServer:
         assert data["name"] == "Talk2Tables FastAPI Server"
         assert "endpoints" in data
     
-    def test_models_endpoint(self, client, mock_config):
-        """Test models endpoint."""
-        response = client.get("/models")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["object"] == "list"
-        assert len(data["data"]) == 1
-        assert data["data"][0]["id"] == "qwen/qwen3-coder:free"
+    @pytest.mark.parametrize("provider,expected_model,expected_owner", [
+        ("openrouter", "qwen/qwen3-coder:free", "openrouter"),
+        ("gemini", "gemini-pro", "google")
+    ])
+    def test_models_endpoint(self, client, provider, expected_model, expected_owner):
+        """Test models endpoint with different providers."""
+        with patch('fastapi_server.config.config') as mock_config:
+            mock_config.llm_provider = provider
+            mock_config.openrouter_model = "qwen/qwen3-coder:free"
+            mock_config.gemini_model = "gemini-pro"
+            
+            response = client.get("/models")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["object"] == "list"
+            assert len(data["data"]) == 1
+            assert data["data"][0]["id"] == expected_model
+            assert data["data"][0]["owned_by"] == expected_owner
     
     @patch('fastapi_server.main.chat_handler')
     async def test_health_endpoint(self, mock_chat_handler, client):

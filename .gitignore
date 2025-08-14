@@ -76,5 +76,3 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
-
-.venv/.claude/

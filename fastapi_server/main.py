@@ -31,7 +31,11 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
     logger.info("Starting FastAPI server for Talk2Tables")
-    logger.info(f"Using OpenRouter model: {config.openrouter_model}")
+    logger.info(f"Using LLM provider: {config.llm_provider}")
+    if config.llm_provider == "openrouter":
+        logger.info(f"OpenRouter model: {config.openrouter_model}")
+    elif config.llm_provider == "gemini":
+        logger.info(f"Gemini model: {config.gemini_model}")
     logger.info(f"MCP server URL: {config.mcp_server_url}")
     
     # Test connections on startup
@@ -43,12 +47,13 @@ async def lifespan(app: FastAPI):
         else:
             logger.warning("✗ MCP server connection failed")
         
-        # Test OpenRouter connection
-        openrouter_connected = await chat_handler.openrouter_client.test_connection()
-        if openrouter_connected:
-            logger.info("✓ OpenRouter connection successful")
+        # Test LLM provider connection
+        llm_connected = await chat_handler.llm_client.test_connection()
+        provider_name = config.llm_provider.title()
+        if llm_connected:
+            logger.info(f"✓ {provider_name} connection successful")
         else:
-            logger.warning("✗ OpenRouter connection failed")
+            logger.warning(f"✗ {provider_name} connection failed")
             
     except Exception as e:
         logger.error(f"Error during startup tests: {str(e)}")
@@ -156,16 +161,26 @@ async def create_chat_completion(request: ChatCompletionRequest):
 @app.get("/models")
 async def list_models():
     """List available models (OpenAI-compatible endpoint)."""
+    if config.llm_provider == "openrouter":
+        model_id = config.openrouter_model
+        owned_by = "openrouter"
+    elif config.llm_provider == "gemini":
+        model_id = config.gemini_model
+        owned_by = "google"
+    else:
+        model_id = "unknown"
+        owned_by = "unknown"
+    
     return {
         "object": "list",
         "data": [
             {
-                "id": config.openrouter_model,
+                "id": model_id,
                 "object": "model",
                 "created": int(time.time()),
-                "owned_by": "openrouter",
+                "owned_by": owned_by,
                 "permission": [],
-                "root": config.openrouter_model,
+                "root": model_id,
                 "parent": None
             }
         ]

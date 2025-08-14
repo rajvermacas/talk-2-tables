@@ -12,7 +12,7 @@ from .models import (
     ChatMessage, ChatCompletionRequest, ChatCompletionResponse, 
     MCPQueryResult, MessageRole
 )
-from .openrouter_client import OpenRouterClient
+from .llm_manager import llm_manager
 from .mcp_client import MCPDatabaseClient, mcp_client
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class ChatCompletionHandler:
     
     def __init__(self):
         """Initialize the chat completion handler."""
-        self.openrouter_client = OpenRouterClient()
+        self.llm_client = llm_manager
         self.mcp_client = mcp_client
         
         # SQL query detection patterns
@@ -106,7 +106,7 @@ class ChatCompletionHandler:
                 ]
             
             # Create the completion with MCP context
-            response = await self.openrouter_client.create_completion_with_mcp_context(
+            response = await self.llm_client.create_completion_with_mcp_context(
                 messages=request.messages,
                 mcp_context=mcp_context,
                 model=request.model,
@@ -142,10 +142,14 @@ class ChatCompletionHandler:
             
             # Return error response in OpenAI format
             from .models import Choice
+            
+            # Get the default model name from the LLM manager
+            default_model = self.llm_client._get_model_name()
+            
             error_response = ChatCompletionResponse(
                 id=f"chatcmpl-error-{uuid4()}",
                 created=int(time.time()),
-                model=request.model or "qwen/qwen3-coder:free",
+                model=request.model or default_model,
                 choices=[Choice(
                     index=0,
                     message=ChatMessage(
@@ -270,7 +274,7 @@ class ChatCompletionHandler:
                 )
             ]
             
-            response = await self.openrouter_client.create_chat_completion(
+            response = await self.llm_client.create_chat_completion(
                 messages=messages,
                 max_tokens=200,
                 temperature=0.1  # Low temperature for more deterministic SQL
@@ -360,21 +364,21 @@ class ChatCompletionHandler:
             Test results
         """
         results = {
-            "openrouter_connection": False,
+            "llm_connection": False,
             "mcp_connection": False,
             "integration_test": False,
             "errors": []
         }
         
         try:
-            # Test OpenRouter connection
-            results["openrouter_connection"] = await self.openrouter_client.test_connection()
+            # Test LLM connection
+            results["llm_connection"] = await self.llm_client.test_connection()
             
             # Test MCP connection
             results["mcp_connection"] = await self.mcp_client.test_connection()
             
             # Test full integration
-            if results["openrouter_connection"] and results["mcp_connection"]:
+            if results["llm_connection"] and results["mcp_connection"]:
                 test_request = ChatCompletionRequest(
                     messages=[
                         ChatMessage(
