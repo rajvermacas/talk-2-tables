@@ -305,7 +305,14 @@ class ChatCompletionHandler:
             for table_name, table_info in metadata["tables"].items():
                 prompt_parts.append(f"- {table_name}")
                 if "columns" in table_info:
-                    columns = list(table_info["columns"].keys())
+                    columns_data = table_info["columns"]
+                    if isinstance(columns_data, dict):
+                        columns = list(columns_data.keys())
+                    elif isinstance(columns_data, list):
+                        # Ensure all items in the list are strings
+                        columns = [str(col) for col in columns_data]
+                    else:
+                        columns = []
                     prompt_parts.append(f"  Columns: {', '.join(columns)}")
         
         prompt_parts.extend([

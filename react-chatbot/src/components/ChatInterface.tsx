@@ -1,14 +1,28 @@
 /**
- * Main chat interface component
+ * Main chat interface component using Material UI
  */
 
-import React, { useState } from 'react';
+import React from 'react';
+import {
+  Box,
+  AppBar,
+  Toolbar,
+  Typography,
+  IconButton,
+  Container,
+  Paper,
+  Alert,
+  AlertTitle,
+} from '@mui/material';
+import {
+  Refresh as RefreshIcon,
+  Clear as ClearIcon,
+} from '@mui/icons-material';
 import { useChat } from '../hooks/useChat';
 import { useConnectionStatus } from '../hooks/useConnectionStatus';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import ConnectionStatus from './ConnectionStatus';
-import styles from '../styles/Chat.module.css';
 
 interface ChatInterfaceProps {
   className?: string;
@@ -54,102 +68,95 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) => {
     retryLastMessage();
   };
 
-  const getConnectionIndicator = () => {
-    if (!connectionStatus.isConnected) {
-      return (
-        <div className={styles.connectionWarning}>
-          <span className={styles.warningIcon}>⚠️</span>
-          <span>Connection issues detected. Some features may not work properly.</span>
-          <button onClick={checkStatus} className={styles.retryConnection}>
-            Retry Connection
-          </button>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
-    <div className={`${styles.chatInterface} ${className}`}>
-      {/* Header */}
-      <div className={styles.chatHeader}>
-        <div className={styles.headerTitle}>
-          <h1>{process.env.REACT_APP_CHAT_TITLE || 'Talk2Tables Chat'}</h1>
-          <p>Ask questions about your database or type SQL queries directly</p>
-        </div>
-        
-        <div className={styles.headerActions}>
+    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* App Bar Header */}
+      <AppBar position="static" elevation={2}>
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            {process.env.REACT_APP_CHAT_TITLE || 'Talk2Tables'}
+          </Typography>
+          
           <ConnectionStatus
             status={connectionStatus}
             onRefresh={checkStatus}
             isChecking={!isMonitoring}
-            className={styles.headerConnectionStatus}
           />
           
-          <button
+          <IconButton
+            color="inherit"
             onClick={handleClearChat}
-            className={styles.clearChatButton}
             disabled={messages.length === 0}
             title="Clear chat history"
+            sx={{ ml: 1 }}
           >
-            🗑️ Clear
-          </button>
-        </div>
-      </div>
+            <ClearIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
 
-      {/* Connection warning */}
-      {getConnectionIndicator()}
+      {/* Connection Warning */}
+      {!connectionStatus.isConnected && (
+        <Alert severity="warning" sx={{ borderRadius: 0 }}>
+          <AlertTitle>Connection Issues</AlertTitle>
+          Some features may not work properly.
+          <IconButton
+            size="small"
+            onClick={checkStatus}
+            sx={{ ml: 1 }}
+            title="Retry Connection"
+          >
+            <RefreshIcon fontSize="small" />
+          </IconButton>
+        </Alert>
+      )}
 
-      {/* Main chat area */}
-      <div className={styles.chatMain}>
-        {/* Messages */}
-        <div className={styles.chatMessages}>
+      {/* Main Chat Area */}
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Messages Container */}
+        <Box sx={{ flex: 1, overflow: 'hidden' }}>
           <MessageList 
             messages={messages}
             isTyping={isTyping}
-            className={styles.mainMessageList}
           />
-        </div>
+        </Box>
 
-        {/* Error handling */}
+        {/* Error Display */}
         {error && (
-          <div className={styles.chatError}>
-            <div className={styles.errorContent}>
-              <span className={styles.errorIcon}>❌</span>
-              <span className={styles.errorMessage}>{error}</span>
-              <button onClick={handleRetry} className={styles.retryButton}>
-                Retry
-              </button>
-            </div>
-          </div>
+          <Alert 
+            severity="error" 
+            action={
+              <IconButton
+                color="inherit"
+                size="small"
+                onClick={handleRetry}
+              >
+                <RefreshIcon />
+              </IconButton>
+            }
+            sx={{ mx: 2, mb: 1, borderRadius: 2 }}
+          >
+            {error}
+          </Alert>
         )}
 
-        {/* Input area */}
-        <div className={styles.chatInput}>
-          <MessageInput
-            onSendMessage={handleSendMessage}
-            disabled={isLoading || !connectionStatus.isConnected}
-            placeholder={
-              !connectionStatus.isConnected 
-                ? "Connecting to server..." 
-                : "Ask about your database or type SQL..."
-            }
-            maxLength={parseInt(process.env.REACT_APP_MAX_MESSAGE_LENGTH || '5000')}
-            className={styles.mainMessageInput}
-          />
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className={styles.chatFooter}>
-        <div className={styles.footerInfo}>
-          <span>Connected to: {process.env.REACT_APP_API_BASE_URL}</span>
-          {messages.length > 0 && (
-            <span>Messages: {messages.length}</span>
-          )}
-        </div>
-      </div>
-    </div>
+        {/* Input Area */}
+        <Paper elevation={3} sx={{ borderRadius: 0 }}>
+          <Container maxWidth="md" sx={{ py: 2 }}>
+            <MessageInput
+              onSendMessage={handleSendMessage}
+              disabled={isLoading || !connectionStatus.isConnected}
+              placeholder={
+                !connectionStatus.isConnected 
+                  ? "Connecting to server..." 
+                  : "Ask about your database or type SQL..."
+              }
+              maxLength={parseInt(process.env.REACT_APP_MAX_MESSAGE_LENGTH || '5000')}
+            />
+          </Container>
+        </Paper>
+      </Box>
+    </Box>
   );
 };
 

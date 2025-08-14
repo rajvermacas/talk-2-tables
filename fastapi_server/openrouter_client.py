@@ -287,7 +287,14 @@ class OpenRouterClient:
                 for table_name, table_info in metadata["tables"].items():
                     context_parts.append(f"- {table_name}:")
                     if "columns" in table_info:
-                        columns = ", ".join(table_info["columns"].keys())
+                        columns_data = table_info["columns"]
+                        if isinstance(columns_data, dict):
+                            columns = ", ".join(columns_data.keys())
+                        elif isinstance(columns_data, list):
+                            # Ensure all items in the list are strings
+                            columns = ", ".join([str(col) for col in columns_data])
+                        else:
+                            columns = "Unknown"
                         context_parts.append(f"  Columns: {columns}")
                     if "row_count" in table_info:
                         context_parts.append(f"  Rows: {table_info['row_count']}")
@@ -298,7 +305,8 @@ class OpenRouterClient:
                 context_parts.append(f"Query returned {len(results['data'])} rows:")
                 # Include first few rows as examples
                 for i, row in enumerate(results["data"][:3]):
-                    context_parts.append(f"Row {i+1}: {row}")
+                    row_str = str(row) if not isinstance(row, dict) else ", ".join([f"{k}: {v}" for k, v in row.items()])
+                    context_parts.append(f"Row {i+1}: {row_str}")
                 if len(results["data"]) > 3:
                     context_parts.append(f"... and {len(results['data']) - 3} more rows")
         

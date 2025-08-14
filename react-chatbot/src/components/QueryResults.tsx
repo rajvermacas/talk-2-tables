@@ -1,8 +1,34 @@
 /**
- * Component for displaying database query results in a table format
+ * Component for displaying database query results using Material UI
  */
 
 import React, { useState, useMemo } from 'react';
+import {
+  Box,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TableSortLabel,
+  TextField,
+  Button,
+  Typography,
+  IconButton,
+  Pagination,
+  Chip,
+  Alert,
+  Toolbar,
+  InputAdornment,
+} from '@mui/material';
+import {
+  Search as SearchIcon,
+  Download as DownloadIcon,
+  ContentCopy as CopyIcon,
+  Schedule as TimeIcon,
+} from '@mui/icons-material';
 import { QueryResult } from '../types/chat.types';
 
 interface QueryResultsProps {
@@ -77,11 +103,9 @@ const QueryResults: React.FC<QueryResultsProps> = ({
   // Handle empty or error results (after all hooks are defined)
   if (!queryResult.success || !queryResult.data || queryResult.data.length === 0) {
     return (
-      <div className={`query-results error ${className}`}>
-        <div className="error-message">
-          {queryResult.error || 'No data returned from query'}
-        </div>
-      </div>
+      <Alert severity="error" sx={{ mt: 1 }}>
+        {queryResult.error || 'No data returned from query'}
+      </Alert>
     );
   }
 
@@ -100,7 +124,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({
     setCurrentPage(1); // Reset to first page when searching
   };
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = (_: React.ChangeEvent<unknown>, page: number) => {
     setCurrentPage(page);
   };
 
@@ -138,7 +162,6 @@ const QueryResults: React.FC<QueryResultsProps> = ({
       ].join('\n');
 
       await navigator.clipboard.writeText(textContent);
-      // You might want to show a toast notification here
       console.log('Results copied to clipboard');
     } catch (err) {
       console.error('Failed to copy to clipboard:', err);
@@ -146,98 +169,163 @@ const QueryResults: React.FC<QueryResultsProps> = ({
   };
 
   return (
-    <div className={`query-results ${className}`}>
-      {/* Header with search and actions */}
-      <div className="results-header">
-        <div className="results-info">
-          <span className="results-count">
-            {sortedData.length} of {data.length} rows
+    <Paper 
+      variant="outlined" 
+      sx={{ 
+        mt: 2,
+        overflow: 'hidden',
+        border: 1,
+        borderColor: 'divider',
+      }}
+    >
+      {/* Header Toolbar */}
+      <Toolbar
+        variant="dense"
+        sx={{
+          bgcolor: 'background.default',
+          borderBottom: 1,
+          borderColor: 'divider',
+          px: 2,
+          py: 1,
+        }}
+      >
+        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+          {/* Results Info */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Chip
+              label={`${sortedData.length} rows`}
+              size="small"
+              color="primary"
+              variant="outlined"
+            />
             {queryResult.execution_time && (
-              <span className="execution-time">
-                ({queryResult.execution_time}ms)
-              </span>
+              <Chip
+                icon={<TimeIcon />}
+                label={`${queryResult.execution_time}ms`}
+                size="small"
+                color="success"
+                variant="outlined"
+              />
             )}
-          </span>
-        </div>
-        
-        <div className="results-actions">
-          <input
-            type="text"
+          </Box>
+        </Box>
+
+        {/* Actions */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {/* Search */}
+          <TextField
+            size="small"
             placeholder="Search results..."
             value={searchTerm}
             onChange={handleSearch}
-            className="search-input"
+            sx={{ width: 200 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
           />
-          <button onClick={copyToClipboard} className="action-button">
-            Copy
-          </button>
-          <button onClick={exportToCSV} className="action-button">
-            Export CSV
-          </button>
-        </div>
-      </div>
+
+          {/* Copy Button */}
+          <IconButton
+            size="small"
+            onClick={copyToClipboard}
+            title="Copy to clipboard"
+          >
+            <CopyIcon fontSize="small" />
+          </IconButton>
+
+          {/* Export Button */}
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<DownloadIcon />}
+            onClick={exportToCSV}
+          >
+            CSV
+          </Button>
+        </Box>
+      </Toolbar>
 
       {/* Table */}
-      <div className="table-container">
-        <table className="results-table">
-          <thead>
-            <tr>
+      <TableContainer sx={{ maxHeight: 400 }}>
+        <Table size="small" stickyHeader>
+          <TableHead>
+            <TableRow>
               {columns.map(column => (
-                <th 
+                <TableCell
                   key={column}
-                  onClick={() => handleSort(column)}
-                  className={`sortable ${sortColumn === column ? `sorted-${sortDirection}` : ''}`}
+                  sortDirection={sortColumn === column ? sortDirection : false}
                 >
-                  {column}
-                  <span className="sort-indicator">
-                    {sortColumn === column 
-                      ? (sortDirection === 'asc' ? ' ↑' : ' ↓')
-                      : ' ↕'
-                    }
-                  </span>
-                </th>
+                  <TableSortLabel
+                    active={sortColumn === column}
+                    direction={sortColumn === column ? sortDirection : 'asc'}
+                    onClick={() => handleSort(column)}
+                    sx={{ fontWeight: 600 }}
+                  >
+                    {column}
+                  </TableSortLabel>
+                </TableCell>
               ))}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {paginatedData.map((row, index) => (
-              <tr key={index}>
+              <TableRow 
+                key={index}
+                hover
+                sx={{ '&:nth-of-type(odd)': { bgcolor: 'action.hover' } }}
+              >
                 {columns.map(column => (
-                  <td key={column} title={String(row[column] ?? '')}>
+                  <TableCell 
+                    key={column}
+                    sx={{
+                      maxWidth: 200,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                    title={String(row[column] ?? '')}
+                  >
                     {row[column] ?? ''}
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="pagination">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="page-button"
-          >
-            Previous
-          </button>
-          
-          <span className="page-info">
-            Page {currentPage} of {totalPages}
-          </span>
-          
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="page-button"
-          >
-            Next
-          </button>
-        </div>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            p: 2,
+            borderTop: 1,
+            borderColor: 'divider',
+            bgcolor: 'background.default',
+          }}
+        >
+          <Pagination
+            count={totalPages}
+            page={currentPage}
+            onChange={handlePageChange}
+            color="primary"
+            size="small"
+            showFirstButton
+            showLastButton
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+            Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, sortedData.length)} of {sortedData.length} rows
+          </Typography>
+        </Box>
       )}
-    </div>
+    </Paper>
   );
 };
 

@@ -1,113 +1,37 @@
-/* CSS Custom Properties for Theme */
-:root {
-  --primary-gradient: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%);
-  --secondary-gradient: linear-gradient(135deg, #EC4899 0%, #F59E0B 100%);
-  --glass-bg: rgba(255, 255, 255, 0.25);
-  --glass-border: rgba(255, 255, 255, 0.18);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-  --text-primary: rgba(255, 255, 255, 0.87);
-  --text-secondary: rgba(255, 255, 255, 0.6);
-  --backdrop-blur: blur(20px);
-  
-  /* Fallback colors for browsers that don't support backdrop-filter */
-  --fallback-bg: rgba(255, 255, 255, 0.95);
-  --fallback-border: rgba(255, 255, 255, 0.3);
+/* 
+ * Minimal CSS for Material UI app
+ * Most styling is handled by Material UI theme
+ */
+
+/* Ensure smooth scrolling */
+html {
+  scroll-behavior: smooth;
 }
 
-/* Global App Styles with Animated Gradient Background */
-.App {
-  height: 100vh;
-  width: 100vw;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #f5576c, #4facfe, #00f2fe);
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  position: relative;
-  overflow: hidden;
-  
-  /* Performance optimizations */
-  contain: layout style paint;
-  will-change: background-position;
-}
-
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.main-chat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Global CSS Reset */
-* {
-  box-sizing: border-box;
-}
-
+/* Remove default margin and ensure full height */
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
+}
+
+/* Root app container */
+#root {
+  height: 100vh;
   overflow: hidden;
 }
 
-/* Modern Scrollbar Styling */
-::-webkit-scrollbar {
-  width: 12px;
+/* Code syntax highlighting for message content */
+pre code {
+  display: block;
+  overflow-x: auto;
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+/* Ensure proper text selection styling */
+::selection {
+  background-color: rgba(25, 118, 210, 0.3);
 }
 
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
-  border-radius: 10px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.2));
-}
-
-/* Add floating particles animation */
-.App::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: 
-    radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
-  animation: floatingParticles 20s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes floatingParticles {
-  0%, 100% { 
-    transform: translateY(0px) rotate(0deg); 
-    opacity: 1;
-  }
-  50% { 
-    transform: translateY(-20px) rotate(180deg); 
-    opacity: 0.8;
-  }
+::-moz-selection {
+  background-color: rgba(25, 118, 210, 0.3);
 }

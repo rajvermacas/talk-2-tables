@@ -255,6 +255,11 @@ class MCPDatabaseClient:
             else:
                 metadata = result.contents
             
+            # Ensure metadata is a dict, not a list
+            if isinstance(metadata, list):
+                logger.warning("Metadata returned as list, converting to empty dict structure")
+                metadata = {"tables": {}}
+            
             logger.info("Successfully retrieved database metadata")
             return metadata
             

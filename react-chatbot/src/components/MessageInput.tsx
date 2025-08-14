@@ -1,8 +1,21 @@
 /**
- * Input component for sending chat messages
+ * Input component for sending chat messages using Material UI
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import {
+  Box,
+  TextField,
+  Fab,
+  IconButton,
+  Chip,
+  Typography,
+  InputAdornment,
+} from '@mui/material';
+import {
+  Send as SendIcon,
+  Clear as ClearIcon,
+} from '@mui/icons-material';
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void;
@@ -21,31 +34,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
 }) => {
   const [message, setMessage] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const textFieldRef = useRef<HTMLInputElement>(null);
 
-  // Auto-resize textarea based on content
-  const adjustTextareaHeight = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      const scrollHeight = textarea.scrollHeight;
-      const maxHeight = 200; // Maximum height in pixels
-      textarea.style.height = Math.min(scrollHeight, maxHeight) + 'px';
-      
-      // Expand chat input area if content is substantial
-      setIsExpanded(scrollHeight > 60);
-    }
-  }, []);
-
-  // Adjust height when message changes
-  useEffect(() => {
-    adjustTextareaHeight();
-  }, [message, adjustTextareaHeight]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (value.length <= maxLength) {
       setMessage(value);
+      setIsExpanded(value.split('\n').length > 2 || value.length > 100);
     }
   };
 
@@ -60,7 +55,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     // Send on Enter (but allow Shift+Enter for new line)
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -77,89 +72,135 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const handleClear = () => {
     setMessage('');
     setIsExpanded(false);
-    textareaRef.current?.focus();
+    textFieldRef.current?.focus();
   };
 
   const insertSampleQuery = (query: string) => {
     setMessage(query);
-    textareaRef.current?.focus();
+    textFieldRef.current?.focus();
   };
 
   const sampleQueries = [
     "SELECT * FROM customers LIMIT 10",
-    "Show me the top 5 products by sales",
-    "How many orders were placed this month?",
-    "What customers have spent the most money?"
+    "Show top 5 products by sales",
+    "How many orders this month?",
+    "Who are the highest spenders?"
   ];
 
+  const isMessageEmpty = message.trim().length === 0;
+
   return (
-    <div className={`message-input-container ${isExpanded ? 'expanded' : ''} ${className}`}>
+    <Box sx={{ width: '100%' }}>
       {/* Sample queries (show when input is empty) */}
-      {message === '' && (
-        <div className="sample-queries">
-          <span className="sample-label">Quick examples:</span>
-          {sampleQueries.map((query, index) => (
-            <button
-              key={index}
-              onClick={() => insertSampleQuery(query)}
-              className="sample-query-button"
-              disabled={disabled}
-            >
-              {query}
-            </button>
-          ))}
-        </div>
+      {isMessageEmpty && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+            Quick examples:
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {sampleQueries.map((query, index) => (
+              <Chip
+                key={index}
+                label={query}
+                onClick={() => insertSampleQuery(query)}
+                disabled={disabled}
+                variant="outlined"
+                size="small"
+                sx={{
+                  cursor: disabled ? 'default' : 'pointer',
+                  '&:hover': {
+                    bgcolor: disabled ? 'transparent' : 'action.hover',
+                  },
+                }}
+              />
+            ))}
+          </Box>
+        </Box>
       )}
 
-      <form onSubmit={handleSubmit} className="message-form">
-        <div className="input-group">
-          <textarea
-            ref={textareaRef}
-            value={message}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            disabled={disabled}
-            className="message-textarea"
-            rows={1}
-            autoFocus
-          />
-          
-          <div className="input-actions">
-            {message && (
-              <button
-                type="button"
-                onClick={handleClear}
-                className="clear-button"
-                disabled={disabled}
-                title="Clear message (Esc)"
-              >
-                ✕
-              </button>
-            )}
-            
-            <button
-              type="submit"
-              disabled={disabled || !message.trim()}
-              className="send-button"
-              title="Send message (Enter)"
-            >
-              {disabled ? '⏳' : '➤'}
-            </button>
-          </div>
-        </div>
+      {/* Input Form */}
+      <Box component="form" onSubmit={handleSubmit} sx={{ position: 'relative' }}>
+        <TextField
+          inputRef={textFieldRef}
+          fullWidth
+          multiline
+          minRows={1}
+          maxRows={6}
+          value={message}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          disabled={disabled}
+          variant="outlined"
+          size="small"
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              pr: message ? 12 : 6, // Space for buttons
+              borderRadius: 3,
+            },
+          }}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end" sx={{ alignSelf: 'flex-end', pb: 0.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  {/* Clear button */}
+                  {message && (
+                    <IconButton
+                      size="small"
+                      onClick={handleClear}
+                      disabled={disabled}
+                      title="Clear message (Esc)"
+                      sx={{ p: 0.5 }}
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  )}
+                  
+                  {/* Send button */}
+                  <Fab
+                    size="small"
+                    color="primary"
+                    type="submit"
+                    disabled={disabled || isMessageEmpty}
+                    title="Send message (Enter)"
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      minHeight: 32,
+                      boxShadow: 1,
+                      '&:hover': {
+                        boxShadow: 2,
+                      },
+                    }}
+                  >
+                    <SendIcon fontSize="small" />
+                  </Fab>
+                </Box>
+              </InputAdornment>
+            ),
+          }}
+        />
 
-        <div className="input-footer">
-          <span className="character-count">
+        {/* Input Footer */}
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            mt: 0.5,
+            px: 1,
+          }}
+        >
+          <Typography variant="caption" color="text.secondary">
             {message.length}/{maxLength}
-          </span>
+          </Typography>
           
-          <span className="input-hint">
+          <Typography variant="caption" color="text.secondary">
             Press Enter to send, Shift+Enter for new line
-          </span>
-        </div>
-      </form>
-    </div>
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

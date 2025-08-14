@@ -1,8 +1,31 @@
 /**
- * Component for displaying connection status to backend services
+ * Component for displaying connection status using Material UI
  */
 
 import React, { useState } from 'react';
+import {
+  Box,
+  Chip,
+  IconButton,
+  Collapse,
+  Paper,
+  Typography,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Alert,
+} from '@mui/material';
+import {
+  CheckCircle as ConnectedIcon,
+  Error as ErrorIcon,
+  Warning as WarningIcon,
+  Refresh as RefreshIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Wifi as WifiIcon,
+  Storage as StorageIcon,
+} from '@mui/icons-material';
 import { ConnectionStatus as ConnectionStatusType } from '../types/chat.types';
 
 interface ConnectionStatusProps {
@@ -23,13 +46,13 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   const getStatusIcon = (connectionStatus: 'connected' | 'disconnected' | 'error') => {
     switch (connectionStatus) {
       case 'connected':
-        return '🟢';
+        return <ConnectedIcon fontSize="small" />;
       case 'disconnected':
-        return '🔴';
+        return <ErrorIcon fontSize="small" />;
       case 'error':
-        return '🟡';
+        return <WarningIcon fontSize="small" />;
       default:
-        return '⚪';
+        return <WarningIcon fontSize="small" />;
     }
   };
 
@@ -43,6 +66,19 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         return 'Error';
       default:
         return 'Unknown';
+    }
+  };
+
+  const getStatusColor = (connectionStatus: 'connected' | 'disconnected' | 'error') => {
+    switch (connectionStatus) {
+      case 'connected':
+        return 'success';
+      case 'disconnected':
+        return 'error';
+      case 'error':
+        return 'warning';
+      default:
+        return 'default';
     }
   };
 
@@ -61,71 +97,122 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   };
 
   const overallStatus = status.isConnected ? 'connected' : 'error';
+  const overallColor = getStatusColor(overallStatus);
 
   return (
-    <div className={`connection-status ${overallStatus} ${className}`}>
-      <div className="status-summary" onClick={() => setIsExpanded(!isExpanded)}>
-        <span className="status-icon">
-          {getStatusIcon(overallStatus)}
-        </span>
-        <span className="status-text">
-          {status.isConnected ? 'All Systems Operational' : 'Connection Issues'}
-        </span>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRefresh();
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      {/* Main Status Chip */}
+      <Chip
+        icon={getStatusIcon(overallStatus)}
+        label={status.isConnected ? 'Connected' : 'Offline'}
+        color={overallColor as 'success' | 'error' | 'warning' | 'default'}
+        size="small"
+        variant="outlined"
+        onClick={() => setIsExpanded(!isExpanded)}
+        sx={{
+          cursor: 'pointer',
+          '& .MuiChip-label': {
+            px: 1,
+          },
+        }}
+      />
+
+      {/* Refresh Button */}
+      <IconButton
+        size="small"
+        onClick={onRefresh}
+        disabled={isChecking}
+        title="Refresh connection status"
+        color="inherit"
+        sx={{ p: 0.5 }}
+      >
+        <RefreshIcon 
+          fontSize="small"
+          sx={{
+            transform: isChecking ? 'rotate(360deg)' : 'none',
+            transition: 'transform 1s linear',
           }}
-          disabled={isChecking}
-          className="refresh-button"
-          title="Refresh connection status"
+        />
+      </IconButton>
+
+      {/* Expand/Collapse Button */}
+      <IconButton
+        size="small"
+        onClick={() => setIsExpanded(!isExpanded)}
+        color="inherit"
+        sx={{ p: 0.5 }}
+      >
+        {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+      </IconButton>
+
+      {/* Expanded Status Details */}
+      <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+        <Paper
+          elevation={2}
+          sx={{
+            position: 'absolute',
+            top: '100%',
+            right: 0,
+            mt: 1,
+            minWidth: 280,
+            zIndex: 1300,
+            bgcolor: 'background.paper',
+          }}
         >
-          {isChecking ? '⟳' : '🔄'}
-        </button>
-        <span className="expand-icon">
-          {isExpanded ? '▼' : '▶'}
-        </span>
-      </div>
+          <Box sx={{ p: 2 }}>
+            {/* Header */}
+            <Typography variant="subtitle2" gutterBottom>
+              Service Status
+            </Typography>
 
-      {isExpanded && (
-        <div className="status-details">
-          <div className="service-status">
-            <div className="service-item">
-              <span className="service-icon">
+            {/* Service List */}
+            <List dense sx={{ mb: 1 }}>
+              <ListItem disablePadding>
+                <ListItemIcon sx={{ minWidth: 36 }}>
+                  <WifiIcon 
+                    fontSize="small" 
+                    color={getStatusColor(status.fastapi_status) as 'success' | 'error' | 'warning'}
+                  />
+                </ListItemIcon>
+                <ListItemText
+                  primary="FastAPI Server"
+                  secondary={getStatusText(status.fastapi_status)}
+                />
                 {getStatusIcon(status.fastapi_status)}
-              </span>
-              <span className="service-name">FastAPI Server</span>
-              <span className="service-status-text">
-                {getStatusText(status.fastapi_status)}
-              </span>
-            </div>
+              </ListItem>
 
-            <div className="service-item">
-              <span className="service-icon">
+              <ListItem disablePadding>
+                <ListItemIcon sx={{ minWidth: 36 }}>
+                  <StorageIcon 
+                    fontSize="small" 
+                    color={getStatusColor(status.mcp_status) as 'success' | 'error' | 'warning'}
+                  />
+                </ListItemIcon>
+                <ListItemText
+                  primary="MCP Server"
+                  secondary={getStatusText(status.mcp_status)}
+                />
                 {getStatusIcon(status.mcp_status)}
-              </span>
-              <span className="service-name">MCP Server</span>
-              <span className="service-status-text">
-                {getStatusText(status.mcp_status)}
-              </span>
-            </div>
-          </div>
+              </ListItem>
+            </List>
 
-          {status.error && (
-            <div className="error-details">
-              <span className="error-icon">⚠️</span>
-              <span className="error-text">{status.error}</span>
-            </div>
-          )}
+            {/* Error Details */}
+            {status.error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  {status.error}
+                </Typography>
+              </Alert>
+            )}
 
-          <div className="status-footer">
-            <span className="last-checked">
+            {/* Footer */}
+            <Typography variant="caption" color="text.secondary">
               Last checked: {formatLastChecked(status.lastChecked)}
-            </span>
-          </div>
-        </div>
-      )}
-    </div>
+            </Typography>
+          </Box>
+        </Paper>
+      </Collapse>
+    </Box>
   );
 };
 
