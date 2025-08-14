@@ -1,0 +1,132 @@
+{
+  "summary": {
+    "total_tests": 6,
+    "passed": 2,
+    "failed": 4,
+    "success_rate": 33.33333333333333,
+    "total_duration": 37.35362,
+    "start_time": "2025-08-14T13:04:32.538524",
+    "end_time": "2025-08-14T13:05:09.892144"
+  },
+  "tests": [
+    {
+      "name": "Server Startup and Health Checks",
+      "status": "FAIL",
+      "duration": 30.79839015007019,
+      "timestamp": "2025-08-14T13:05:03.338285",
+      "details": {
+        "success": false,
+        "error": "MCP server failed to start",
+        "root_cause": "MCP server startup failure - check database path, port availability, or dependencies",
+        "impact": "Critical - entire system depends on MCP server"
+      }
+    },
+    {
+      "name": "FastAPI Connection Status",
+      "status": "FAIL",
+      "duration": 0.19631028175354004,
+      "timestamp": "2025-08-14T13:05:04.535361",
+      "details": {
+        "success": false,
+        "error": "MCP server not connected according to FastAPI",
+        "root_cause": "MCP connection issue: Cannot connect to MCP server",
+        "impact": "Database queries will fail - core functionality impaired"
+      }
+    },
+    {
+      "name": "Natural Language Chat",
+      "status": "FAIL",
+      "duration": 0.051247358322143555,
+      "timestamp": "2025-08-14T13:05:05.587455",
+      "details": {
+        "success": false,
+        "error": "Chat response does not appear to address customer query",
+        "root_cause": "LLM not understanding database context or not generating appropriate response",
+        "impact": "Natural language to database functionality not working correctly"
+      }
+    },
+    {
+      "name": "Direct SQL Query Processing",
+      "status": "FAIL",
+      "duration": 0.044231414794921875,
+      "timestamp": "2025-08-14T13:05:06.632242",
+      "details": {
+        "success": false,
+        "error": "SQL query response does not contain expected customer data",
+        "root_cause": "SQL query not being executed properly or database connection issue",
+        "impact": "Database query execution functionality impaired"
+      }
+    },
+    {
+      "name": "Error Handling and Recovery",
+      "status": "PASS",
+      "duration": 0.05854392051696777,
+      "timestamp": "2025-08-14T13:05:07.691579",
+      "details": {
+        "success": true,
+        "details": "Error handling working correctly",
+        "validation_working": true
+      }
+    },
+    {
+      "name": "Performance Metrics",
+      "status": "PASS",
+      "duration": 0.19948387145996094,
+      "timestamp": "2025-08-14T13:05:08.891634",
+      "details": {
+        "success": true,
+        "details": "Performance metrics collected. Avg: 0.07s",
+        "metrics": {
+          "average_response_time": 0.06628147761027019,
+          "max_response_time": 0.07708406448364258,
+          "min_response_time": 0.051779747009277344,
+          "success_rate": 100.0,
+          "total_queries": 3
+        },
+        "acceptable": true
+      }
+    }
+  ],
+  "failures": [
+    {
+      "test_name": "Server Startup and Health Checks",
+      "error": "MCP server failed to start",
+      "root_cause": "MCP server startup failure - check database path, port availability, or dependencies",
+      "impact": "Critical - entire system depends on MCP server",
+      "timestamp": "2025-08-14T13:05:03.338327"
+    },
+    {
+      "test_name": "FastAPI Connection Status",
+      "error": "MCP server not connected according to FastAPI",
+      "root_cause": "MCP connection issue: Cannot connect to MCP server",
+      "impact": "Database queries will fail - core functionality impaired",
+      "timestamp": "2025-08-14T13:05:04.535379"
+    },
+    {
+      "test_name": "Natural Language Chat",
+      "error": "Chat response does not appear to address customer query",
+      "root_cause": "LLM not understanding database context or not generating appropriate response",
+      "impact": "Natural language to database functionality not working correctly",
+      "timestamp": "2025-08-14T13:05:05.587473"
+    },
+    {
+      "test_name": "Direct SQL Query Processing",
+      "error": "SQL query response does not contain expected customer data",
+      "root_cause": "SQL query not being executed properly or database connection issue",
+      "impact": "Database query execution functionality impaired",
+      "timestamp": "2025-08-14T13:05:06.632268"
+    }
+  ],
+  "performance_metrics": {
+    "average_response_time": 0.06628147761027019,
+    "max_response_time": 0.07708406448364258,
+    "min_response_time": 0.051779747009277344,
+    "success_rate": 100.0,
+    "total_queries": 3
+  },
+  "environment": {
+    "project_root": "/root/projects/talk-2-tables-mcp",
+    "python_version": "3.12.3 (main, Jun 18 2025, 17:59:45) [GCC 13.3.0]",
+    "test_timestamp": "2025-08-14T13:05:09.904545"
+  }
+}

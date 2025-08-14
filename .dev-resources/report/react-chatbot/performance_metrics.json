@@ -1,0 +1,27 @@
+{
+  "test_execution": {
+    "total_tests": 6,
+    "passed": 2,
+    "failed": 4,
+    "success_rate": 33.33333333333333,
+    "total_duration": 37.35362,
+    "start_time": "2025-08-14T13:04:32.538524",
+    "end_time": "2025-08-14T13:05:09.892144"
+  },
+  "api_performance": {
+    "average_response_time": 0.06628147761027019,
+    "max_response_time": 0.07708406448364258,
+    "min_response_time": 0.051779747009277344,
+    "success_rate": 100.0,
+    "total_queries": 3
+  },
+  "system_resources": {
+    "timestamp": "2025-08-14T13:05:09.915541",
+    "test_duration": 37.35362
+  },
+  "thresholds": {
+    "acceptable_avg_response": 30.0,
+    "acceptable_max_response": 60.0,
+    "minimum_success_rate": 80.0
+  }
+}
