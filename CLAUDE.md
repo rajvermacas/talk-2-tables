@@ -48,12 +48,8 @@ src/talk_2_tables_mcp/
 ## Session Context Management
 
 ### Session Scratchpad
-This project maintains a **session scratchpad** at `resources/context/session-scratchpad.md` that tracks:
-- **Completed tasks and implementations** in the current development session
-- **Current project state** and working features
-- **Critical bug fixes applied** and their locations
-- **Next steps and priorities** for future development
-- **Commands reference** for common operations
+This project maintains a **session scratchpad** at `.dev-resources/context/session-scratchpad.md` to track the progress done till now and how the project has evolved overtime.  
+Read the instructions at `/root/.claude/commands/persist-session.md` to get an understanding on the how to update the session scratchpad.
 
 **Important**: Always read and update the session scratchpad when working on this project to maintain context continuity across different Claude Code sessions.
 
