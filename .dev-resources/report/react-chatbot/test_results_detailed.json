@@ -1,19 +1,19 @@
 {
   "summary": {
     "total_tests": 6,
-    "passed": 2,
-    "failed": 4,
-    "success_rate": 33.33333333333333,
-    "total_duration": 37.35362,
-    "start_time": "2025-08-14T13:04:32.538524",
-    "end_time": "2025-08-14T13:05:09.892144"
+    "passed": 0,
+    "failed": 6,
+    "success_rate": 0.0,
+    "total_duration": 36.801832,
+    "start_time": "2025-08-14T13:25:51.522745",
+    "end_time": "2025-08-14T13:26:28.324577"
   },
   "tests": [
     {
       "name": "Server Startup and Health Checks",
       "status": "FAIL",
-      "duration": 30.79839015007019,
-      "timestamp": "2025-08-14T13:05:03.338285",
+      "duration": 30.788331985473633,
+      "timestamp": "2025-08-14T13:26:22.312612",
       "details": {
         "success": false,
         "error": "MCP server failed to start",
@@ -24,66 +24,61 @@
     {
       "name": "FastAPI Connection Status",
       "status": "FAIL",
-      "duration": 0.19631028175354004,
-      "timestamp": "2025-08-14T13:05:04.535361",
+      "duration": 0.0015311241149902344,
+      "timestamp": "2025-08-14T13:26:23.314780",
       "details": {
         "success": false,
-        "error": "MCP server not connected according to FastAPI",
-        "root_cause": "MCP connection issue: Cannot connect to MCP server",
-        "impact": "Database queries will fail - core functionality impaired"
+        "error": "Connection status test failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /mcp/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fc71ca03fb0>: Failed to establish a new connection: [Errno 111] Connection refused'))",
+        "root_cause": "API communication error: ConnectionError",
+        "impact": "Cannot verify system connectivity status"
       }
     },
     {
       "name": "Natural Language Chat",
       "status": "FAIL",
-      "duration": 0.051247358322143555,
-      "timestamp": "2025-08-14T13:05:05.587455",
+      "duration": 0.001608133316040039,
+      "timestamp": "2025-08-14T13:26:24.316809",
       "details": {
         "success": false,
-        "error": "Chat response does not appear to address customer query",
-        "root_cause": "LLM not understanding database context or not generating appropriate response",
-        "impact": "Natural language to database functionality not working correctly"
+        "error": "Natural language chat test failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /chat/completions (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fc71ca28470>: Failed to establish a new connection: [Errno 111] Connection refused'))",
+        "root_cause": "Chat API error: ConnectionError - possible network timeout, API key issue, or server overload",
+        "impact": "Core chat functionality unavailable"
       }
     },
     {
       "name": "Direct SQL Query Processing",
       "status": "FAIL",
-      "duration": 0.044231414794921875,
-      "timestamp": "2025-08-14T13:05:06.632242",
+      "duration": 0.0014524459838867188,
+      "timestamp": "2025-08-14T13:26:25.318651",
       "details": {
         "success": false,
-        "error": "SQL query response does not contain expected customer data",
-        "root_cause": "SQL query not being executed properly or database connection issue",
-        "impact": "Database query execution functionality impaired"
+        "error": "SQL query test failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /chat/completions (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fc71ca03d40>: Failed to establish a new connection: [Errno 111] Connection refused'))",
+        "root_cause": "SQL processing error: ConnectionError",
+        "impact": "Direct SQL functionality unavailable"
       }
     },
     {
       "name": "Error Handling and Recovery",
-      "status": "PASS",
-      "duration": 0.05854392051696777,
-      "timestamp": "2025-08-14T13:05:07.691579",
+      "status": "FAIL",
+      "duration": 0.0014324188232421875,
+      "timestamp": "2025-08-14T13:26:26.320446",
       "details": {
-        "success": true,
-        "details": "Error handling working correctly",
-        "validation_working": true
+        "success": false,
+        "error": "Error handling test failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /chat/completions (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fc71ca03f20>: Failed to establish a new connection: [Errno 111] Connection refused'))",
+        "root_cause": "Error handling test error: ConnectionError",
+        "impact": "Cannot verify error handling robustness"
       }
     },
     {
       "name": "Performance Metrics",
-      "status": "PASS",
-      "duration": 0.19948387145996094,
-      "timestamp": "2025-08-14T13:05:08.891634",
+      "status": "FAIL",
+      "duration": 0.003270387649536133,
+      "timestamp": "2025-08-14T13:26:27.324204",
       "details": {
-        "success": true,
-        "details": "Performance metrics collected. Avg: 0.07s",
-        "metrics": {
-          "average_response_time": 0.06628147761027019,
-          "max_response_time": 0.07708406448364258,
-          "min_response_time": 0.051779747009277344,
-          "success_rate": 100.0,
-          "total_queries": 3
-        },
-        "acceptable": true
+        "success": false,
+        "error": "No successful performance test queries",
+        "root_cause": "All performance test queries failed - system performance cannot be measured",
+        "impact": "Performance characteristics unknown"
       }
     }
   ],
@@ -93,40 +88,48 @@
       "error": "MCP server failed to start",
       "root_cause": "MCP server startup failure - check database path, port availability, or dependencies",
       "impact": "Critical - entire system depends on MCP server",
-      "timestamp": "2025-08-14T13:05:03.338327"
+      "timestamp": "2025-08-14T13:26:22.312635"
     },
     {
       "test_name": "FastAPI Connection Status",
-      "error": "MCP server not connected according to FastAPI",
-      "root_cause": "MCP connection issue: Cannot connect to MCP server",
-      "impact": "Database queries will fail - core functionality impaired",
-      "timestamp": "2025-08-14T13:05:04.535379"
+      "error": "Connection status test failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /mcp/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fc71ca03fb0>: Failed to establish a new connection: [Errno 111] Connection refused'))",
+      "root_cause": "API communication error: ConnectionError",
+      "impact": "Cannot verify system connectivity status",
+      "timestamp": "2025-08-14T13:26:23.314787"
     },
     {
       "test_name": "Natural Language Chat",
-      "error": "Chat response does not appear to address customer query",
-      "root_cause": "LLM not understanding database context or not generating appropriate response",
-      "impact": "Natural language to database functionality not working correctly",
-      "timestamp": "2025-08-14T13:05:05.587473"
+      "error": "Natural language chat test failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /chat/completions (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fc71ca28470>: Failed to establish a new connection: [Errno 111] Connection refused'))",
+      "root_cause": "Chat API error: ConnectionError - possible network timeout, API key issue, or server overload",
+      "impact": "Core chat functionality unavailable",
+      "timestamp": "2025-08-14T13:26:24.316815"
     },
     {
       "test_name": "Direct SQL Query Processing",
-      "error": "SQL query response does not contain expected customer data",
-      "root_cause": "SQL query not being executed properly or database connection issue",
-      "impact": "Database query execution functionality impaired",
-      "timestamp": "2025-08-14T13:05:06.632268"
+      "error": "SQL query test failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /chat/completions (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fc71ca03d40>: Failed to establish a new connection: [Errno 111] Connection refused'))",
+      "root_cause": "SQL processing error: ConnectionError",
+      "impact": "Direct SQL functionality unavailable",
+      "timestamp": "2025-08-14T13:26:25.318658"
+    },
+    {
+      "test_name": "Error Handling and Recovery",
+      "error": "Error handling test failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /chat/completions (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fc71ca03f20>: Failed to establish a new connection: [Errno 111] Connection refused'))",
+      "root_cause": "Error handling test error: ConnectionError",
+      "impact": "Cannot verify error handling robustness",
+      "timestamp": "2025-08-14T13:26:26.320455"
+    },
+    {
+      "test_name": "Performance Metrics",
+      "error": "No successful performance test queries",
+      "root_cause": "All performance test queries failed - system performance cannot be measured",
+      "impact": "Performance characteristics unknown",
+      "timestamp": "2025-08-14T13:26:27.324210"
     }
   ],
-  "performance_metrics": {
-    "average_response_time": 0.06628147761027019,
-    "max_response_time": 0.07708406448364258,
-    "min_response_time": 0.051779747009277344,
-    "success_rate": 100.0,
-    "total_queries": 3
-  },
+  "performance_metrics": {},
   "environment": {
     "project_root": "/root/projects/talk-2-tables-mcp",
     "python_version": "3.12.3 (main, Jun 18 2025, 17:59:45) [GCC 13.3.0]",
-    "test_timestamp": "2025-08-14T13:05:09.904545"
+    "test_timestamp": "2025-08-14T13:26:28.336704"
   }
 }

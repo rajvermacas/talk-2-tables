@@ -161,6 +161,7 @@ class FastAPIServerConfig(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
+        extra = "ignore"  # Ignore extra fields like TRANSPORT which is for MCP server
 
 
 # Global configuration instance

@@ -1,23 +1,17 @@
 {
   "test_execution": {
     "total_tests": 6,
-    "passed": 2,
-    "failed": 4,
-    "success_rate": 33.33333333333333,
-    "total_duration": 37.35362,
-    "start_time": "2025-08-14T13:04:32.538524",
-    "end_time": "2025-08-14T13:05:09.892144"
+    "passed": 0,
+    "failed": 6,
+    "success_rate": 0.0,
+    "total_duration": 36.801832,
+    "start_time": "2025-08-14T13:25:51.522745",
+    "end_time": "2025-08-14T13:26:28.324577"
   },
-  "api_performance": {
-    "average_response_time": 0.06628147761027019,
-    "max_response_time": 0.07708406448364258,
-    "min_response_time": 0.051779747009277344,
-    "success_rate": 100.0,
-    "total_queries": 3
-  },
+  "api_performance": {},
   "system_resources": {
-    "timestamp": "2025-08-14T13:05:09.915541",
-    "test_duration": 37.35362
+    "timestamp": "2025-08-14T13:26:28.346764",
+    "test_duration": 36.801832
   },
   "thresholds": {
     "acceptable_avg_response": 30.0,

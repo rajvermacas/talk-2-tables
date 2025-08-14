@@ -1,8 +1,8 @@
 # React Chatbot E2E Test Execution Report
 
-**Generated**: 2025-08-14T13:05:09.901564
-**Test Duration**: 37.35 seconds
-**Success Rate**: 33.3%
+**Generated**: 2025-08-14T13:26:28.332913
+**Test Duration**: 36.80 seconds
+**Success Rate**: 0.0%
 
 ## Executive Summary
 
@@ -10,9 +10,9 @@ This comprehensive end-to-end test validates the complete React chatbot system f
 
 ### Test Results Overview
 - **Total Tests**: 6
-- **Passed**: 2 ✅
-- **Failed**: 4 ❌
-- **Success Rate**: 33.3%
+- **Passed**: 0 ✅
+- **Failed**: 6 ❌
+- **Success Rate**: 0.0%
 
 ### System Architecture Tested
 ```
@@ -30,19 +30,12 @@ Database (test_data/sample.db)
 
 | Test Category | Status | Duration | Details |
 |---------------|--------|----------|---------|
-| Server Startup and Health Checks | ❌ FAIL | 30.80s | N/A |
-| FastAPI Connection Status | ❌ FAIL | 0.20s | N/A |
-| Natural Language Chat | ❌ FAIL | 0.05s | N/A |
-| Direct SQL Query Processing | ❌ FAIL | 0.04s | N/A |
-| Error Handling and Recovery | ✅ PASS | 0.06s | Error handling working correctly |
-| Performance Metrics | ✅ PASS | 0.20s | Performance metrics collected. Avg: 0.07s |
-
-
-## Performance Metrics
-- **Average Response Time**: 0.07s
-- **Maximum Response Time**: 0.08s  
-- **Minimum Response Time**: 0.05s
-- **Query Success Rate**: 100.0%
+| Server Startup and Health Checks | ❌ FAIL | 30.79s | N/A |
+| FastAPI Connection Status | ❌ FAIL | 0.00s | N/A |
+| Natural Language Chat | ❌ FAIL | 0.00s | N/A |
+| Direct SQL Query Processing | ❌ FAIL | 0.00s | N/A |
+| Error Handling and Recovery | ❌ FAIL | 0.00s | N/A |
+| Performance Metrics | ❌ FAIL | 0.00s | N/A |
 
 ## Critical Failures Detected
 
@@ -52,19 +45,29 @@ Database (test_data/sample.db)
 - **Impact**: Critical - entire system depends on MCP server
 
 ### FastAPI Connection Status
-- **Error**: MCP server not connected according to FastAPI
-- **Root Cause**: MCP connection issue: Cannot connect to MCP server
-- **Impact**: Database queries will fail - core functionality impaired
+- **Error**: Connection status test failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /mcp/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fc71ca03fb0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+- **Root Cause**: API communication error: ConnectionError
+- **Impact**: Cannot verify system connectivity status
 
 ### Natural Language Chat
-- **Error**: Chat response does not appear to address customer query
-- **Root Cause**: LLM not understanding database context or not generating appropriate response
-- **Impact**: Natural language to database functionality not working correctly
+- **Error**: Natural language chat test failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /chat/completions (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fc71ca28470>: Failed to establish a new connection: [Errno 111] Connection refused'))
+- **Root Cause**: Chat API error: ConnectionError - possible network timeout, API key issue, or server overload
+- **Impact**: Core chat functionality unavailable
 
 ### Direct SQL Query Processing
-- **Error**: SQL query response does not contain expected customer data
-- **Root Cause**: SQL query not being executed properly or database connection issue
-- **Impact**: Database query execution functionality impaired
+- **Error**: SQL query test failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /chat/completions (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fc71ca03d40>: Failed to establish a new connection: [Errno 111] Connection refused'))
+- **Root Cause**: SQL processing error: ConnectionError
+- **Impact**: Direct SQL functionality unavailable
+
+### Error Handling and Recovery
+- **Error**: Error handling test failed: HTTPConnectionPool(host='localhost', port=8001): Max retries exceeded with url: /chat/completions (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fc71ca03f20>: Failed to establish a new connection: [Errno 111] Connection refused'))
+- **Root Cause**: Error handling test error: ConnectionError
+- **Impact**: Cannot verify error handling robustness
+
+### Performance Metrics
+- **Error**: No successful performance test queries
+- **Root Cause**: All performance test queries failed - system performance cannot be measured
+- **Impact**: Performance characteristics unknown
 
 
 ## System Status

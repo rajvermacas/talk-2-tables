@@ -12,6 +12,7 @@ from contextlib import AsyncExitStack
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.sse import sse_client
+from mcp.client.streamable_http import streamablehttp_client
 
 from .config import config
 from .models import MCPQueryResult, MCPResource, MCPTool
@@ -87,16 +88,18 @@ class MCPDatabaseClient:
     async def _connect_http(self) -> None:
         """Connect using HTTP transport."""
         # For HTTP, connect to the running MCP server
+        # The MCP server is configured to use streamable-http transport
         if not self.server_url.endswith("/mcp"):
             server_url = f"{self.server_url}/mcp"
         else:
             server_url = self.server_url
         
-        # Use SSE client for HTTP connection
-        sse_transport = await self.exit_stack.enter_async_context(
-            sse_client(server_url)
+        # Use streamable HTTP client for the connection
+        # This matches the server's streamable-http transport
+        streamable_transport = await self.exit_stack.enter_async_context(
+            streamablehttp_client(server_url)
         )
-        read, write = sse_transport
+        read, write, get_session_id = streamable_transport
         self.session = await self.exit_stack.enter_async_context(
             ClientSession(read, write)
         )
