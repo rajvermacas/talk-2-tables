@@ -51,6 +51,8 @@ class MCPDatabaseClient:
                 await self._connect_stdio()
             elif self.transport_type == "http":
                 await self._connect_http()
+            elif self.transport_type == "sse":
+                await self._connect_sse()
             else:
                 raise MCPClientError(f"Unsupported transport type: {self.transport_type}")
             
