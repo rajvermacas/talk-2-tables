@@ -240,19 +240,20 @@ class MCPDatabaseClient:
             # Read the database metadata resource
             result = await self.session.read_resource("database://metadata")
             
-            if result.isError:
+            # Check if result has an error - MCP SDK doesn't use isError attribute
+            if hasattr(result, 'isError') and result.isError:
                 logger.error(f"Failed to read metadata: {result.content}")
                 return None
             
             # Parse the metadata content
-            if isinstance(result.content, list) and len(result.content) > 0:
-                content = result.content[0]
+            if isinstance(result.contents, list) and len(result.contents) > 0:
+                content = result.contents[0]
                 if hasattr(content, 'text'):
                     metadata = json.loads(content.text)
                 else:
                     metadata = content
             else:
-                metadata = result.content
+                metadata = result.contents
             
             logger.info("Successfully retrieved database metadata")
             return metadata
@@ -306,7 +307,7 @@ class MCPDatabaseClient:
                 resources.append(MCPResource(
                     name=resource.name,
                     description=resource.description,
-                    uri=resource.uri,
+                    uri=str(resource.uri),  # Convert AnyUrl to string
                     mime_type=getattr(resource, 'mimeType', None)
                 ))
             

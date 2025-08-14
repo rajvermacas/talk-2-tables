@@ -68,7 +68,7 @@ Ensured `.env` file has proper configuration:
 ```env
 # MCP Server Configuration  
 MCP_SERVER_URL=http://localhost:8000
-MCP_TRANSPORT=http
+MCP_TRANSPORT=sse
 TRANSPORT=streamable-http  # For MCP server
 ```
 
