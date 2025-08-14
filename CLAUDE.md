@@ -15,29 +15,47 @@ The ultimate vision is a multi-tier system:
 5. AI agent uses resource discovery to route queries to appropriate MCP servers
 
 ### Current Implementation Status
-This repository implements **one MCP server component** that:
-- Exposes SQLite database query capabilities via MCP protocol
-- Provides resource discovery metadata for agent routing decisions
-- Supports both local (stdio) and remote (HTTP/SSE) access
-- Includes comprehensive security, testing, and deployment infrastructure
+This repository implements the **complete multi-tier system** including:
+- **MCP Server**: SQLite database query capabilities via MCP protocol with resource discovery
+- **FastAPI Backend**: AI agent server with OpenRouter LLMs + MCP client integration
+- **React Chatbot**: Frontend interface for natural language database queries
+- **Full Integration**: Complete data flow from user queries to database results
+- **Deployment Infrastructure**: Docker, nginx, monitoring, and comprehensive testing
 
 ## Architecture & Key Components
 
 ### Core Structure
 ```
-src/talk_2_tables_mcp/
-├── server.py          # Main MCP server with FastMCP framework
-├── remote_server.py   # Remote deployment manager for network access
-├── database.py        # SQLite handler with security validation
-└── config.py          # Pydantic v2 configuration management
+src/talk_2_tables_mcp/      # MCP Server (database interface)
+├── server.py               # Main MCP server with FastMCP framework
+├── remote_server.py        # Remote deployment manager for network access
+├── database.py             # SQLite handler with security validation
+└── config.py               # Pydantic v2 configuration management
+
+fastapi_server/             # AI Agent Backend
+├── main.py                 # FastAPI application entry point
+├── chat_handler.py         # Natural language query processing
+├── mcp_client.py          # MCP client for database communication
+├── openrouter_client.py   # LLM integration with OpenRouter
+├── retry_utils.py         # Retry logic with exponential backoff
+├── config.py              # FastAPI server configuration
+└── models.py              # Pydantic data models
+
+react-chatbot/             # Frontend Interface
+├── src/
+│   ├── components/        # React UI components (ChatInterface, etc.)
+│   ├── hooks/            # Custom React hooks (useChat, etc.)
+│   ├── services/         # API client for FastAPI communication
+│   └── types/            # TypeScript type definitions
+└── package.json          # React dependencies and scripts
 ```
 
-### MCP Protocol Implementation
-- **Framework**: FastMCP from `mcp.server.fastmcp`
-- **Transports**: stdio (local), SSE, streamable-http (remote)
-- **Tools**: `execute_query` - executes SELECT statements only
-- **Resources**: `database://metadata` - provides JSON schema + business context
-- **Security**: SQL injection protection, query validation, read-only access
+### System Integration
+- **MCP Protocol**: FastMCP framework with stdio/SSE/HTTP transports
+- **AI Agent**: OpenRouter LLM integration with retry logic and rate limiting
+- **Frontend**: React TypeScript UI with real-time chat interface
+- **Database**: SQLite with read-only SELECT queries and security validation
+- **Deployment**: Full Docker stack with nginx reverse proxy
 
 ### Remote Access & Deployment
 - **Multiple transport modes**: Local CLI, SSE streaming, HTTP with optional stateless mode
@@ -55,18 +73,19 @@ Read the instructions at `/root/.claude/commands/persist-session.md` to get an u
 
 ### Incremental Development Approach
 **Build one task at a time** - this project follows an incremental development strategy:
-- Focus on **single, well-defined tasks** rather than attempting to implement the entire end-state architecture at once
+- Focus on **single, well-defined tasks** rather than attempting massive changes at once
 - Complete and test each component thoroughly before moving to the next
 - Update the session scratchpad after each task completion to maintain progress tracking
-- The current MCP server is one component of the larger multi-tier system - future tasks will add FastAPI backend, React frontend, and multi-server orchestration
+- **Current Status**: Full multi-tier system implemented (MCP ↔ FastAPI ↔ React) - future tasks focus on enhancements, additional data sources, and production optimizations
 
 ## Development Commands
 
 ### Local Development
 ```bash
-# Install in development mode
-pip install -e ".[dev]"
+# Install in development mode (MCP server + FastAPI dependencies)
+pip install -e ".[dev,fastapi]"
 
+# === MCP Server Only ===
 # Start local server (stdio transport for MCP clients)
 python -m talk_2_tables_mcp.server
 
@@ -74,10 +93,27 @@ python -m talk_2_tables_mcp.server
 python -m talk_2_tables_mcp.remote_server
 # OR with specific options:
 python -m talk_2_tables_mcp.server --transport streamable-http --host 0.0.0.0 --port 8000
+
+# === Full Stack Development ===
+# 1. Start MCP server (in one terminal)
+python -m talk_2_tables_mcp.remote_server
+
+# 2. Start FastAPI server (in another terminal)
+cd fastapi_server
+python main.py
+
+# 3. Start React chatbot (in third terminal)
+./start-chatbot.sh
+# OR manually:
+cd react-chatbot && npm start
+
+# === Testing FastAPI Integration ===
+python scripts/test_fastapi_server.py
 ```
 
 ### Testing
 ```bash
+# === Unit and Integration Tests ===
 # Run all tests
 pytest
 
@@ -87,8 +123,25 @@ pytest --cov=talk_2_tables_mcp
 # Run specific test file
 pytest tests/test_server.py -v
 
-# Run end-to-end feature test
+# === End-to-End Tests ===
+# Full system E2E test (MCP + FastAPI + React)
 pytest tests/e2e_feature_test.py -v
+
+# React chatbot E2E test
+pytest tests/e2e_react_chatbot_test.py -v
+
+# Rate limiting and retry logic
+pytest tests/e2e_rate_limit_handling_test.py -v
+
+# Comprehensive system test
+pytest tests/e2e_comprehensive_test.py -v
+
+# === Component-Specific Tests ===
+# FastAPI server tests
+pytest tests/test_fastapi_server.py -v
+
+# Retry logic tests
+pytest tests/test_retry_logic.py -v
 ```
 
 ### Docker Deployment
@@ -116,6 +169,7 @@ python scripts/test_remote_server.py
 
 ### Key Environment Variables
 ```bash
+# === MCP Server Configuration ===
 DATABASE_PATH="test_data/sample.db"      # SQLite database location
 METADATA_PATH="resources/metadata.json"  # Resource discovery metadata
 HOST="0.0.0.0"                          # Server bind address
@@ -124,6 +178,18 @@ TRANSPORT="streamable-http"              # Transport protocol
 LOG_LEVEL="INFO"                         # Logging verbosity
 STATELESS_HTTP="false"                   # HTTP session mode
 ALLOW_CORS="true"                        # CORS headers
+
+# === FastAPI Server Configuration ===
+OPENROUTER_API_KEY="your_key_here"      # OpenRouter API key for LLM
+OPENROUTER_MODEL="meta-llama/llama-3.1-8b-instruct:free"  # Default model
+FASTAPI_HOST="0.0.0.0"                  # FastAPI bind address
+FASTAPI_PORT="8001"                     # FastAPI port
+MCP_SERVER_URL="http://localhost:8000/mcp"  # MCP server endpoint
+
+# === Development Ports ===
+# MCP Server: 8000
+# FastAPI Server: 8001  
+# React Dev Server: 3000
 ```
 
 ### Configuration Management
