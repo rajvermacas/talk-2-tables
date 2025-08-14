@@ -75,6 +75,10 @@ class Choice(BaseModel):
         default=None,
         description="Reason the generation finished"
     )
+    query_result: Optional["MCPQueryResult"] = Field(
+        default=None,
+        description="Database query result if a query was executed"
+    )
 
 
 class ChatCompletionResponse(BaseModel):

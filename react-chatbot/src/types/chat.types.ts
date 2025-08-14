@@ -44,6 +44,7 @@ export interface ChatCompletionResponse {
       content: string;
     };
     finish_reason: string | null;
+    query_result?: QueryResult;
   }>;
   usage?: {
     prompt_tokens: number;

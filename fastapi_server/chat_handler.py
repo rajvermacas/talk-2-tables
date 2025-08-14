@@ -68,6 +68,7 @@ class ChatCompletionHandler:
             needs_database = self._needs_database_query(user_message.content)
             
             mcp_context = {}
+            query_result = None
             
             if needs_database:
                 logger.info("Message appears to need database access")
@@ -113,6 +114,10 @@ class ChatCompletionHandler:
                 temperature=request.temperature,
                 stream=request.stream
             )
+            
+            # If we have query results, add them to the first choice
+            if query_result and response.choices:
+                response.choices[0].query_result = query_result
             
             logger.info("Successfully processed chat completion")
             return response

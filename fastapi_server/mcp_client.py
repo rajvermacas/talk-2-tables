@@ -195,7 +195,8 @@ class MCPDatabaseClient:
             # Extract data from result
             if isinstance(result_data, dict):
                 success = result_data.get("success", True)
-                data = result_data.get("data", [])
+                # The MCP server returns data in "rows" field, not "data"
+                data = result_data.get("data", result_data.get("rows", []))
                 columns = result_data.get("columns", [])
                 error = result_data.get("error")
                 row_count = len(data) if data else 0

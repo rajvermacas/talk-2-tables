@@ -182,8 +182,16 @@ export const useChat = ({
       });
 
       if (response.choices && response.choices.length > 0) {
-        const assistantResponse = response.choices[0].message.content;
-        const queryResult = processQueryResults(assistantResponse);
+        const choice = response.choices[0];
+        const assistantResponse = choice.message.content;
+        
+        // First try to get query results from the response structure
+        let queryResult = choice.query_result || undefined;
+        
+        // If not found, fall back to parsing from content
+        if (!queryResult) {
+          queryResult = processQueryResults(assistantResponse);
+        }
 
         // Update the assistant message with the response
         updateMessage(assistantMessageId, {
