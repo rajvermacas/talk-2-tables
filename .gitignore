@@ -77,4 +77,4 @@ Thumbs.db
 tmp/
 temp/
 
-.venv/
+.venv/.claude/

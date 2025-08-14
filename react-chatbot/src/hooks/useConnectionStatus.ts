@@ -113,7 +113,7 @@ export const useConnectionStatus = ({
     return () => {
       stopMonitoring();
     };
-  }, [autoStart, startMonitoring, stopMonitoring]);
+  }, [autoStart]);
 
   // Handle window focus - check status when user returns to tab
   useEffect(() => {

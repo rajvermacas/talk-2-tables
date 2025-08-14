@@ -104,6 +104,24 @@ class MCPDatabaseClient:
             ClientSession(read, write)
         )
     
+    async def _connect_sse(self) -> None:
+        """Connect using SSE (Server-Sent Events) transport."""
+        # For SSE, connect to the running MCP server with SSE endpoint
+        if not self.server_url.endswith("/sse"):
+            server_url = f"{self.server_url}/sse"
+        else:
+            server_url = self.server_url
+        
+        # Use SSE client for the connection
+        # This matches the server's sse transport
+        sse_transport = await self.exit_stack.enter_async_context(
+            sse_client(server_url)
+        )
+        read, write = sse_transport
+        self.session = await self.exit_stack.enter_async_context(
+            ClientSession(read, write)
+        )
+    
     async def _log_server_capabilities(self) -> None:
         """Log the server's capabilities."""
         try:

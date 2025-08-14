@@ -306,3 +306,19 @@ This project is licensed under the MIT License.
 4. Implement your changes
 5. Ensure all tests pass
 6. Submit a pull request
+
+
+# Execution Steps
+Run these three commands in separate terminals:
+1. Start MCP Server (Terminal 1)  
+python3 -m talk_2_tables_mcp.remote_server
+
+2. Start remote mcp server with sse transport prtocol
+python3 -m talk_2_tables_mcp.server --transport sse
+
+2. Start FastAPI Backend (Terminal 2)  
+python3 -m fastapi_server.main
+
+3. Start React Frontend (Terminal 3)  
+cd react-chatbot && npm start
+

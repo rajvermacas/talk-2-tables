@@ -104,8 +104,8 @@ class FastAPIServerConfig(BaseSettings):
     @classmethod
     def validate_transport(cls, v: str) -> str:
         """Validate MCP transport protocol."""
-        if v not in ["stdio", "http"]:
-            raise ValueError("MCP transport must be 'stdio' or 'http'")
+        if v not in ["stdio", "http", "sse"]:
+            raise ValueError("MCP transport must be 'stdio', 'http', or 'sse'")
         return v
     
     @field_validator("log_level")
