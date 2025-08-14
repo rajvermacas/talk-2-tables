@@ -15,11 +15,12 @@ The ultimate vision is a multi-tier system:
 5. AI agent uses resource discovery to route queries to appropriate MCP servers
 
 ### Current Implementation Status
-This repository implements the **complete multi-tier system** including:
+This repository implements the **complete multi-tier system with multi-LLM support** including:
 - **MCP Server**: SQLite database query capabilities via MCP protocol with resource discovery
-- **FastAPI Backend**: AI agent server with OpenRouter LLMs + MCP client integration
-- **React Chatbot**: Frontend interface for natural language database queries
-- **Full Integration**: Complete data flow from user queries to database results
+- **FastAPI Backend**: AI agent server with multi-LLM support (OpenRouter + Google Gemini) via LangChain + MCP client integration
+- **React Chatbot**: Modern glassmorphism frontend with red/black/gray/white theme for natural language database queries
+- **Multi-LLM Architecture**: LangChain-based unified interface supporting multiple LLM providers with configuration-based switching
+- **Full Integration**: Complete data flow from user queries through multiple LLM providers to database results
 - **Deployment Infrastructure**: Docker, nginx, monitoring, and comprehensive testing
 
 ## Architecture & Key Components
@@ -52,7 +53,7 @@ react-chatbot/             # Frontend Interface
 
 ### System Integration
 - **MCP Protocol**: FastMCP framework with stdio/SSE/HTTP transports
-- **AI Agent**: OpenRouter LLM integration with retry logic and rate limiting
+- **AI Agent**: Multi-LLM integration via LangChain (OpenRouter + Google Gemini) with retry logic and rate limiting
 - **Frontend**: React TypeScript UI with glassmorphism design and red/black/gray/white theme
 - **Database**: SQLite with read-only SELECT queries and security validation
 - **Deployment**: Full Docker stack with nginx reverse proxy
@@ -103,7 +104,7 @@ The system requires three components running simultaneously. Use these commands 
 # Terminal 1: MCP Server (database interface)
 python -m talk_2_tables_mcp.remote_server
 
-# Terminal 2: FastAPI Backend (AI agent with OpenRouter)
+# Terminal 2: FastAPI Backend (AI agent with multi-LLM support)
 cd fastapi_server && python main.py
 
 # Terminal 3: React Frontend (user interface)
@@ -134,11 +135,12 @@ cd react-chatbot && npm start
 # === Quick Testing ===
 python scripts/test_fastapi_server.py
 python scripts/test_remote_server.py
+python scripts/test_multi_llm.py
 ```
 
 ### Testing
 
-**Important**: Ensure OpenRouter API key is set for E2E tests involving LLM integration.
+**Important**: Ensure OpenRouter API key and/or Gemini API key is set for E2E tests involving LLM integration.
 
 ```bash
 # === Unit Tests (fastest, no external dependencies) ===
