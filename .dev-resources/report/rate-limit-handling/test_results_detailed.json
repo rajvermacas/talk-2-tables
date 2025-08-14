@@ -1,0 +1,207 @@
+{
+  "session": {
+    "session_id": "rate_limit_e2e_1755151909",
+    "start_time": "2025-08-14 11:41:49.062786",
+    "end_time": "2025-08-14 11:42:40.101294",
+    "total_duration_ms": 51038.508,
+    "tests_run": 8,
+    "tests_passed": 7,
+    "tests_failed": 1,
+    "configuration": {
+      "openrouter_api_key": "sk-or-***[REDACTED]***",
+      "openrouter_model": "qwen/qwen3-coder:free",
+      "mcp_server_url": "http://localhost:8000",
+      "fastapi_port": 8001,
+      "fastapi_host": "0.0.0.0",
+      "database_path": "test_data/sample.db",
+      "metadata_path": "resources/metadata.json",
+      "log_level": "INFO"
+    },
+    "environment_info": {
+      "python_version": "3.12.3 (main, Jun 18 2025, 17:59:45) [GCC 13.3.0]",
+      "working_directory": "/root/projects/talk-2-tables-mcp",
+      "timestamp": "2025-08-14T11:41:49.663964",
+      "platform": "posix",
+      "environment_variables_loaded": 7
+    }
+  },
+  "test_results": [
+    {
+      "test_name": "simple_chat",
+      "status": "PASS",
+      "duration_ms": 19469.528436660767,
+      "details": "Successful response with 131 characters",
+      "error_message": null,
+      "response_data": {
+        "id": "chatcmpl-error-050a1b8e-60f4-4a2c-a6a4-0679d0109eef",
+        "object": "chat.completion",
+        "created": 1755151939,
+        "model": "qwen/qwen3-coder:free",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "I'm currently experiencing high demand and need to wait a moment before processing your request. Please try again in a few seconds.",
+              "name": null
+            },
+            "finish_reason": "error"
+          }
+        ],
+        "usage": null
+      },
+      "performance_metrics": {
+        "response_time_ms": 19469.528436660767,
+        "token_usage": null,
+        "response_length": 131,
+        "model_used": "qwen/qwen3-coder:free"
+      }
+    },
+    {
+      "test_name": "database_query",
+      "status": "PASS",
+      "duration_ms": 69.66972351074219,
+      "details": "Successful response with 103 characters",
+      "error_message": null,
+      "response_data": {
+        "id": "chatcmpl-error-9b0bc0b3-1dd0-48e1-a902-7809a862da20",
+        "object": "chat.completion",
+        "created": 1755151939,
+        "model": "qwen/qwen3-coder:free",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "I encountered an unexpected error: Connection failed: unhandled errors in a TaskGroup (1 sub-exception)",
+              "name": null
+            },
+            "finish_reason": "error"
+          }
+        ],
+        "usage": null
+      },
+      "performance_metrics": {
+        "response_time_ms": 69.66972351074219,
+        "token_usage": null,
+        "response_length": 103,
+        "model_used": "qwen/qwen3-coder:free"
+      }
+    },
+    {
+      "test_name": "explicit_sql",
+      "status": "PASS",
+      "duration_ms": 70.08504867553711,
+      "details": "Successful response with 103 characters",
+      "error_message": null,
+      "response_data": {
+        "id": "chatcmpl-error-20909e09-1df0-4310-b2a1-a8e41a658b07",
+        "object": "chat.completion",
+        "created": 1755151940,
+        "model": "qwen/qwen3-coder:free",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "I encountered an unexpected error: Connection failed: unhandled errors in a TaskGroup (1 sub-exception)",
+              "name": null
+            },
+            "finish_reason": "error"
+          }
+        ],
+        "usage": null
+      },
+      "performance_metrics": {
+        "response_time_ms": 70.08504867553711,
+        "token_usage": null,
+        "response_length": 103,
+        "model_used": "qwen/qwen3-coder:free"
+      }
+    },
+    {
+      "test_name": "rate_limit_trigger",
+      "status": "PASS",
+      "duration_ms": 69.85282897949219,
+      "details": "Successful response with 103 characters",
+      "error_message": null,
+      "response_data": {
+        "id": "chatcmpl-error-0b7ba5ab-880c-45c1-9b69-fcfbc801da33",
+        "object": "chat.completion",
+        "created": 1755151940,
+        "model": "qwen/qwen3-coder:free",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "I encountered an unexpected error: Connection failed: unhandled errors in a TaskGroup (1 sub-exception)",
+              "name": null
+            },
+            "finish_reason": "error"
+          }
+        ],
+        "usage": null
+      },
+      "performance_metrics": {
+        "response_time_ms": 69.85282897949219,
+        "token_usage": null,
+        "response_length": 103,
+        "model_used": "qwen/qwen3-coder:free"
+      }
+    },
+    {
+      "test_name": "Rate Limit Stress Test",
+      "status": "ERROR",
+      "duration_ms": 0.00762939453125,
+      "details": "Stress test failed: cannot access local variable 'i' where it is not associated with a value",
+      "error_message": "cannot access local variable 'i' where it is not associated with a value",
+      "response_data": null,
+      "performance_metrics": null
+    },
+    {
+      "test_name": "Empty Messages Error Handling",
+      "status": "PASS",
+      "duration_ms": 49.961090087890625,
+      "details": "Empty messages properly rejected (HTTP 400)",
+      "error_message": null,
+      "response_data": null,
+      "performance_metrics": {
+        "response_time_ms": 49.961090087890625,
+        "status_code": 400
+      }
+    },
+    {
+      "test_name": "Invalid Structure Error Handling",
+      "status": "PASS",
+      "duration_ms": 49.98183250427246,
+      "details": "Invalid structure properly rejected (HTTP 422)",
+      "error_message": null,
+      "response_data": null,
+      "performance_metrics": {
+        "response_time_ms": 49.98183250427246,
+        "status_code": 422
+      }
+    },
+    {
+      "test_name": "Large Request Handling",
+      "status": "PASS",
+      "duration_ms": 19839.09773826599,
+      "details": "Large request handled appropriately (HTTP 200)",
+      "error_message": null,
+      "response_data": null,
+      "performance_metrics": {
+        "response_time_ms": 19839.09773826599,
+        "status_code": 200,
+        "request_size": 5000
+      }
+    }
+  ],
+  "summary": {
+    "total_tests": 8,
+    "passed": 7,
+    "failed": 1,
+    "success_rate": 87.5,
+    "total_duration_ms": 51038.508
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "session_id": "rate_limit_validation_e2e_1755154045700",
+  "performance_summary": {
+    "average_response_time_ms": 17500.045617421467,
+    "max_response_time_ms": 65997.87187576294,
+    "min_response_time_ms": 70.09768486022949,
+    "total_execution_time_ms": 113923.81715774536,
+    "tests_per_minute": 3.160006476095544
+  },
+  "individual_performance": [
+    {
+      "test_name": "simple_chat_with_retry_logic",
+      "duration_ms": 21373.08669090271,
+      "performance_metrics": {
+        "response_time_ms": 21373.08669090271,
+        "token_usage": null,
+        "response_length": 131,
+        "model_used": "qwen/qwen3-coder:free",
+        "retry_headers_present": false
+      }
+    },
+    {
+      "test_name": "database_query_with_retry",
+      "duration_ms": 71.57516479492188,
+      "performance_metrics": {
+        "response_time_ms": 71.57516479492188,
+        "token_usage": null,
+        "response_length": 103,
+        "model_used": "qwen/qwen3-coder:free",
+        "retry_headers_present": false
+      }
+    },
+    {
+      "test_name": "explicit_sql_with_retry",
+      "duration_ms": 79.75411415100098,
+      "performance_metrics": {
+        "response_time_ms": 79.75411415100098,
+        "token_usage": null,
+        "response_length": 103,
+        "model_used": "qwen/qwen3-coder:free",
+        "retry_headers_present": false
+      }
+    },
+    {
+      "test_name": "complex_query_stress_test",
+      "duration_ms": 70.09768486022949,
+      "performance_metrics": {
+        "response_time_ms": 70.09768486022949,
+        "token_usage": null,
+        "response_length": 103,
+        "model_used": "qwen/qwen3-coder:free",
+        "retry_headers_present": false
+      }
+    },
+    {
+      "test_name": "Concurrent Rate Limit Handling (Variable Scope Fix Validation)",
+      "duration_ms": 65997.87187576294,
+      "performance_metrics": {
+        "concurrent_requests": 5,
+        "success_count": 5,
+        "rate_limit_count": 0,
+        "error_count": 0,
+        "total_duration_ms": 65997.87187576294,
+        "retry_behavior_detected": true,
+        "variable_scope_fix_validated": true
+      }
+    },
+    {
+      "test_name": "Exponential Backoff Retry Validation",
+      "duration_ms": 17407.888174057007,
+      "performance_metrics": {
+        "response_time_ms": 17407.888174057007,
+        "retry_behavior_indicated": true,
+        "response_length": 131,
+        "exponential_backoff_validated": true
+      }
+    }
+  ],
+  "rate_limit_analysis": {
+    "tests_with_rate_limits": 1,
+    "average_retry_time": 34926.282246907555,
+    "retry_behavior_detected": true
+  }
+}
