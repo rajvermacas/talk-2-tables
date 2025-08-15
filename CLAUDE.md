@@ -188,18 +188,6 @@ npm test -- --coverage --watchAll=false
 npm run build
 ```
 
-### Docker Deployment
-```bash
-# Basic deployment
-docker-compose up -d
-
-# Production with nginx
-docker-compose --profile production up -d
-
-# With monitoring
-docker-compose --profile monitoring up -d
-```
-
 ### Data Setup
 ```bash
 # Generate test database with sample data
@@ -412,6 +400,10 @@ echo $OPENROUTER_API_KEY
 - **Test database setup**: `scripts/setup_test_db.py`
 - **Configuration**: `pyproject.toml` (Python), `react-chatbot/package.json` (React)
 
+## Memorize
+- test using puppeteer mcp tool for UI relate tasks
+
+# UI Design
 When asked to design UI & frontend interface
 When asked to design UI & frontend interface
 # Role

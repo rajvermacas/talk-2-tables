@@ -228,7 +228,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({
               {columns.map(column => (
                 <th
                   key={column}
-                  className="text-left px-4 py-3 font-semibold text-gray-700">
+                  className="text-left px-4 py-3 font-semibold text-gray-700"
                 >
                   <button
                     onClick={() => handleSort(column)}
@@ -266,7 +266,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({
                 {columns.map(column => (
                   <td 
                     key={column}
-                    className="px-4 py-3 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap text-gray-900">
+                    className="px-4 py-3 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap text-gray-900"
                     title={String(row[column] ?? '')}
                   >
                     {row[column] ?? ''}
