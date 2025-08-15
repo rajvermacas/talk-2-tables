@@ -538,3 +538,34 @@ class SemanticIntentCache:
                 await self.redis_client.close()
         except Exception as e:
             logger.error(f"Error closing cache connections: {e}")
+
+
+# Global cache instance
+_semantic_cache_instance: Optional[SemanticIntentCache] = None
+
+
+def get_semantic_cache() -> SemanticIntentCache:
+    """Get or create the global semantic cache instance."""
+    global _semantic_cache_instance
+    
+    if _semantic_cache_instance is None:
+        from .config import config
+        from .intent_models import EnhancedIntentConfig
+        
+        # Create config for cache
+        cache_config = EnhancedIntentConfig(
+            enable_enhanced_detection=config.enable_enhanced_detection,
+            enable_hybrid_mode=config.enable_hybrid_mode,
+            rollout_percentage=config.rollout_percentage,
+            cache_backend=config.cache_backend,
+            redis_url=config.redis_url,
+            cache_ttl_seconds=config.cache_ttl_seconds,
+            max_cache_size=config.max_cache_size,
+            similarity_threshold=config.similarity_threshold,
+            embedding_model=config.embedding_model,
+            enable_embedding_cache=config.enable_embedding_cache
+        )
+        
+        _semantic_cache_instance = SemanticIntentCache(cache_config)
+    
+    return _semantic_cache_instance

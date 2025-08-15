@@ -13,19 +13,11 @@ class FastAPIServerConfig(BaseSettings):
     
     # LLM Provider Configuration
     llm_provider: str = Field(
-        default="openrouter",
-        description="LLM provider to use (openrouter, gemini)"
+        default="gemini",
+        description="LLM provider to use (gemini only)"
     )
     
-    # OpenRouter API Configuration
-    openrouter_api_key: Optional[str] = Field(
-        default=None,
-        description="OpenRouter API key for LLM access"
-    )
-    openrouter_model: str = Field(
-        default="qwen/qwen3-coder:free",
-        description="OpenRouter model to use"
-    )
+    # OpenRouter API Configuration - REMOVED for production deployment
     
     # Google Gemini API Configuration
     gemini_api_key: Optional[str] = Field(
@@ -79,15 +71,7 @@ class FastAPIServerConfig(BaseSettings):
         description="Allow CORS for React frontend"
     )
     
-    # Optional: Site information for OpenRouter
-    site_url: Optional[str] = Field(
-        default="http://localhost:8001",
-        description="Site URL for OpenRouter rankings"
-    )
-    site_name: Optional[str] = Field(
-        default="Talk2Tables FastAPI Server",
-        description="Site name for OpenRouter rankings"
-    )
+    # Site information - REMOVED (was for OpenRouter)
     
     # OpenAI-compatible settings
     max_tokens: int = Field(
@@ -138,26 +122,18 @@ class FastAPIServerConfig(BaseSettings):
     @classmethod
     def validate_llm_provider(cls, v: str) -> str:
         """Validate LLM provider is supported."""
-        valid_providers = ["openrouter", "gemini"]
+        valid_providers = ["gemini"]
         if v not in valid_providers:
-            raise ValueError(f"LLM provider must be one of: {valid_providers}")
+            raise ValueError(f"LLM provider must be: {valid_providers[0]}")
         return v
     
-    @field_validator("openrouter_api_key")
-    @classmethod
-    def validate_openrouter_api_key(cls, v: Optional[str], info) -> Optional[str]:
-        """Validate OpenRouter API key is provided when using OpenRouter."""
-        provider = info.data.get("llm_provider", "openrouter")
-        if provider == "openrouter":
-            if not v or v == "your_openrouter_api_key_here":
-                raise ValueError("OpenRouter API key must be provided when using openrouter provider")
-        return v
+    # OpenRouter validation REMOVED - not needed for Gemini-only deployment
     
     @field_validator("gemini_api_key")
     @classmethod
     def validate_gemini_api_key(cls, v: Optional[str], info) -> Optional[str]:
         """Validate Gemini API key is provided when using Gemini."""
-        provider = info.data.get("llm_provider", "openrouter")
+        provider = info.data.get("llm_provider", "gemini")
         if provider == "gemini":
             if not v or v == "your_gemini_api_key_here":
                 raise ValueError("Gemini API key must be provided when using gemini provider")
@@ -211,8 +187,8 @@ class FastAPIServerConfig(BaseSettings):
     
     # LLM Configuration for Intent Classification
     classification_model: str = Field(
-        default="meta-llama/llama-3.1-8b-instruct:free",
-        description="Model for intent classification"
+        default="gemini-1.5-flash",
+        description="Gemini model for intent classification"
     )
     classification_temperature: float = Field(
         default=0.0,

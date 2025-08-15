@@ -1,5 +1,5 @@
 """
-Main FastAPI application for chat completions with OpenRouter and MCP integration.
+Main FastAPI application for chat completions with Google Gemini and MCP integration.
 """
 
 import logging
@@ -32,9 +32,7 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting FastAPI server for Talk2Tables")
     logger.info(f"Using LLM provider: {config.llm_provider}")
-    if config.llm_provider == "openrouter":
-        logger.info(f"OpenRouter model: {config.openrouter_model}")
-    elif config.llm_provider == "gemini":
+    if config.llm_provider == "gemini":
         logger.info(f"Gemini model: {config.gemini_model}")
     logger.info(f"MCP server URL: {config.mcp_server_url}")
     
@@ -88,7 +86,7 @@ if config.allow_cors:
 
 # Global exception handler
 @app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
+async def global_exception_handler(_: Request, exc: Exception):
     """Global exception handler."""
     logger.error(f"Unhandled exception: {str(exc)}")
     return JSONResponse(
@@ -99,7 +97,7 @@ async def global_exception_handler(request: Request, exc: Exception):
                 type="internal_error",
                 code="500"
             )
-        ).dict()
+        ).model_dump()
     )
 
 
@@ -161,10 +159,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
 @app.get("/models")
 async def list_models():
     """List available models (OpenAI-compatible endpoint)."""
-    if config.llm_provider == "openrouter":
-        model_id = config.openrouter_model
-        owned_by = "openrouter"
-    elif config.llm_provider == "gemini":
+    if config.llm_provider == "gemini":
         model_id = config.gemini_model
         owned_by = "google"
     else:
@@ -224,7 +219,7 @@ async def mcp_status():
 
 @app.get("/test/integration")
 async def test_integration():
-    """Test the integration between OpenRouter and MCP."""
+    """Test the integration between Google Gemini and MCP."""
     try:
         results = await chat_handler.test_integration()
         return results

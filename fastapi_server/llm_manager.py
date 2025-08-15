@@ -1,5 +1,5 @@
 """
-LangChain-based LLM manager for multi-provider support (OpenRouter, Google Gemini).
+LangChain-based LLM manager for Google Gemini provider support.
 """
 
 import logging
@@ -44,21 +44,7 @@ class LLMManager:
     
     def _initialize_llm(self) -> BaseChatModel:
         """Initialize the appropriate LLM based on configuration."""
-        if self.provider == "openrouter":
-            return ChatOpenAI(
-                base_url="https://openrouter.ai/api/v1",
-                api_key=config.openrouter_api_key,
-                model=config.openrouter_model,
-                temperature=config.temperature,
-                max_tokens=config.max_tokens,
-                timeout=60,  # 60 second timeout
-                max_retries=0,  # We handle retries ourselves
-                # OpenRouter-specific headers
-                model_kwargs={
-                    "extra_headers": self._create_openrouter_headers()
-                }
-            )
-        elif self.provider == "gemini":
+        if self.provider == "gemini":
             return ChatGoogleGenerativeAI(
                 google_api_key=config.gemini_api_key,
                 model=config.gemini_model,
@@ -72,21 +58,12 @@ class LLMManager:
     
     def _get_model_name(self) -> str:
         """Get the model name for the current provider."""
-        if self.provider == "openrouter":
-            return config.openrouter_model
-        elif self.provider == "gemini":
+        if self.provider == "gemini":
             return config.gemini_model
         else:
             return "unknown"
     
-    def _create_openrouter_headers(self) -> Dict[str, str]:
-        """Create headers for OpenRouter requests."""
-        headers = {}
-        if config.site_url:
-            headers["HTTP-Referer"] = config.site_url
-        if config.site_name:
-            headers["X-Title"] = config.site_name
-        return headers
+    # Gemini-only deployment - headers not needed
     
     def _convert_messages_to_langchain(self, messages: List[ChatMessage]) -> List[BaseMessage]:
         """Convert our ChatMessage format to LangChain messages."""

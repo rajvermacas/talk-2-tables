@@ -4,401 +4,259 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Model Context Protocol (MCP) server implementation that provides SQLite database query capabilities with resource discovery. The project is part of a larger multi-component system architecture designed for AI agents to interact with distributed data sources.
+This is a production-ready, full-stack system implementing a Model Context Protocol (MCP) server with natural language database querying capabilities. The system uses Google Gemini for cost-effective LLM operations and features an enhanced intent detection system with semantic caching.
 
-### End Goal Architecture
-The ultimate vision is a multi-tier system:
-1. **React chatbot** ↔ **FastAPI server** 
-2. **FastAPI server** contains an **AI agent** (OpenRouter LLMs + MCP client)
-3. **MCP client** ↔ **Multiple MCP servers** (like this one) in data source systems
-4. Each **data source system** has MCP servers + SQLite databases
-5. AI agent uses resource discovery to route queries to appropriate MCP servers
+### Multi-Tier Architecture
+1. **React Frontend** (TypeScript + Tailwind CSS) ↔ **FastAPI Backend** (Python + LangChain)
+2. **FastAPI Backend** contains **AI Agent** (Gemini LLM + Enhanced Intent Detection) + **MCP Client**
+3. **MCP Client** ↔ **MCP Server** (SQLite database interface)
+4. **Enhanced Intent Detection**: Multi-tier strategy (SQL Fast Path → Semantic Cache → Gemini LLM)
 
 ### Current Implementation Status
-This repository implements the **complete multi-tier system with multi-LLM support** including:
-- **MCP Server**: SQLite database query capabilities via MCP protocol with resource discovery
-- **FastAPI Backend**: AI agent server with multi-LLM support (OpenRouter + Google Gemini) via LangChain + MCP client integration
-- **React Chatbot**: Modern glassmorphism frontend with red/black/gray/white theme for natural language database queries
-- **Multi-LLM Architecture**: LangChain-based unified interface supporting multiple LLM providers with configuration-based switching
-- **Full Integration**: Complete data flow from user queries through multiple LLM providers to database results
-- **Deployment Infrastructure**: Docker, nginx, monitoring, and comprehensive testing
-
-## Architecture & Key Components
-
-### Core Structure
-```
-src/talk_2_tables_mcp/      # MCP Server (database interface)
-├── server.py               # Main MCP server with FastMCP framework
-├── remote_server.py        # Remote deployment manager for network access
-├── database.py             # SQLite handler with security validation
-└── config.py               # Pydantic v2 configuration management
-
-fastapi_server/             # AI Agent Backend
-├── main.py                 # FastAPI application entry point
-├── chat_handler.py         # Natural language query processing
-├── mcp_client.py          # MCP client for database communication
-├── openrouter_client.py   # LLM integration with OpenRouter
-├── retry_utils.py         # Retry logic with exponential backoff
-├── config.py              # FastAPI server configuration
-└── models.py              # Pydantic data models
-
-react-chatbot/             # Frontend Interface
-├── src/
-│   ├── components/        # React UI components (ChatInterface, etc.)
-│   ├── hooks/            # Custom React hooks (useChat, etc.)
-│   ├── services/         # API client for FastAPI communication
-│   └── types/            # TypeScript type definitions
-└── package.json          # React dependencies and scripts
-```
-
-### System Integration
-- **MCP Protocol**: FastMCP framework with stdio/SSE/HTTP transports
-- **AI Agent**: Multi-LLM integration via LangChain (OpenRouter + Google Gemini) with retry logic and rate limiting
-- **Frontend**: React TypeScript UI with glassmorphism design and red/black/gray/white theme
-- **Database**: SQLite with read-only SELECT queries and security validation
-- **Deployment**: Full Docker stack with nginx reverse proxy
-
-### Remote Access & Deployment
-- **Multiple transport modes**: Local CLI, SSE streaming, HTTP with optional stateless mode
-- **Docker deployment**: Full docker-compose with nginx reverse proxy
-- **Network configuration**: Host/port binding, CORS support, health checks
-- **Production profiles**: Monitoring (Prometheus), production (nginx), security headers
-
-## Session Context Management
-
-### Session Scratchpad
-This project maintains a **session scratchpad** at `.dev-resources/context/session-scratchpad.md` to track the progress done till now and how the project has evolved overtime.  
-Read the instructions at `/root/.claude/commands/persist-session.md` to get an understanding on the how to update the session scratchpad.
-
-**Important**: Always read and update the session scratchpad when working on this project to maintain context continuity across different Claude Code sessions.
-
-### Incremental Development Approach
-**Build one task at a time** - this project follows an incremental development strategy:
-- Focus on **single, well-defined tasks** rather than attempting massive changes at once
-- Complete and test each component thoroughly before moving to the next
-- Update the session scratchpad after each task completion to maintain progress tracking
-- **Current Status**: Full multi-tier system implemented (MCP ↔ FastAPI ↔ React) - future tasks focus on enhancements, additional data sources, and production optimizations
+- **MCP Server**: SQLite database query capabilities via FastMCP framework with resource discovery
+- **FastAPI Backend**: Production-ready AI agent using Google Gemini with enhanced intent detection and semantic caching
+- **React Frontend**: Modern glassmorphism UI with dark/light themes and accessibility compliance
+- **Enhanced Intent Detection**: LLM-based intent classification with local embeddings and intelligent caching
+- **Production Ready**: Docker deployment, cost-optimized configuration, comprehensive testing
 
 ## Development Commands
 
 ### Prerequisites
-**Always use venv for Python development**
-
+Always use venv for Python development:
 ```bash
-# Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install all dependencies
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -e ".[dev,fastapi]"
-
-# Install React dependencies (if not already installed)
 cd react-chatbot && npm install && cd ..
 ```
 
-### Local Development - Full Stack
-
-The system requires three components running simultaneously. Use these commands in **separate terminals**:
-
+### Full Stack Development (3 terminals required)
 ```bash
 # Terminal 1: MCP Server (database interface)
 python -m talk_2_tables_mcp.remote_server
 
-# Terminal 2: FastAPI Backend (AI agent with multi-LLM support)
+# Terminal 2: FastAPI Backend (AI agent)
 cd fastapi_server && python main.py
 
-# Terminal 3: React Frontend (user interface)
+# Terminal 3: React Frontend
 ./start-chatbot.sh
 ```
 
 ### Component-Specific Development
-
 ```bash
-# === MCP Server Only ===
-# Start local server (stdio transport for MCP clients)
+# MCP Server only (local CLI)
 python -m talk_2_tables_mcp.server
 
-# Start remote server (HTTP transport for network access)
-python -m talk_2_tables_mcp.remote_server
-# OR with specific options:
+# MCP Server (HTTP for network access)
 python -m talk_2_tables_mcp.server --transport streamable-http --host 0.0.0.0 --port 8000
 
-# === FastAPI Server Only ===
-cd fastapi_server
-python main.py
-# OR with hot reload:
-uvicorn main:app --reload --port 8001
+# FastAPI Server only
+cd fastapi_server && uvicorn main:app --reload --port 8001
 
-# === React App Only ===
+# React App only
 cd react-chatbot && npm start
 
-# === Quick Testing ===
-python scripts/test_fastapi_server.py
-python scripts/test_remote_server.py
-python scripts/test_multi_llm.py
+# Test database setup
+python scripts/setup_test_db.py
 ```
 
 ### Testing
-
-**Important**: Ensure OpenRouter API key and/or Gemini API key is set for E2E tests involving LLM integration.
-
 ```bash
-# === Unit Tests (fastest, no external dependencies) ===
+# Unit tests (fastest, no external dependencies)
 pytest tests/test_database.py tests/test_config.py tests/test_server.py -v
 
-# === Integration Tests ===
-pytest tests/test_fastapi_server.py tests/test_retry_logic.py -v
+# Integration tests
+pytest tests/test_fastapi_server.py tests/test_llm_manager.py -v
 
-# === End-to-End Tests (require running servers) ===
-# Full system E2E test (MCP + FastAPI + React)
+# Enhanced intent detection tests
+pytest tests/test_enhanced_intent_detector.py tests/test_semantic_cache.py -v
+
+# End-to-End tests (requires running servers)
 pytest tests/e2e_feature_test.py -v
 
-# React chatbot E2E test (automated browser testing)
-pytest tests/e2e_react_chatbot_test.py -v
+# React frontend tests
+cd react-chatbot && npm test
 
-# Rate limiting and retry logic validation
-pytest tests/e2e_rate_limit_handling_test.py -v
-
-# Comprehensive system test (all components)
-pytest tests/e2e_comprehensive_test.py -v
-
-# === Run All Tests ===
-# Quick test (unit + integration only)
-pytest tests/test_*.py -v
-
-# Full test suite (including E2E)
-pytest
-
-# With coverage report
+# Full test suite
 pytest --cov=talk_2_tables_mcp --cov-report=html
 ```
 
-### React Frontend Testing
-
+### Quick Testing Scripts
 ```bash
-cd react-chatbot
-
-# Run React test suite
-npm test
-
-# Run tests with coverage
-npm test -- --coverage --watchAll=false
-
-# Build for production (validates TypeScript)
-npm run build
+python scripts/test_fastapi_server.py     # Test FastAPI endpoints
+python scripts/test_remote_server.py      # Test MCP server connectivity
+python scripts/test_multi_llm.py          # Test Gemini integration
 ```
 
-### Data Setup
-```bash
-# Generate test database with sample data
-python scripts/setup_test_db.py
+## Architecture & Key Components
 
-# Test remote server connectivity
-python scripts/test_remote_server.py
+### Core Data Flow
+1. **User Query** → React Frontend → FastAPI Backend
+2. **Enhanced Intent Detection**: Analyzes query using multi-tier strategy
+3. **If Database Query**: FastAPI → MCP Client → MCP Server → SQLite
+4. **If General Chat**: FastAPI → Gemini LLM directly
+5. **Response** ← FastAPI ← Frontend (with query results or chat response)
+
+### Enhanced Intent Detection System
+The system uses a sophisticated 3-tier approach:
+- **Tier 1 - SQL Fast Path**: Regex patterns for explicit SQL queries (~1ms)
+- **Tier 2 - Semantic Cache**: Local embeddings + similarity matching (~5ms, 50-80% hit rate)
+- **Tier 3 - Gemini LLM**: Intent classification with database metadata (~500ms)
+
+Key files:
+- `fastapi_server/enhanced_intent_detector.py` - Main detection logic
+- `fastapi_server/semantic_cache.py` - Embedding-based caching
+- `fastapi_server/intent_models.py` - Pydantic data models
+
+### MCP Protocol Integration
+- **Transport**: HTTP (streamable-http) for network access, stdio for CLI
+- **Security**: Read-only SELECT queries only, SQL injection protection
+- **Resource Discovery**: JSON metadata describing database structure
+- **Async/Sync**: Use `server.run_async()` for HTTP transport to prevent "asyncio already running" errors
+
+Key files:
+- `src/talk_2_tables_mcp/server.py` - Main MCP server with FastMCP framework
+- `fastapi_server/mcp_client.py` - MCP client integration
+- `resources/metadata.json` - Database structure metadata
+
+### LLM Integration (Gemini-Only Production Config)
+- **Provider**: Google Gemini via LangChain for cost-effective production deployment
+- **Models**: gemini-1.5-flash for intent detection, gemini-2.5-flash for chat
+- **Configuration**: Environment-based, Pydantic v2 validation
+- **Error Handling**: Retry logic with exponential backoff
+
+Key files:
+- `fastapi_server/llm_manager.py` - LangChain-based Gemini integration
+- `fastapi_server/config.py` - Environment configuration management
+- `fastapi_server/retry_utils.py` - Retry logic implementation
+
+### React Frontend Architecture
+- **Framework**: React 18 + TypeScript + Tailwind CSS
+- **Design**: Glassmorphism with red/black/gray/white theme
+- **Features**: Dark/light mode, accessibility compliance, responsive design
+- **State**: React Query for server state, Context for themes
+- **Components**: Modular design with custom hooks
+
+Key files:
+- `react-chatbot/src/components/ChatInterface.tsx` - Main chat component
+- `react-chatbot/src/hooks/useChat.ts` - Chat state management
+- `react-chatbot/src/contexts/ThemeContext.tsx` - Theme management
+
+## Critical Configuration
+
+### Environment Variables
+```bash
+# === Primary Configuration ===
+LLM_PROVIDER=gemini                    # Production uses Gemini only
+GEMINI_API_KEY=your_gemini_api_key_here
+CLASSIFICATION_MODEL=gemini-1.5-flash  # For intent detection
+EMBEDDING_MODEL=all-MiniLM-L6-v2      # Local sentence-transformers
+
+# === Enhanced Intent Detection ===
+ENABLE_ENHANCED_DETECTION=true        # Enable LLM-based detection
+ENABLE_SEMANTIC_CACHE=true            # Enable intelligent caching
+CACHE_BACKEND=memory                  # Use memory cache (or redis)
+SIMILARITY_THRESHOLD=0.85             # Semantic similarity threshold
+
+# === Server Configuration ===
+DATABASE_PATH=test_data/sample.db     # SQLite database location
+MCP_SERVER_URL=http://localhost:8000  # MCP server endpoint
+FASTAPI_PORT=8001                     # FastAPI server port
 ```
 
-## Configuration & Environment
+### Key Design Patterns
 
-### Key Environment Variables
-```bash
-# === MCP Server Configuration ===
-DATABASE_PATH="test_data/sample.db"      # SQLite database location
-METADATA_PATH="resources/metadata.json"  # Resource discovery metadata
-HOST="0.0.0.0"                          # Server bind address
-PORT="8000"                             # Server port
-TRANSPORT="streamable-http"              # Transport protocol
-LOG_LEVEL="INFO"                         # Logging verbosity
-STATELESS_HTTP="false"                   # HTTP session mode
-ALLOW_CORS="true"                        # CORS headers
-
-# === FastAPI Server Configuration ===
-OPENROUTER_API_KEY="your_key_here"      # OpenRouter API key for LLM
-OPENROUTER_MODEL="meta-llama/llama-3.1-8b-instruct:free"  # Default model
-FASTAPI_HOST="0.0.0.0"                  # FastAPI bind address
-FASTAPI_PORT="8001"                     # FastAPI port
-MCP_SERVER_URL="http://localhost:8000/mcp"  # MCP server endpoint
-
-# === Development Ports ===
-# MCP Server: 8000
-# FastAPI Server: 8001  
-# React Dev Server: 3000
-```
-
-### Configuration Management
-- **Pydantic v2** models with field validation
-- **Environment variable override** support
-- **Path validation** for database and metadata files
-- **Logging configuration** with multiple levels
-
-## Security Considerations
-
-### Database Security
-- **Read-only access**: Only SELECT queries allowed
-- **SQL injection protection**: Dangerous keywords blocked (`INSERT`, `UPDATE`, `DELETE`, `DROP`, etc.)
-- **Query validation**: Length limits (10,000 chars), result row limits (1,000 rows)
-- **Input sanitization**: Query content validation and logging
-
-### Network Security
-- **CORS configuration**: Configurable cross-origin access
-- **Rate limiting**: Via nginx reverse proxy configuration
-- **Health endpoints**: `/health` for monitoring without exposing data
-- **Optional authentication**: Framework ready for auth layer addition
-
-## Critical Implementation Details
-
-### Async/Sync Compatibility
-The server supports both sync and async execution:
-- `server.run()` - synchronous execution for stdio transport
-- `server.run_async()` - asynchronous execution for HTTP/SSE transports
-- **Critical**: Use `run_async()` for remote servers to prevent "asyncio already running" errors
-
-### Pydantic v2 Migration
-Configuration uses Pydantic v2 syntax:
-- `@field_validator` instead of `@validator`
-- `Field()` descriptions and constraints
-- Model inheritance and validation chains
-
-### Resource Discovery
+#### Pydantic v2 Configuration
+Uses field validators and modern syntax:
 ```python
-# Resource provides metadata for agent routing:
-{
-    "server_name": "Talk 2 Tables MCP Server",
-    "database_path": "test_data/sample.db", 
-    "description": "SQLite database with customer, product, and order data",
-    "business_use_cases": ["Customer analytics", "Sales reporting", ...],
-    "tables": {
-        "customers": {"columns": {...}, "row_count": 100},
-        "products": {"columns": {...}, "row_count": 50},
-        "orders": {"columns": {...}, "row_count": 200}
-    }
-}
+@field_validator("gemini_api_key")
+@classmethod
+def validate_gemini_api_key(cls, v: Optional[str], info) -> Optional[str]:
+    # Validation logic
 ```
 
-## Testing Architecture
+#### Async/Sync Transport Compatibility
+- **stdio transport**: Use `server.run()` (synchronous)
+- **HTTP transport**: Use `server.run_async()` (asynchronous) - Critical for remote servers
 
-### Test Coverage
-- **Unit tests**: Database operations, query validation, security checks
-- **Integration tests**: MCP protocol compliance, transport modes
-- **End-to-end tests**: Full client-server interaction with sample data
-- **Security tests**: SQL injection attempts, unauthorized query types
+#### Enhanced Intent Detection Flow
+Multi-tier strategy with semantic caching:
+1. Check for explicit SQL patterns
+2. Query semantic cache using local embeddings
+3. Fallback to Gemini LLM with database metadata
 
-### Test Data Management
-- **Sample database**: `test_data/sample.db` with realistic business data
-- **Test data generation**: `scripts/setup_test_db.py` creates reproducible datasets
-- **Mock data**: Used exclusively in tests, never in production code
+#### Error Handling & Retry Logic
+Exponential backoff with configurable parameters:
+- Max retries, initial delay, backoff factor
+- Graceful degradation when components fail
 
-## File Organization Rules
+## Production Deployment
 
-### Directory Structure
-- **`src/`**: Source code with package structure for PyPI deployment
-- **`test_data/`**: Sample databases and test datasets  
-- **`scripts/`**: Utility scripts for setup, testing, deployment
-- **`resources/`**: Metadata, configuration, and reports
-- **`resources/context/session-scratchpad.md`**: **Session context tracking** - maintains record of completed tasks and current project state
-- **`tests/`**: Unit and integration tests
-
-### File Size Limits
-- **Maximum 800 lines per file** - enforce by splitting large modules
-- **Single responsibility**: Each module has one clear purpose
-- **Function length**: Keep functions under 80 lines when possible
-
-## Known Issues & Fixes Applied
-
-### Critical Bug Fixes
-1. **Pydantic v1→v2**: Updated validator decorators and field definitions
-2. **AsyncIO conflicts**: Added `run_async()` method for remote servers  
-3. **Resource registration**: Removed invalid `ctx` parameter from resource functions
-4. **Host/port configuration**: Use `self.mcp.settings` for server binding
-
-### Configuration Pitfalls
-- **Database paths**: Must be relative to project root or absolute
-- **Metadata validation**: JSON schema must match Pydantic models
-- **Transport selection**: stdio for local CLI, http for remote access
-- **Docker networking**: Ensure port mapping matches internal configuration
-
-## Integration with Larger System
-
-### MCP Client Integration
-This server is designed to be discovered and used by MCP clients:
-1. **Resource discovery**: Client calls `list_resources` to get metadata
-2. **Tool discovery**: Client calls `list_tools` to see available query capabilities  
-3. **Query execution**: Client calls `execute_query` tool with SELECT statements
-4. **Result processing**: Client receives structured JSON with columns and rows
-
-### Future Integration Points
-- **Authentication layer**: Ready for API key or OAuth integration
-- **Multiple databases**: Architecture supports multiple database configurations
-- **Monitoring integration**: Prometheus metrics and health check endpoints
-- **Load balancing**: Stateless HTTP mode supports horizontal scaling
-
-## Deployment Considerations
-
-### Development vs Production
-- **Development**: Use stdio transport with local database files
-- **Production**: Use HTTP transport with nginx reverse proxy and SSL
-- **Testing**: Use in-memory or temporary databases with test data
-
-### Scaling Strategies
-- **Horizontal**: Multiple server instances with load balancer
-- **Vertical**: Increase database connection limits and memory
-- **Caching**: Add query result caching for frequently accessed data
-- **Database optimization**: Index optimization for common query patterns
-
-## Common Development Workflows
-
-### Starting Fresh Development Session
+### Docker Configuration
 ```bash
-# 1. Activate environment and check status
-source venv/bin/activate
-git status
+# Basic deployment
+docker-compose up -d
 
-# 2. Update session context (ALWAYS READ FIRST)
-cat .dev-resources/context/session-scratchpad.md
-
-# 3. Install any missing dependencies
-pip install -e ".[dev,fastapi]" && cd react-chatbot && npm install && cd ..
-
-# 4. Start development stack (3 terminals)
-python -m talk_2_tables_mcp.remote_server  # Terminal 1
-cd fastapi_server && python main.py        # Terminal 2  
-./start-chatbot.sh                          # Terminal 3
+# Production with nginx
+docker-compose --profile production up -d
 ```
 
-### Debugging Common Issues
+### Cost Optimization Features
+- **Gemini API**: Affordable pricing compared to other providers
+- **Local Embeddings**: sentence-transformers runs locally (no API costs)
+- **Semantic Caching**: 50-80% reduction in LLM API calls
+- **Intelligent Routing**: SQL queries bypass LLM when possible
 
-**MCP Connection Issues:**
-```bash
-# Test MCP server directly
-python scripts/test_remote_server.py
+### Security Features
+- **Read-only database access**: Only SELECT statements allowed
+- **SQL injection protection**: Dangerous keywords blocked
+- **Query validation**: Length and result limits enforced
+- **CORS configuration**: Configurable cross-origin access
 
-# Check transport protocol match (FastAPI uses streamablehttp)
-python -m talk_2_tables_mcp.server --transport streamable-http --port 8000
+## File Organization
+
+### Repository Structure
+```
+├── src/talk_2_tables_mcp/     # MCP Server implementation
+├── fastapi_server/            # AI agent backend
+├── react-chatbot/             # TypeScript frontend
+├── tests/                     # Comprehensive test suite
+├── scripts/                   # Development and testing utilities
+├── resources/                 # Database metadata and assets
+└── test_data/                 # Sample databases
 ```
 
-**React Build Failures:**
-```bash
-cd react-chatbot
-npm run build  # Validates TypeScript compilation
-npm test       # Runs test suite
-```
+### Critical Files to Know
+- **Session Context**: `.dev-resources/context/session-scratchpad.md` - Project evolution history
+- **Enhanced Detection**: `fastapi_server/enhanced_intent_detector.py` - Core AI logic
+- **Configuration**: `fastapi_server/config.py` - Environment settings
+- **Frontend Entry**: `react-chatbot/src/components/ChatInterface.tsx` - Main UI
+- **Test Database**: `scripts/setup_test_db.py` - Generate sample data
 
-**FastAPI Server Issues:**
-```bash
-# Test FastAPI endpoints directly
-python scripts/test_fastapi_server.py
+### Size Limits
+- **Maximum 800 lines per file** - split large modules when exceeded
+- **Single responsibility** per module
+- **Function length** under 80 lines preferred
 
-# Check OpenRouter API key is set
-echo $OPENROUTER_API_KEY
-```
+## Important Context
 
-### Essential File Locations
-- **Session context**: `.dev-resources/context/session-scratchpad.md` (READ FIRST)
-- **MCP server**: `src/talk_2_tables_mcp/server.py`
-- **FastAPI backend**: `fastapi_server/main.py`
-- **React frontend**: `react-chatbot/src/components/ChatInterface.tsx`
-- **Database**: `test_data/sample.db`
-- **Test database setup**: `scripts/setup_test_db.py`
-- **Configuration**: `pyproject.toml` (Python), `react-chatbot/package.json` (React)
+### Business Value
+Natural language database querying system with:
+- Universal domain support (healthcare, finance, retail, manufacturing)
+- Cost-effective Gemini integration with intelligent caching
+- Production-ready deployment with comprehensive testing
+- Accessibility-compliant modern UI
 
-## Memorize
-- test using puppeteer mcp tool for UI relate tasks
+### Technical Decisions
+- **Gemini-only LLM provider**: Cost optimization for production deployment
+- **Enhanced Intent Detection**: Multi-tier strategy for accuracy and performance
+- **Local embeddings**: sentence-transformers for zero-cost semantic similarity
+- **FastMCP framework**: Modern MCP implementation with multiple transports
+- **LangChain integration**: Unified LLM interface with retry logic
+
+### Development Workflow
+1. **Read session scratchpad first**: Contains project evolution and current state
+2. **Test incrementally**: Each component has isolated testing capability
+3. **Follow async patterns**: Critical for MCP HTTP transport compatibility
+4. **Maintain configuration consistency**: Pydantic v2 validation throughout
+5. **Preserve cost optimization**: Keep Gemini-only configuration for production

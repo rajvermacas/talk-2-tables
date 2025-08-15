@@ -1,5 +1,5 @@
 """
-Chat completion handler that orchestrates OpenRouter LLM and MCP database queries.
+Chat completion handler that orchestrates Google Gemini LLM and MCP database queries.
 Enhanced with LLM-based intent detection and semantic caching capabilities.
 """
 
@@ -447,7 +447,7 @@ class ChatCompletionHandler:
     
     async def test_integration(self) -> Dict[str, Any]:
         """
-        Test the integration between OpenRouter and MCP.
+        Test the integration between Google Gemini and MCP.
         
         Returns:
             Test results

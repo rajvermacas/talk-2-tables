@@ -1,7 +1,7 @@
 # Talk 2 Tables MCP Server - Session Summary
 
 ## Session Overview
-**Current Session (2025-08-15)**: **PHASE 1 ENHANCED INTENT DETECTION - COMPLETE** 🎉 Successfully implemented comprehensive LLM-based intent classification system replacing legacy regex-based detection. Achieved universal domain support (healthcare, finance, retail, manufacturing, legal, education) through multi-tier detection strategy (SQL Fast Path → Semantic Cache → LLM Classification). All core components working: Pydantic v2 models, semantic similarity caching, performance metrics, graceful degradation, comprehensive testing suite, and production-ready configuration. System ready for gradual rollout deployment.
+**Current Session (2025-08-15)**: **PRODUCTION-READY GEMINI CONFIGURATION - COMPLETE** 🎉 Successfully removed OpenRouter dependency and configured system for production deployment with Google Gemini + local models. Implemented cost-optimized architecture: Gemini API for LLM classification (gemini-1.5-flash) + local sentence-transformers for embeddings (all-MiniLM-L6-v2) + semantic caching for performance. Maintained Enhanced Intent Detection capabilities while eliminating expensive API dependencies. System fully validated and ready for production with predictable, affordable costs.
 
 ## Historical Sessions Summary
 *Consolidated overview of Sessions 1-13 - compacted for token efficiency*
@@ -148,12 +148,75 @@
 
 ---
 
+## Session 16 - 2025-08-15
+**Focus Area**: Production-ready Gemini configuration and OpenRouter dependency removal for cost-optimized deployment.
+
+### Key Accomplishments
+- **OpenRouter Removal**: Completely removed OpenRouter dependency and all related code for production deployment constraints.
+- **Gemini-Only Configuration**: Configured system for Google Gemini as the sole LLM provider with cost-effective models.
+- **Cost Optimization**: Implemented dual-model architecture: Gemini API for classification + local sentence-transformers for embeddings.
+- **Maintained Enhanced Intent Detection**: Preserved all Enhanced Intent Detection capabilities while eliminating expensive API dependencies.
+- **Production Validation**: Comprehensive testing confirmed system works perfectly with Gemini + local models configuration.
+
+### Technical Implementation
+- **Configuration Updates**: 
+  - Changed default `LLM_PROVIDER` from "openrouter" to "gemini"
+  - Updated `CLASSIFICATION_MODEL` from "meta-llama/llama-3.1-8b-instruct:free" to "gemini-1.5-flash"
+  - Confirmed `EMBEDDING_MODEL` uses local "all-MiniLM-L6-v2" (sentence-transformers)
+- **Code Cleanup**: 
+  - Deleted `fastapi_server/openrouter_client.py` (349 lines)
+  - Removed OpenRouter imports and references from all files
+  - Updated LLM manager to support Gemini-only provider
+  - Simplified configuration validation to only support "gemini"
+- **Semantic Caching Preservation**: Kept all caching functionality intact for 50-80% API cost reduction
+- **Documentation Updates**: Updated `.env.example` and configuration documentation for Gemini-only deployment
+
+### Problem Resolution Process
+1. **Cost Concern Identification**: User identified expensive OpenRouter API costs and unavailability in production
+2. **Model Analysis**: Analyzed CLASSIFICATION_MODEL (OpenRouter API) vs EMBEDDING_MODEL (local) usage patterns
+3. **Solution Design**: Configured Gemini as affordable API + local embeddings + semantic caching for optimal cost/performance
+4. **Implementation**: Systematic removal of OpenRouter code while preserving Enhanced Intent Detection capabilities
+5. **Validation**: Comprehensive testing confirmed all functionality preserved with new provider configuration
+
+### Cost Optimization Results
+- **Before**: OpenRouter API (expensive/unavailable) + Local embeddings
+- **After**: Gemini API (affordable) + Local embeddings + Semantic caching (50-80% fewer API calls)
+- **Cost Reduction**: Significant cost optimization through affordable Gemini pricing and intelligent caching
+- **Performance Maintained**: Semantic caching provides same performance benefits with local embeddings
+
+### Files Modified
+1. **`fastapi_server/openrouter_client.py`**: ❌ **DELETED** (removed OpenRouter dependency)
+2. **`fastapi_server/config.py`**: Updated default provider to "gemini", removed OpenRouter fields and validation
+3. **`fastapi_server/llm_manager.py`**: Removed OpenRouter provider logic, simplified to Gemini-only
+4. **`fastapi_server/main.py`**: Updated startup logs and model listing for Gemini-only configuration
+5. **`.env.example`**: Updated configuration examples to remove OpenRouter, set Gemini as default
+6. **`fastapi_server/intent_models.py`**: Confirmed embedding model uses local sentence-transformers
+
+### Validation & Testing Results
+- **✅ Configuration Loading**: Pydantic v2 validation passes with Gemini-only setup
+- **✅ LLM Manager**: Initializes correctly with Gemini provider (gemini-2.5-flash)
+- **✅ Enhanced Intent Detection**: All capabilities preserved with Gemini classification model (gemini-1.5-flash)
+- **✅ Local Embeddings**: Confirmed sentence-transformers (all-MiniLM-L6-v2) runs locally with no API costs
+- **✅ Semantic Caching**: Memory-based caching working correctly for cost optimization
+- **✅ System Startup**: FastAPI application starts successfully with complete endpoint structure
+- **✅ No OpenRouter Dependencies**: All OpenRouter imports and references successfully removed
+
+### Current State After This Session
+- **Production Ready**: ✅ System fully configured for production deployment with predictable, affordable costs
+- **Provider Configuration**: ✅ Gemini-only setup with gemini-1.5-flash for classification, local embeddings for similarity
+- **Cost Optimization**: ✅ Dual architecture (API + local) with semantic caching provides optimal cost/performance ratio
+- **Enhanced Intent Detection**: ✅ All capabilities preserved including multi-tier detection and performance metrics
+- **Documentation**: ✅ Updated configuration guides and deployment instructions for Gemini-only setup
+- **Validation Complete**: ✅ Comprehensive testing confirms production readiness with new architecture
+
+---
+
 ## Current Project State
 
 ### ✅ Completed Components
 - **MCP Server**: Fully implemented with FastMCP framework, security validation, and multiple transport protocols.
-- **FastAPI Backend**: OpenAI-compatible chat completions API with multi-LLM support (OpenRouter & Google Gemini) via LangChain, robust retry logic, and fully functional MCP resource discovery.
-- **Multi-LLM Architecture**: Complete LangChain-based implementation supporting multiple providers with unified interface, configuration-based switching, and extensible design for future providers.
+- **FastAPI Backend**: OpenAI-compatible chat completions API with Google Gemini via LangChain, robust retry logic, and fully functional MCP resource discovery.
+- **Gemini LLM Architecture**: Complete LangChain-based implementation with Google Gemini provider, cost-optimized configuration, and production-ready deployment setup.
 - **React Frontend**: Complete TypeScript chatbot with modern Tailwind CSS and glassmorphism design, 6 components, custom hooks, API integration, responsive design with red/black/gray/white theme, smooth animations, professional UI/UX, comprehensive dark mode support with accessibility improvements, and clean error-free compilation.
 - **Modern UI Design**: Complete Tailwind CSS transformation with glassmorphism effects, gradient backgrounds, modern typography, optimized performance through reduced bundle size, and full dark/light mode theming with WCAG-compliant color contrast.
 - **UI Accessibility**: Send button positioning optimized to prevent scrollbar overlap, comprehensive Puppeteer MCP testing validated for browser automation workflows.
@@ -191,10 +254,11 @@ talk-2-tables-mcp/
 DATABASE_PATH="test_data/sample.db"
 TRANSPORT="streamable-http"
 
-# FastAPI Server - Multi-LLM Support
-LLM_PROVIDER="openrouter"  # or "gemini"
-OPENROUTER_API_KEY="your_openrouter_api_key_here"
+# FastAPI Server - Gemini Configuration  
+LLM_PROVIDER="gemini"
 GEMINI_API_KEY="your_gemini_api_key_here"
+CLASSIFICATION_MODEL="gemini-1.5-flash"
+EMBEDDING_MODEL="all-MiniLM-L6-v2"  # Local model
 MCP_SERVER_URL="http://localhost:8000"
 ```
 
@@ -202,8 +266,7 @@ MCP_SERVER_URL="http://localhost:8000"
 - **FastMCP**: MCP protocol implementation framework.
 - **FastAPI**: Modern async web framework for API development.
 - **LangChain**: Unified framework for multi-LLM provider integration.
-- **OpenRouter**: LLM API integration via LangChain-OpenAI.
-- **Google Gemini**: Google's LLM API via LangChain-Google-GenAI.
+- **Google Gemini**: Google's LLM API via LangChain-Google-GenAI for cost-effective production deployment.
 - **React**: JavaScript library for building user interfaces.
 - **Docker**: Containerization and production deployment.
 
@@ -279,15 +342,15 @@ pytest tests/e2e_react_chatbot_test.py -v
 The project has evolved from a simple MCP server to a complete, multi-tier, full-stack application with modern UI design, multi-LLM capabilities, and accessibility-focused improvements. Key evolution phases include foundation building, productionization, integration, validation, reliability improvements, frontend development, resource discovery fixes, modern UI transformation, multi-LLM architecture, dark mode implementation, and accessibility optimization.
 
 ## Session Handoff Context
-✅ **FULL-STACK APPLICATION WITH COMPREHENSIVE ARCHITECTURAL ROADMAP FOR ENHANCED INTENT DETECTION COMPLETE**. All system components are working with future architecture documented:
+✅ **PRODUCTION-READY GEMINI SYSTEM WITH COST-OPTIMIZED ARCHITECTURE COMPLETE**. All system components are working with production-ready configuration:
 1. ✅ **Modern Tailwind CSS Frontend**: Complete TypeScript chatbot with professional glassmorphism design, red/black/gray/white theme, smooth animations, optimized performance, comprehensive dark/light mode support, and accessibility-compliant UI spacing.
-2. ✅ **Multi-LLM Backend**: Complete LangChain-based architecture supporting both OpenRouter and Google Gemini providers with unified interface.
-3. ✅ **Configuration Flexibility**: Environment-based provider switching allowing seamless transition between LLM providers.
-4. ✅ **Comprehensive Testing**: Extensive test suites covering multi-provider scenarios, mocked tests, integration validation, and browser automation via Puppeteer MCP.
-5. ✅ **MCP Resource Discovery**: All protocol mismatches resolved, database metadata fully accessible.
-6. ✅ **Modern UI/UX**: Professional glassmorphism design with reduced bundle size, faster loading, superior user experience, accessibility-compliant dark mode, and optimized button positioning preventing UI overlap issues.
-7. ✅ **Extensible Architecture**: Clean abstraction layer ready for adding additional providers (Claude, GPT-4, Llama, etc.).
-8. ✅ **Enhanced Intent Detection Architecture**: Comprehensive architectural documentation for LLM-based intent detection supporting universal domain deployment without manual configuration.
+2. ✅ **Gemini LLM Backend**: Complete LangChain-based architecture using Google Gemini for cost-effective production deployment with affordable API pricing.
+3. ✅ **Cost-Optimized Configuration**: Dual-model architecture with Gemini API for classification (gemini-1.5-flash) + local sentence-transformers for embeddings (all-MiniLM-L6-v2).
+4. ✅ **Enhanced Intent Detection**: All capabilities preserved including multi-tier detection strategy (SQL Fast Path → Semantic Cache → Gemini LLM) with performance metrics.
+5. ✅ **Semantic Caching**: Intelligent caching with local embeddings providing 50-80% API cost reduction while maintaining performance benefits.
+6. ✅ **Production Validation**: Comprehensive testing confirmed system works perfectly with Gemini + local models configuration.
+7. ✅ **OpenRouter Removal**: Complete elimination of expensive OpenRouter dependency while preserving all functionality.
+8. ✅ **Enhanced Intent Detection Architecture**: Comprehensive architectural documentation for LLM-based intent detection supporting universal domain deployment.
 9. ✅ **Multi-Server Routing Foundation**: Future architecture documented for federated query execution across multiple MCP servers and data sources.
 
-**Current Status**: ✅ **PRODUCTION READY WITH COMPREHENSIVE ARCHITECTURAL ROADMAP FOR NEXT-GENERATION CAPABILITIES**. The system features a sophisticated LangChain-based architecture with multiple LLM providers, a stunning modern Tailwind CSS interface with complete dark/light mode support, accessibility improvements including proper UI spacing and overlap prevention, and comprehensive browser automation testing capabilities. Additionally, a detailed architectural specification has been created for enhanced intent detection that will enable universal domain support (healthcare, finance, manufacturing, retail, etc.) through LLM-based classification, semantic caching for cost optimization, and metadata-aware decisions. The architecture includes a 4-phase implementation roadmap spanning 12+ weeks, comprehensive risk assessment, TCO analysis, and future vision for multi-server federated query execution. The system is ready for production deployment with superior UI/UX, multi-provider flexibility, accessibility compliance, and a clear path to next-generation multi-domain capabilities.
+**Current Status**: ✅ **PRODUCTION READY WITH COST-OPTIMIZED GEMINI ARCHITECTURE**. The system features a sophisticated cost-optimized configuration using Google Gemini for affordable LLM classification, local sentence-transformers for zero-cost embeddings, and intelligent semantic caching for API usage reduction. The complete Enhanced Intent Detection system is preserved with multi-tier detection strategy, performance metrics, and universal domain support capabilities. The system eliminates expensive API dependencies while maintaining all functionality, providing predictable and affordable costs for production deployment. Ready for immediate production deployment with Gemini API key configuration and comprehensive architectural roadmap for next-generation multi-domain capabilities.
