@@ -195,6 +195,172 @@ class FastAPIServerConfig(BaseSettings):
             raise ValueError("Retry backoff factor must be between 1.0 and 5.0")
         return v
     
+    # Enhanced Intent Detection Configuration
+    enable_enhanced_detection: bool = Field(
+        default=False,
+        description="Enable enhanced LLM-based intent detection"
+    )
+    enable_hybrid_mode: bool = Field(
+        default=False,
+        description="Run both legacy and enhanced detection for comparison"
+    )
+    rollout_percentage: float = Field(
+        default=0.0,
+        description="Percentage of queries to use enhanced detection (0.0-1.0)"
+    )
+    
+    # LLM Configuration for Intent Classification
+    classification_model: str = Field(
+        default="meta-llama/llama-3.1-8b-instruct:free",
+        description="Model for intent classification"
+    )
+    classification_temperature: float = Field(
+        default=0.0,
+        description="Temperature for intent classification"
+    )
+    classification_max_tokens: int = Field(
+        default=10,
+        description="Max tokens for classification response"
+    )
+    classification_timeout_seconds: int = Field(
+        default=30,
+        description="Timeout for classification requests"
+    )
+    
+    # Cache Configuration
+    enable_semantic_cache: bool = Field(
+        default=True,
+        description="Enable semantic similarity caching"
+    )
+    cache_backend: str = Field(
+        default="memory",
+        description="Cache backend: memory or redis"
+    )
+    redis_url: Optional[str] = Field(
+        default=None,
+        description="Redis connection URL for caching"
+    )
+    cache_ttl_seconds: int = Field(
+        default=3600,
+        description="Cache time-to-live in seconds"
+    )
+    max_cache_size: int = Field(
+        default=10000,
+        description="Maximum cache entries"
+    )
+    
+    # Semantic Similarity Configuration
+    similarity_threshold: float = Field(
+        default=0.85,
+        description="Minimum similarity for cache match"
+    )
+    embedding_model: str = Field(
+        default="all-MiniLM-L6-v2",
+        description="Sentence transformer model for embeddings"
+    )
+    enable_embedding_cache: bool = Field(
+        default=True,
+        description="Cache embeddings to avoid recomputation"
+    )
+    
+    # Performance Configuration
+    enable_background_caching: bool = Field(
+        default=True,
+        description="Enable background cache warming"
+    )
+    cache_warmup_on_startup: bool = Field(
+        default=True,
+        description="Warm cache on system startup"
+    )
+    max_concurrent_classifications: int = Field(
+        default=10,
+        description="Max concurrent LLM classification calls"
+    )
+    
+    # Monitoring Configuration
+    enable_detection_metrics: bool = Field(
+        default=True,
+        description="Enable detection metrics collection"
+    )
+    log_classifications: bool = Field(
+        default=True,
+        description="Log classification decisions"
+    )
+    enable_comparison_logging: bool = Field(
+        default=True,
+        description="Log legacy vs enhanced comparison in hybrid mode"
+    )
+    
+    # Alert Thresholds
+    accuracy_alert_threshold: float = Field(
+        default=0.85,
+        description="Alert if accuracy drops below this threshold"
+    )
+    cache_hit_rate_alert_threshold: float = Field(
+        default=0.40,
+        description="Alert if cache hit rate drops below this threshold"
+    )
+    response_time_alert_threshold_ms: float = Field(
+        default=2000.0,
+        description="Alert if P95 response time exceeds this threshold"
+    )
+    
+    @field_validator("rollout_percentage")
+    @classmethod
+    def validate_rollout_percentage(cls, v: float) -> float:
+        """Validate rollout percentage is between 0 and 1."""
+        if v < 0.0 or v > 1.0:
+            raise ValueError("Rollout percentage must be between 0.0 and 1.0")
+        return v
+    
+    @field_validator("classification_temperature")
+    @classmethod
+    def validate_classification_temperature(cls, v: float) -> float:
+        """Validate classification temperature."""
+        if v < 0.0 or v > 2.0:
+            raise ValueError("Classification temperature must be between 0.0 and 2.0")
+        return v
+    
+    @field_validator("classification_max_tokens")
+    @classmethod
+    def validate_classification_max_tokens(cls, v: int) -> int:
+        """Validate classification max tokens."""
+        if v < 5 or v > 50:
+            raise ValueError("Classification max tokens must be between 5 and 50")
+        return v
+    
+    @field_validator("cache_backend")
+    @classmethod
+    def validate_cache_backend(cls, v: str) -> str:
+        """Validate cache backend."""
+        if v not in ["memory", "redis"]:
+            raise ValueError("Cache backend must be 'memory' or 'redis'")
+        return v
+    
+    @field_validator("cache_ttl_seconds")
+    @classmethod
+    def validate_cache_ttl(cls, v: int) -> int:
+        """Validate cache TTL."""
+        if v < 300 or v > 86400:  # 5 minutes to 1 day
+            raise ValueError("Cache TTL must be between 300 and 86400 seconds")
+        return v
+    
+    @field_validator("similarity_threshold")
+    @classmethod
+    def validate_similarity_threshold(cls, v: float) -> float:
+        """Validate similarity threshold."""
+        if v < 0.5 or v > 0.99:
+            raise ValueError("Similarity threshold must be between 0.5 and 0.99")
+        return v
+    
+    @field_validator("max_concurrent_classifications")
+    @classmethod
+    def validate_max_concurrent_classifications(cls, v: int) -> int:
+        """Validate max concurrent classifications."""
+        if v < 1 or v > 50:
+            raise ValueError("Max concurrent classifications must be between 1 and 50")
+        return v
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

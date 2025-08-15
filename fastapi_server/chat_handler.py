@@ -1,5 +1,6 @@
 """
 Chat completion handler that orchestrates OpenRouter LLM and MCP database queries.
+Enhanced with LLM-based intent detection and semantic caching capabilities.
 """
 
 import logging
@@ -14,6 +15,9 @@ from .models import (
 )
 from .llm_manager import llm_manager
 from .mcp_client import MCPDatabaseClient, mcp_client
+from .enhanced_intent_detector import get_enhanced_intent_detector
+from .intent_models import IntentDetectionRequest, EnhancedIntentConfig
+from .config import config
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +30,18 @@ class ChatCompletionHandler:
         self.llm_client = llm_manager
         self.mcp_client = mcp_client
         
-        # SQL query detection patterns
+        # Initialize enhanced intent detector if enabled
+        self.enhanced_detector = None
+        if config.enable_enhanced_detection:
+            try:
+                enhanced_config = self._create_enhanced_config()
+                self.enhanced_detector = get_enhanced_intent_detector(enhanced_config)
+                logger.info("Enhanced intent detection enabled")
+            except Exception as e:
+                logger.error(f"Failed to initialize enhanced intent detector: {e}")
+                logger.info("Falling back to legacy intent detection")
+        
+        # Legacy SQL query detection patterns (kept for fallback)
         self.sql_patterns = [
             r'\b(?:select|SELECT)\b.*\b(?:from|FROM)\b',
             r'\b(?:show|SHOW)\b.*\b(?:tables|databases|columns)\b',
@@ -34,7 +49,7 @@ class ChatCompletionHandler:
             r'\b(?:explain|EXPLAIN)\b',
         ]
         
-        # Database-related keywords that might indicate a query need
+        # Legacy database-related keywords
         self.db_keywords = [
             'table', 'database', 'query', 'select', 'data', 'records', 'rows',
             'customers', 'products', 'orders', 'sales', 'analytics', 'report',
@@ -42,6 +57,39 @@ class ChatCompletionHandler:
         ]
         
         logger.info("Initialized chat completion handler")
+        if self.enhanced_detector:
+            logger.info("Enhanced intent detection: ENABLED")
+        else:
+            logger.info("Enhanced intent detection: DISABLED (using legacy)")
+    
+    def _create_enhanced_config(self) -> EnhancedIntentConfig:
+        """Create enhanced intent detection config from FastAPI config."""
+        return EnhancedIntentConfig(
+            enable_enhanced_detection=config.enable_enhanced_detection,
+            enable_hybrid_mode=config.enable_hybrid_mode,
+            rollout_percentage=config.rollout_percentage,
+            classification_model=config.classification_model,
+            classification_temperature=config.classification_temperature,
+            classification_max_tokens=config.classification_max_tokens,
+            classification_timeout_seconds=config.classification_timeout_seconds,
+            enable_semantic_cache=config.enable_semantic_cache,
+            cache_backend=config.cache_backend,
+            redis_url=config.redis_url,
+            cache_ttl_seconds=config.cache_ttl_seconds,
+            max_cache_size=config.max_cache_size,
+            similarity_threshold=config.similarity_threshold,
+            embedding_model=config.embedding_model,
+            enable_embedding_cache=config.enable_embedding_cache,
+            enable_background_caching=config.enable_background_caching,
+            cache_warmup_on_startup=config.cache_warmup_on_startup,
+            max_concurrent_classifications=config.max_concurrent_classifications,
+            enable_metrics=config.enable_detection_metrics,
+            log_classifications=config.log_classifications,
+            enable_comparison_logging=config.enable_comparison_logging,
+            accuracy_alert_threshold=config.accuracy_alert_threshold,
+            cache_hit_rate_alert_threshold=config.cache_hit_rate_alert_threshold,
+            response_time_alert_threshold_ms=config.response_time_alert_threshold_ms
+        )
     
     async def process_chat_completion(
         self,
@@ -64,8 +112,8 @@ class ChatCompletionHandler:
             if not user_message:
                 raise ValueError("No user message found in request")
             
-            # Check if this looks like a database query
-            needs_database = self._needs_database_query(user_message.content)
+            # Check if this looks like a database query using enhanced or legacy detection
+            needs_database = await self._needs_database_query_enhanced(user_message.content)
             
             mcp_context = {}
             query_result = None
@@ -168,9 +216,50 @@ class ChatCompletionHandler:
                 return message
         return None
     
-    def _needs_database_query(self, content: str) -> bool:
+    async def _needs_database_query_enhanced(self, content: str) -> bool:
         """
-        Determine if a message needs database access.
+        Determine if a message needs database access using enhanced or legacy detection.
+        
+        Args:
+            content: Message content to analyze
+            
+        Returns:
+            True if database access is likely needed
+        """
+        if self.enhanced_detector:
+            try:
+                # Use enhanced intent detection
+                request = IntentDetectionRequest(query=content)
+                
+                # Get database metadata for context
+                metadata = await self.mcp_client.get_database_metadata()
+                
+                result = await self.enhanced_detector.detect_intent(request, metadata)
+                
+                # Log the detection result if enabled
+                if config.log_classifications:
+                    logger.info(
+                        f"Enhanced detection: '{content[:100]}...' -> "
+                        f"{result.classification.value} "
+                        f"(confidence: {result.confidence:.2f}, "
+                        f"method: {result.detection_method.value}, "
+                        f"time: {result.processing_time_ms:.1f}ms)"
+                    )
+                
+                return result.needs_database
+                
+            except Exception as e:
+                logger.error(f"Enhanced intent detection failed: {e}")
+                logger.info("Falling back to legacy detection")
+                return self._needs_database_query_legacy(content)
+        
+        else:
+            # Use legacy detection
+            return self._needs_database_query_legacy(content)
+    
+    def _needs_database_query_legacy(self, content: str) -> bool:
+        """
+        Legacy method to determine if a message needs database access.
         
         Args:
             content: Message content to analyze
@@ -406,6 +495,139 @@ class ChatCompletionHandler:
             logger.error(f"Integration test error: {str(e)}")
         
         return results
+    
+    def get_detection_stats(self) -> Dict[str, Any]:
+        """
+        Get intent detection system statistics.
+        
+        Returns:
+            Detection system statistics
+        """
+        if self.enhanced_detector:
+            return self.enhanced_detector.get_detection_stats()
+        else:
+            return {
+                "detection_system": "legacy",
+                "enhanced_detection_enabled": False,
+                "message": "Enhanced intent detection is not enabled"
+            }
+    
+    async def warm_cache_for_domain(self, domain: str) -> Dict[str, Any]:
+        """
+        Warm the cache with common patterns for a specific business domain.
+        
+        Args:
+            domain: Business domain (healthcare, finance, manufacturing, retail, etc.)
+            
+        Returns:
+            Cache warming results
+        """
+        if not self.enhanced_detector:
+            return {
+                "success": False,
+                "message": "Enhanced intent detection not enabled",
+                "patterns_cached": 0
+            }
+        
+        try:
+            # Get database metadata for context
+            metadata = await self.mcp_client.get_database_metadata()
+            
+            patterns_cached = await self.enhanced_detector.warm_cache_with_domain_patterns(
+                domain, metadata
+            )
+            
+            return {
+                "success": True,
+                "domain": domain,
+                "patterns_cached": patterns_cached,
+                "message": f"Successfully warmed cache with {patterns_cached} patterns for {domain} domain"
+            }
+        
+        except Exception as e:
+            logger.error(f"Error warming cache for domain {domain}: {e}")
+            return {
+                "success": False,
+                "domain": domain,
+                "patterns_cached": 0,
+                "error": str(e)
+            }
+    
+    async def assess_domain_complexity(
+        self, 
+        domain_name: str,
+        sample_queries: List[str]
+    ) -> Dict[str, Any]:
+        """
+        Assess the complexity of adapting to a new business domain.
+        
+        Args:
+            domain_name: Name of the business domain
+            sample_queries: Sample queries from the domain
+            
+        Returns:
+            Domain complexity assessment
+        """
+        if not self.enhanced_detector:
+            return {
+                "success": False,
+                "message": "Enhanced intent detection not enabled",
+                "domain_name": domain_name
+            }
+        
+        try:
+            assessment = await self.enhanced_detector.assess_domain_complexity(
+                domain_name, sample_queries
+            )
+            
+            return {
+                "success": True,
+                "assessment": assessment.__dict__,
+                "recommendations": self._generate_domain_recommendations(assessment)
+            }
+        
+        except Exception as e:
+            logger.error(f"Error assessing domain complexity: {e}")
+            return {
+                "success": False,
+                "domain_name": domain_name,
+                "error": str(e)
+            }
+    
+    def _generate_domain_recommendations(self, assessment) -> List[str]:
+        """Generate recommendations based on domain complexity assessment."""
+        recommendations = []
+        
+        if assessment.risk_level == "low":
+            recommendations.append("Domain appears well-suited for enhanced intent detection")
+            recommendations.append("Consider enabling enhanced detection with high rollout percentage")
+        
+        elif assessment.risk_level == "medium":
+            recommendations.append("Domain shows moderate complexity")
+            recommendations.append("Start with low rollout percentage (10-25%) and monitor performance")
+            recommendations.append("Consider domain-specific cache warming")
+        
+        else:  # high risk
+            recommendations.append("Domain shows high complexity")
+            recommendations.append("Start with hybrid mode for comparison")
+            recommendations.append("Use very low rollout percentage (5-10%) initially")
+            recommendations.append("Consider domain-specific prompt tuning")
+        
+        if assessment.vocabulary_diversity > 0.7:
+            recommendations.append("High vocabulary diversity detected - consider custom embeddings")
+        
+        if assessment.sample_accuracy < 0.7:
+            recommendations.append("Low initial accuracy - additional training data may be needed")
+        
+        return recommendations
+    
+    async def close(self) -> None:
+        """Close chat handler and cleanup resources."""
+        try:
+            if self.enhanced_detector:
+                await self.enhanced_detector.close()
+        except Exception as e:
+            logger.error(f"Error closing chat handler: {e}")
 
 
 # Global chat handler instance
