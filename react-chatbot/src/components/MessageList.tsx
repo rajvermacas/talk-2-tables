@@ -49,22 +49,22 @@ const MessageList: React.FC<MessageListProps> = ({
         <div className="max-w-2xl mx-auto text-center">
           {/* Welcome Header */}
           <div className="mb-8">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-700 flex items-center justify-center animate-glow">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-r from-red-600 to-red-700 flex items-center justify-center animate-glow">
               <MessageCircle className="h-8 w-8 text-white" />
             </div>
             <h1 className="text-4xl font-bold text-gradient mb-4">
               Welcome to Talk2Tables
             </h1>
-            <p className="text-gray-400 text-lg mb-8">
+            <p className="text-gray-600 text-lg mb-8">
               Ask me questions about your database or type SQL queries directly.
             </p>
           </div>
 
           {/* Example Queries */}
-          <div className="glass-dark rounded-2xl p-6 text-left max-w-lg mx-auto border border-gray-700/50">
+          <div className="bg-white rounded-2xl p-6 text-left max-w-lg mx-auto border border-gray-200 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
-              <Bot className="h-5 w-5 text-primary-400" />
-              <h3 className="text-lg font-semibold text-gray-200">Try asking:</h3>
+              <Bot className="h-5 w-5 text-red-500" />
+              <h3 className="text-lg font-semibold text-gray-900">Try asking:</h3>
             </div>
             <div className="space-y-2">
               {[
@@ -74,8 +74,8 @@ const MessageList: React.FC<MessageListProps> = ({
                 'Or type SQL directly: "SELECT * FROM customers LIMIT 10"'
               ].map((example, index) => (
                 <div key={index} className="flex items-start gap-2">
-                  <span className="text-primary-400 mt-1">•</span>
-                  <p className="text-gray-300 text-sm">{example}</p>
+                  <span className="text-red-500 mt-1">•</span>
+                  <p className="text-gray-700 text-sm">{example}</p>
                 </div>
               ))}
             </div>
@@ -111,12 +111,12 @@ const MessageList: React.FC<MessageListProps> = ({
             {/* Typing Content */}
             <div className="message-bubble-assistant max-w-xs">
               <div className="flex items-center gap-2">
-                <div className="typing-indicator text-gray-400">
+                <div className="typing-indicator text-gray-500">
                   <span></span>
                   <span></span>
                   <span></span>
                 </div>
-                <span className="text-sm text-gray-400">Assistant is typing...</span>
+                <span className="text-sm text-gray-600">Assistant is typing...</span>
               </div>
             </div>
           </div>

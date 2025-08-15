@@ -10,7 +10,7 @@
   }
   
   body {
-    @apply bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100 font-sans antialiased;
+    @apply bg-gray-50 text-gray-900 font-sans antialiased;
     margin: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -18,17 +18,19 @@
   }
 
   * {
-    @apply border-gray-700;
+    @apply border-gray-200;
   }
 }
 
 @layer components {
   .glass {
-    @apply bg-white/10 backdrop-blur-lg border border-white/20;
+    @apply bg-white/80 backdrop-blur-lg border border-gray-200/50 shadow-sm;
+    @apply dark:bg-gray-800/80 dark:border-gray-700/50;
   }
   
   .glass-dark {
-    @apply bg-gray-900/40 backdrop-blur-lg border border-gray-700/50;
+    @apply bg-white/90 backdrop-blur-lg border border-gray-200/50 shadow-sm;
+    @apply dark:bg-gray-800/90 dark:border-gray-700/50;
   }
   
   .gradient-border {
@@ -36,7 +38,7 @@
   }
   
   .gradient-border::before {
-    @apply absolute inset-0 rounded-lg p-[1px] bg-gradient-to-r from-primary-500 to-primary-700;
+    @apply absolute inset-0 rounded-lg p-[1px] bg-gradient-to-r from-red-500 to-red-700;
     content: '';
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask-composite: xor;
@@ -47,32 +49,36 @@
   }
   
   .message-bubble-user {
-    @apply bg-gradient-to-r from-primary-600 to-primary-700 text-white ml-12;
+    @apply bg-gradient-to-r from-red-600 to-red-700 text-white ml-12;
   }
   
   .message-bubble-assistant {
-    @apply glass-dark text-gray-100 mr-12;
+    @apply bg-white border border-gray-200 text-gray-900 mr-12 shadow-sm;
+    @apply dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100;
   }
   
   .input-glass {
-    @apply glass-dark border-gray-600/50 rounded-xl px-4 py-3 text-gray-100 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all duration-200;
+    @apply bg-white border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all duration-200 shadow-sm;
+    @apply dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400;
   }
   
   .btn-primary {
-    @apply bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-glow-red;
+    @apply bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-red-500/30;
   }
   
   .btn-secondary {
-    @apply glass-dark hover:bg-white/20 text-gray-300 hover:text-white font-medium py-2 px-4 rounded-lg transition-all duration-200;
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-900 font-medium py-2 px-4 rounded-lg transition-all duration-200 border border-gray-300;
+    @apply dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300 dark:hover:text-gray-100 dark:border-gray-600;
   }
   
   .table-glass {
-    @apply glass-dark rounded-xl overflow-hidden;
+    @apply bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm;
+    @apply dark:bg-gray-800 dark:border-gray-700;
   }
   
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: rgb(75 85 99) rgb(31 41 55);
+    scrollbar-color: rgb(156 163 175) rgb(243 244 246);
   }
   
   .scrollbar-thin::-webkit-scrollbar {
@@ -80,17 +86,17 @@
   }
   
   .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-gray-800 rounded-full;
+    @apply bg-gray-100 rounded-full;
   }
   
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-gray-600 rounded-full hover:bg-gray-500;
+    @apply bg-gray-400 rounded-full hover:bg-gray-500;
   }
 }
 
 @layer utilities {
   .text-gradient {
-    @apply bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-red-500 to-red-700 bg-clip-text text-transparent;
   }
   
   .bg-mesh {
@@ -115,11 +121,11 @@
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-gray-800/50;
+  @apply bg-gray-100;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-600 rounded-full;
+  @apply bg-gray-400 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {

@@ -35,7 +35,7 @@ const Message: React.FC<MessageProps> = ({ message, className = '' }) => {
         return (
           <div
             key={index}
-            className="bg-gray-950 border border-gray-800 rounded-lg p-4 my-3 overflow-auto font-mono text-sm"
+            className="bg-gray-900 border border-gray-700 rounded-lg p-4 my-3 overflow-auto font-mono text-sm"
           >
             {language && (
               <div className="text-xs text-gray-400 mb-2 font-sans uppercase tracking-wide">
@@ -85,14 +85,14 @@ const Message: React.FC<MessageProps> = ({ message, className = '' }) => {
         'flex items-center gap-2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200',
         isUser ? 'flex-row-reverse' : 'flex-row'
       )}>
-        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gray-800/50 text-xs text-gray-400">
+        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300">
           <Clock className="h-3 w-3" />
           <span>{formatTimestamp(message.timestamp)}</span>
         </div>
         <button
           onClick={() => copyToClipboard(message.content)}
           title="Copy message"
-          className="p-1.5 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors text-gray-400 hover:text-gray-300"
+          className="p-1.5 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
         >
           <Copy className="h-3 w-3" />
         </button>
@@ -107,7 +107,7 @@ const Message: React.FC<MessageProps> = ({ message, className = '' }) => {
         <div className={clsx(
           'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
           isUser 
-            ? 'bg-gradient-to-r from-primary-600 to-primary-700' 
+            ? 'bg-gradient-to-r from-red-600 to-red-700' 
             : 'bg-gradient-to-r from-gray-600 to-gray-700'
         )}>
           {isUser ? (
@@ -124,8 +124,8 @@ const Message: React.FC<MessageProps> = ({ message, className = '' }) => {
         )}>
           {message.isLoading ? (
             <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-              <span className="text-sm text-gray-400">Thinking...</span>
+              <Loader2 className="h-4 w-4 animate-spin text-gray-500 dark:text-gray-400" />
+              <span className="text-sm text-gray-600 dark:text-gray-300">Thinking...</span>
             </div>
           ) : (
             <>
@@ -134,9 +134,9 @@ const Message: React.FC<MessageProps> = ({ message, className = '' }) => {
               </div>
               
               {/* Show query results if available */}
-              {message.queryResult && (
-                <div className="mt-4 pt-4 border-t border-gray-700/50">
-                  <h4 className="text-sm font-medium text-gray-300 mb-3">
+              {message.queryResult && message.queryResult.data && (
+                <div className="mt-4 pt-4 border-t border-gray-300 dark:border-gray-600">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                     Query Results:
                   </h4>
                   <QueryResults queryResult={message.queryResult} />
@@ -145,10 +145,10 @@ const Message: React.FC<MessageProps> = ({ message, className = '' }) => {
               
               {/* Show error if present */}
               {message.error && (
-                <div className="mt-3 bg-red-400/10 border border-red-400/50 rounded-lg p-3">
+                <div className="mt-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-200">{message.error}</p>
+                    <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-800 dark:text-red-200">{message.error}</p>
                   </div>
                 </div>
               )}

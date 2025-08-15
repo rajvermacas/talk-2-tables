@@ -93,8 +93,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
       {isMessageEmpty && (
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="h-4 w-4 text-primary-400" />
-            <p className="text-sm text-gray-400 font-medium">Quick examples:</p>
+            <Sparkles className="h-4 w-4 text-red-500" />
+            <p className="text-sm text-gray-600 font-medium">Quick examples:</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {sampleQueries.map((query, index) => (
@@ -104,10 +104,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 disabled={disabled}
                 className={clsx(
                   'px-3 py-1.5 text-sm rounded-lg border transition-all duration-200',
-                  'glass-dark border-gray-600/50 text-gray-300 hover:text-white',
-                  'hover:border-primary-500/50 hover:bg-primary-500/10',
-                  'focus:outline-none focus:ring-2 focus:ring-primary-500/50',
-                  'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-600/50 disabled:hover:bg-transparent'
+                  'bg-gray-50 border-gray-300 text-gray-700 hover:text-gray-900',
+                  'hover:border-red-500/50 hover:bg-red-50',
+                  'focus:outline-none focus:ring-2 focus:ring-red-500/50',
+                  'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:bg-gray-50'
                 )}
               >
                 {query}
@@ -130,10 +130,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
             rows={1}
             className={clsx(
               'w-full resize-none pr-20 py-4 pl-4',
-              'input-glass text-gray-100 placeholder-gray-400',
-              'focus:border-primary-500 focus:ring-1 focus:ring-primary-500',
+              'bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500',
+              'focus:border-red-500 focus:ring-1 focus:ring-red-500',
               'disabled:opacity-50 disabled:cursor-not-allowed',
-              'min-h-[3rem] max-h-32 overflow-y-auto scrollbar-thin'
+              'min-h-[3rem] max-h-32 overflow-y-auto scrollbar-thin shadow-sm'
             )}
             style={{
               height: 'auto',
@@ -147,7 +147,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           />
           
           {/* Action Buttons */}
-          <div className="absolute right-2 bottom-2 flex items-center gap-1">
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {/* Clear button */}
             {message && (
               <button
@@ -157,8 +157,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 title="Clear message (Esc)"
                 className={clsx(
                   'p-2 rounded-lg transition-all duration-200',
-                  'text-gray-400 hover:text-gray-300 hover:bg-gray-700/50',
-                  'focus:outline-none focus:ring-2 focus:ring-primary-500/50',
+                  'text-gray-500 hover:text-gray-700 hover:bg-gray-100',
+                  'focus:outline-none focus:ring-2 focus:ring-red-500/50',
                   'disabled:opacity-50 disabled:cursor-not-allowed'
                 )}
               >
@@ -173,12 +173,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
               title="Send message (Enter)"
               className={clsx(
                 'p-2 rounded-lg transition-all duration-200',
-                'bg-gradient-to-r from-primary-600 to-primary-700',
-                'hover:from-primary-700 hover:to-primary-800',
-                'text-white shadow-lg hover:shadow-glow-red',
-                'focus:outline-none focus:ring-2 focus:ring-primary-500/50',
+                'bg-gradient-to-r from-red-600 to-red-700',
+                'hover:from-red-700 hover:to-red-800',
+                'text-white shadow-lg hover:shadow-red-500/30',
+                'focus:outline-none focus:ring-2 focus:ring-red-500/50',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
-                'disabled:hover:from-primary-600 disabled:hover:to-primary-700',
+                'disabled:hover:from-red-600 disabled:hover:to-red-700',
                 'disabled:hover:shadow-lg'
               )}
             >

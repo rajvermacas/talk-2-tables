@@ -35,7 +35,8 @@ const QueryResults: React.FC<QueryResultsProps> = ({
   
   const itemsPerPage = 10;
 
-  const { data = [], columns = [] } = queryResult;
+  // Provide safe defaults for data and columns
+  const { data = [], columns = [] } = queryResult || { data: [], columns: [] };
 
   // Filter data based on search term
   const filteredData = useMemo(() => {
@@ -85,6 +86,11 @@ const QueryResults: React.FC<QueryResultsProps> = ({
     const startIndex = (currentPage - 1) * itemsPerPage;
     return sortedData.slice(startIndex, startIndex + itemsPerPage);
   }, [sortedData, currentPage]);
+
+  // Early return if queryResult is null or undefined (after ALL hooks)
+  if (!queryResult) {
+    return null;
+  }
 
   const totalPages = Math.ceil(sortedData.length / itemsPerPage);
 
@@ -162,9 +168,9 @@ const QueryResults: React.FC<QueryResultsProps> = ({
   };
 
   return (
-    <div className="table-glass mt-4 border border-gray-700/50 overflow-hidden">
+    <div className="bg-white mt-4 border border-gray-300 rounded-xl shadow-sm overflow-hidden">
       {/* Header Toolbar */}
-      <div className="bg-gray-800/30 border-b border-gray-700/50 px-4 py-3">
+      <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Results Info */}
           <div className="flex items-center gap-3">
@@ -217,12 +223,12 @@ const QueryResults: React.FC<QueryResultsProps> = ({
       {/* Table */}
       <div className="overflow-auto max-h-96 scrollbar-thin">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-gray-800/50 backdrop-blur-sm">
-            <tr className="border-b border-gray-700/50">
+          <thead className="sticky top-0 bg-gray-100 backdrop-blur-sm">
+            <tr className="border-b border-gray-200">
               {columns.map(column => (
                 <th
                   key={column}
-                  className="text-left px-4 py-3 font-semibold text-gray-200"
+                  className="text-left px-4 py-3 font-semibold text-gray-700">
                 >
                   <button
                     onClick={() => handleSort(column)}
@@ -253,14 +259,14 @@ const QueryResults: React.FC<QueryResultsProps> = ({
               <tr 
                 key={index}
                 className={clsx(
-                  'border-b border-gray-800/50 hover:bg-gray-700/30 transition-colors',
-                  index % 2 === 0 ? 'bg-gray-800/20' : 'bg-gray-800/10'
+                  'border-b border-gray-100 hover:bg-gray-50 transition-colors',
+                  index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
                 )}
               >
                 {columns.map(column => (
                   <td 
                     key={column}
-                    className="px-4 py-3 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap text-gray-300"
+                    className="px-4 py-3 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap text-gray-900">
                     title={String(row[column] ?? '')}
                   >
                     {row[column] ?? ''}
@@ -274,9 +280,9 @@ const QueryResults: React.FC<QueryResultsProps> = ({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="bg-gray-800/30 border-t border-gray-700/50 px-4 py-3">
+        <div className="bg-gray-50 border-t border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-600">
               Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, sortedData.length)} of {sortedData.length} rows
             </p>
             
@@ -288,7 +294,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({
                 className={clsx(
                   'p-2 rounded-lg transition-colors',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
-                  'enabled:hover:bg-gray-700/50 text-gray-400 enabled:hover:text-white'
+                  'enabled:hover:bg-gray-100 text-gray-500 enabled:hover:text-gray-700'
                 )}
               >
                 <ChevronsLeft className="h-4 w-4" />
@@ -301,7 +307,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({
                 className={clsx(
                   'p-2 rounded-lg transition-colors',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
-                  'enabled:hover:bg-gray-700/50 text-gray-400 enabled:hover:text-white'
+                  'enabled:hover:bg-gray-100 text-gray-500 enabled:hover:text-gray-700'
                 )}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -326,7 +332,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({
                             'px-3 py-1 rounded-lg text-sm transition-colors',
                             page === currentPage
                               ? 'bg-primary-600 text-white'
-                              : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                           )}
                         >
                           {page}
@@ -343,7 +349,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({
                 className={clsx(
                   'p-2 rounded-lg transition-colors',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
-                  'enabled:hover:bg-gray-700/50 text-gray-400 enabled:hover:text-white'
+                  'enabled:hover:bg-gray-100 text-gray-500 enabled:hover:text-gray-700'
                 )}
               >
                 <ChevronRight className="h-4 w-4" />
@@ -356,7 +362,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({
                 className={clsx(
                   'p-2 rounded-lg transition-colors',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
-                  'enabled:hover:bg-gray-700/50 text-gray-400 enabled:hover:text-white'
+                  'enabled:hover:bg-gray-100 text-gray-500 enabled:hover:text-gray-700'
                 )}
               >
                 <ChevronsRight className="h-4 w-4" />
