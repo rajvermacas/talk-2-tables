@@ -94,7 +94,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="h-4 w-4 text-red-500" />
-            <p className="text-sm text-gray-600 font-medium">Quick examples:</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Quick examples:</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {sampleQueries.map((query, index) => (
@@ -104,10 +104,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 disabled={disabled}
                 className={clsx(
                   'px-3 py-1.5 text-sm rounded-lg border transition-all duration-200',
-                  'bg-gray-50 border-gray-300 text-gray-700 hover:text-gray-900',
-                  'hover:border-red-500/50 hover:bg-red-50',
+                  'bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100',
+                  'hover:border-red-500/50 hover:bg-red-50 dark:hover:bg-gray-600',
                   'focus:outline-none focus:ring-2 focus:ring-red-500/50',
-                  'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:bg-gray-50'
+                  'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:bg-gray-50 dark:disabled:hover:border-gray-600 dark:disabled:hover:bg-gray-700'
                 )}
               >
                 {query}
@@ -129,8 +129,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
             disabled={disabled}
             rows={1}
             className={clsx(
-              'w-full resize-none pr-20 py-4 pl-4',
-              'bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500',
+              'w-full resize-none pr-24 py-4 pl-4',
+              'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400',
               'focus:border-red-500 focus:ring-1 focus:ring-red-500',
               'disabled:opacity-50 disabled:cursor-not-allowed',
               'min-h-[3rem] max-h-32 overflow-y-auto scrollbar-thin shadow-sm'
@@ -147,7 +147,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           />
           
           {/* Action Buttons */}
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {/* Clear button */}
             {message && (
               <button
@@ -157,7 +157,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 title="Clear message (Esc)"
                 className={clsx(
                   'p-2 rounded-lg transition-all duration-200',
-                  'text-gray-500 hover:text-gray-700 hover:bg-gray-100',
+                  'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700',
                   'focus:outline-none focus:ring-2 focus:ring-red-500/50',
                   'disabled:opacity-50 disabled:cursor-not-allowed'
                 )}
@@ -195,12 +195,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
               ? 'text-yellow-400' 
               : message.length > maxLength * 0.8 
               ? 'text-orange-400' 
-              : 'text-gray-500'
+              : 'text-gray-500 dark:text-gray-400'
           )}>
             {message.length}/{maxLength}
           </span>
           
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
             Press Enter to send, Shift+Enter for new line
           </span>
         </div>
