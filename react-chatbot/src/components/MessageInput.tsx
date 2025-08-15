@@ -129,7 +129,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             disabled={disabled}
             rows={1}
             className={clsx(
-              'w-full resize-none pr-24 py-4 pl-4',
+              'w-full resize-none pr-28 py-4 pl-4',
               'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400',
               'focus:border-red-500 focus:ring-1 focus:ring-red-500',
               'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -147,7 +147,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           />
           
           {/* Action Buttons */}
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {/* Clear button */}
             {message && (
               <button
