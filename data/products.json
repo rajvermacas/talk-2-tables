@@ -1,0 +1,652 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2024-08-15T10:00:00Z",
+    "total_products": 25,
+    "total_categories": 8
+  },
+  "products": [
+    {
+      "id": "12345",
+      "name": "Axios",
+      "aliases": ["axios", "axios.js", "axios library", "axios-http"],
+      "category": "JavaScript Libraries",
+      "subcategory": "HTTP Clients",
+      "description": "Promise-based HTTP client for browser and Node.js",
+      "tags": ["javascript", "http", "api", "promises", "ajax"],
+      "business_unit": "Web Development Tools",
+      "created_date": "2023-01-15",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 95,
+        "market_segment": "Developer Tools",
+        "target_audience": "Frontend/Backend Developers",
+        "pricing_tier": "open_source",
+        "support_level": "community"
+      },
+      "relationships": {
+        "related_products": ["67890", "11111"],
+        "alternative_products": ["22222", "33333"],
+        "dependent_products": ["44444", "55555"]
+      }
+    },
+    {
+      "id": "67890",
+      "name": "React",
+      "aliases": ["react", "reactjs", "react.js", "react library"],
+      "category": "JavaScript Libraries",
+      "subcategory": "UI Frameworks",
+      "description": "JavaScript library for building user interfaces",
+      "tags": ["javascript", "ui", "frontend", "components", "jsx"],
+      "business_unit": "Web Development Tools",
+      "created_date": "2023-02-10",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 98,
+        "market_segment": "Developer Tools",
+        "target_audience": "Frontend Developers",
+        "pricing_tier": "open_source",
+        "support_level": "enterprise"
+      },
+      "relationships": {
+        "related_products": ["12345", "11111"],
+        "alternative_products": ["77777", "88888"],
+        "dependent_products": ["99999", "10101"]
+      }
+    },
+    {
+      "id": "11111",
+      "name": "Express",
+      "aliases": ["express", "express.js", "expressjs", "express framework"],
+      "category": "JavaScript Libraries",
+      "subcategory": "Web Frameworks",
+      "description": "Fast, unopinionated, minimalist web framework for Node.js",
+      "tags": ["javascript", "nodejs", "web", "framework", "server"],
+      "business_unit": "Web Development Tools",
+      "created_date": "2023-01-20",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 92,
+        "market_segment": "Developer Tools",
+        "target_audience": "Backend Developers",
+        "pricing_tier": "open_source",
+        "support_level": "community"
+      },
+      "relationships": {
+        "related_products": ["12345", "67890"],
+        "alternative_products": ["10102", "10103"],
+        "dependent_products": ["10104", "10105"]
+      }
+    },
+    {
+      "id": "22222",
+      "name": "Fetch API",
+      "aliases": ["fetch", "fetch-api", "web fetch", "browser fetch"],
+      "category": "JavaScript Libraries",
+      "subcategory": "HTTP Clients",
+      "description": "Modern browser API for making HTTP requests",
+      "tags": ["javascript", "http", "api", "browser", "native"],
+      "business_unit": "Web Development Tools",
+      "created_date": "2023-03-01",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 85,
+        "market_segment": "Developer Tools",
+        "target_audience": "Frontend Developers",
+        "pricing_tier": "free",
+        "support_level": "standard"
+      },
+      "relationships": {
+        "related_products": ["33333"],
+        "alternative_products": ["12345"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "33333",
+      "name": "Superagent",
+      "aliases": ["superagent", "super-agent", "superagent.js"],
+      "category": "JavaScript Libraries",
+      "subcategory": "HTTP Clients",
+      "description": "Small progressive client-side HTTP request library",
+      "tags": ["javascript", "http", "client", "ajax", "progressive"],
+      "business_unit": "Web Development Tools",
+      "created_date": "2023-02-15",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 78,
+        "market_segment": "Developer Tools",
+        "target_audience": "Frontend Developers",
+        "pricing_tier": "open_source",
+        "support_level": "community"
+      },
+      "relationships": {
+        "related_products": ["22222"],
+        "alternative_products": ["12345"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "44444",
+      "name": "Vue Axios",
+      "aliases": ["vue-axios", "vue axios", "axios vue"],
+      "category": "JavaScript Libraries",
+      "subcategory": "Framework Integrations",
+      "description": "Axios integration for Vue.js applications",
+      "tags": ["javascript", "vue", "axios", "integration", "http"],
+      "business_unit": "Web Development Tools",
+      "created_date": "2023-04-01",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 75,
+        "market_segment": "Developer Tools",
+        "target_audience": "Vue.js Developers",
+        "pricing_tier": "open_source",
+        "support_level": "community"
+      },
+      "relationships": {
+        "related_products": ["12345", "77777"],
+        "alternative_products": [],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "55555",
+      "name": "React Axios",
+      "aliases": ["react-axios", "react axios", "axios react"],
+      "category": "JavaScript Libraries",
+      "subcategory": "Framework Integrations",
+      "description": "Axios integration hooks and components for React",
+      "tags": ["javascript", "react", "axios", "hooks", "http"],
+      "business_unit": "Web Development Tools",
+      "created_date": "2023-04-10",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 82,
+        "market_segment": "Developer Tools",
+        "target_audience": "React Developers",
+        "pricing_tier": "open_source",
+        "support_level": "community"
+      },
+      "relationships": {
+        "related_products": ["12345", "67890"],
+        "alternative_products": [],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "77777",
+      "name": "Vue.js",
+      "aliases": ["vue", "vuejs", "vue.js", "vue framework"],
+      "category": "JavaScript Libraries",
+      "subcategory": "UI Frameworks",
+      "description": "Progressive JavaScript framework for building user interfaces",
+      "tags": ["javascript", "ui", "frontend", "progressive", "components"],
+      "business_unit": "Web Development Tools",
+      "created_date": "2023-03-05",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 88,
+        "market_segment": "Developer Tools",
+        "target_audience": "Frontend Developers",
+        "pricing_tier": "open_source",
+        "support_level": "enterprise"
+      },
+      "relationships": {
+        "related_products": ["44444"],
+        "alternative_products": ["67890", "88888"],
+        "dependent_products": ["44444"]
+      }
+    },
+    {
+      "id": "88888",
+      "name": "Angular",
+      "aliases": ["angular", "angularjs", "angular framework"],
+      "category": "JavaScript Libraries",
+      "subcategory": "UI Frameworks",
+      "description": "Platform for building mobile and desktop web applications",
+      "tags": ["javascript", "typescript", "ui", "framework", "google"],
+      "business_unit": "Web Development Tools",
+      "created_date": "2023-02-28",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 85,
+        "market_segment": "Developer Tools",
+        "target_audience": "Enterprise Developers",
+        "pricing_tier": "open_source",
+        "support_level": "enterprise"
+      },
+      "relationships": {
+        "related_products": [],
+        "alternative_products": ["67890", "77777"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "99999",
+      "name": "Next.js",
+      "aliases": ["nextjs", "next.js", "next", "nextjs framework"],
+      "category": "JavaScript Libraries",
+      "subcategory": "Full-Stack Frameworks",
+      "description": "React framework for production with SSR and static generation",
+      "tags": ["javascript", "react", "ssr", "static", "fullstack"],
+      "business_unit": "Web Development Tools",
+      "created_date": "2023-03-15",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 90,
+        "market_segment": "Developer Tools",
+        "target_audience": "Full-Stack Developers",
+        "pricing_tier": "open_source",
+        "support_level": "enterprise"
+      },
+      "relationships": {
+        "related_products": ["67890"],
+        "alternative_products": ["10101"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "10101",
+      "name": "Gatsby",
+      "aliases": ["gatsby", "gatsbyjs", "gatsby.js"],
+      "category": "JavaScript Libraries",
+      "subcategory": "Static Site Generators",
+      "description": "React-based static site generator with GraphQL",
+      "tags": ["javascript", "react", "static", "graphql", "jamstack"],
+      "business_unit": "Web Development Tools",
+      "created_date": "2023-04-05",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 76,
+        "market_segment": "Developer Tools",
+        "target_audience": "Frontend Developers",
+        "pricing_tier": "open_source",
+        "support_level": "community"
+      },
+      "relationships": {
+        "related_products": ["67890"],
+        "alternative_products": ["99999"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "10102",
+      "name": "Fastify",
+      "aliases": ["fastify", "fastify.js", "fastify framework"],
+      "category": "JavaScript Libraries",
+      "subcategory": "Web Frameworks",
+      "description": "Fast and low overhead web framework for Node.js",
+      "tags": ["javascript", "nodejs", "web", "framework", "fast"],
+      "business_unit": "Web Development Tools",
+      "created_date": "2023-05-01",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 72,
+        "market_segment": "Developer Tools",
+        "target_audience": "Backend Developers",
+        "pricing_tier": "open_source",
+        "support_level": "community"
+      },
+      "relationships": {
+        "related_products": [],
+        "alternative_products": ["11111", "10103"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "10103",
+      "name": "Koa",
+      "aliases": ["koa", "koajs", "koa.js"],
+      "category": "JavaScript Libraries",
+      "subcategory": "Web Frameworks",
+      "description": "Next generation web framework for Node.js",
+      "tags": ["javascript", "nodejs", "web", "framework", "async"],
+      "business_unit": "Web Development Tools",
+      "created_date": "2023-05-10",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 68,
+        "market_segment": "Developer Tools",
+        "target_audience": "Backend Developers",
+        "pricing_tier": "open_source",
+        "support_level": "community"
+      },
+      "relationships": {
+        "related_products": [],
+        "alternative_products": ["11111", "10102"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "20001",
+      "name": "PostgreSQL",
+      "aliases": ["postgres", "postgresql", "postgres db"],
+      "category": "Databases",
+      "subcategory": "SQL Databases",
+      "description": "Advanced open source relational database",
+      "tags": ["database", "sql", "relational", "open-source", "acid"],
+      "business_unit": "Data Infrastructure",
+      "created_date": "2023-01-01",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 94,
+        "market_segment": "Infrastructure",
+        "target_audience": "Database Administrators",
+        "pricing_tier": "open_source",
+        "support_level": "enterprise"
+      },
+      "relationships": {
+        "related_products": ["20002", "20003"],
+        "alternative_products": ["20004", "20005"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "20002",
+      "name": "MySQL",
+      "aliases": ["mysql", "mysql db", "mysql database"],
+      "category": "Databases",
+      "subcategory": "SQL Databases",
+      "description": "Popular open source relational database management system",
+      "tags": ["database", "sql", "relational", "open-source", "web"],
+      "business_unit": "Data Infrastructure",
+      "created_date": "2023-01-05",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 91,
+        "market_segment": "Infrastructure",
+        "target_audience": "Web Developers",
+        "pricing_tier": "open_source",
+        "support_level": "commercial"
+      },
+      "relationships": {
+        "related_products": ["20001", "20003"],
+        "alternative_products": ["20004", "20005"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "20003",
+      "name": "MongoDB",
+      "aliases": ["mongo", "mongodb", "mongo db"],
+      "category": "Databases",
+      "subcategory": "NoSQL Databases", 
+      "description": "Document-oriented NoSQL database program",
+      "tags": ["database", "nosql", "document", "json", "scalable"],
+      "business_unit": "Data Infrastructure",
+      "created_date": "2023-01-10",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 87,
+        "market_segment": "Infrastructure",
+        "target_audience": "Application Developers",
+        "pricing_tier": "freemium",
+        "support_level": "enterprise"
+      },
+      "relationships": {
+        "related_products": ["20001", "20002"],
+        "alternative_products": ["20006", "20007"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "30001",
+      "name": "Jest",
+      "aliases": ["jest", "jestjs", "jest testing"],
+      "category": "Testing Tools",
+      "subcategory": "JavaScript Testing",
+      "description": "JavaScript testing framework with focus on simplicity",
+      "tags": ["testing", "javascript", "unit-test", "snapshot", "mocking"],
+      "business_unit": "Developer Tools",
+      "created_date": "2023-02-01",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 89,
+        "market_segment": "Quality Assurance",
+        "target_audience": "JavaScript Developers",
+        "pricing_tier": "open_source",
+        "support_level": "community"
+      },
+      "relationships": {
+        "related_products": ["30002", "30003"],
+        "alternative_products": ["30004", "30005"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "30002",
+      "name": "Cypress",
+      "aliases": ["cypress", "cypress.io", "cypress testing"],
+      "category": "Testing Tools",
+      "subcategory": "E2E Testing",
+      "description": "JavaScript end-to-end testing framework",
+      "tags": ["testing", "e2e", "javascript", "automation", "browser"],
+      "business_unit": "Developer Tools",
+      "created_date": "2023-02-05",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 83,
+        "market_segment": "Quality Assurance",
+        "target_audience": "QA Engineers",
+        "pricing_tier": "freemium",
+        "support_level": "commercial"
+      },
+      "relationships": {
+        "related_products": ["30001", "30003"],
+        "alternative_products": ["30006", "30007"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "40001",
+      "name": "Docker",
+      "aliases": ["docker", "docker engine", "containerization"],
+      "category": "DevOps Tools",
+      "subcategory": "Containerization",
+      "description": "Platform for developing, shipping, and running applications in containers",
+      "tags": ["containers", "devops", "deployment", "virtualization", "microservices"],
+      "business_unit": "Infrastructure Tools",
+      "created_date": "2023-01-12",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 96,
+        "market_segment": "Infrastructure",
+        "target_audience": "DevOps Engineers",
+        "pricing_tier": "freemium",
+        "support_level": "enterprise"
+      },
+      "relationships": {
+        "related_products": ["40002", "40003"],
+        "alternative_products": ["40004", "40005"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "40002",
+      "name": "Kubernetes",
+      "aliases": ["k8s", "kubernetes", "kube"],
+      "category": "DevOps Tools",
+      "subcategory": "Container Orchestration",
+      "description": "Container orchestration platform for automating deployment and scaling",
+      "tags": ["orchestration", "containers", "devops", "scaling", "cloud-native"],
+      "business_unit": "Infrastructure Tools",
+      "created_date": "2023-01-18",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 92,
+        "market_segment": "Infrastructure",
+        "target_audience": "Platform Engineers",
+        "pricing_tier": "open_source",
+        "support_level": "enterprise"
+      },
+      "relationships": {
+        "related_products": ["40001", "40003"],
+        "alternative_products": ["40006", "40007"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "50001",
+      "name": "TensorFlow",
+      "aliases": ["tensorflow", "tf", "tensorflow.js"],
+      "category": "Machine Learning",
+      "subcategory": "Deep Learning Frameworks",
+      "description": "Open source machine learning framework for everyone",
+      "tags": ["machine-learning", "ai", "deep-learning", "neural-networks", "python"],
+      "business_unit": "AI/ML Tools",
+      "created_date": "2023-03-01",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 94,
+        "market_segment": "Artificial Intelligence",
+        "target_audience": "Data Scientists",
+        "pricing_tier": "open_source",
+        "support_level": "enterprise"
+      },
+      "relationships": {
+        "related_products": ["50002", "50003"],
+        "alternative_products": ["50004", "50005"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "50002",
+      "name": "PyTorch",
+      "aliases": ["pytorch", "torch", "pytorch.org"],
+      "category": "Machine Learning",
+      "subcategory": "Deep Learning Frameworks",
+      "description": "Python machine learning library based on the Torch library",
+      "tags": ["machine-learning", "ai", "deep-learning", "python", "research"],
+      "business_unit": "AI/ML Tools",
+      "created_date": "2023-03-08",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 91,
+        "market_segment": "Artificial Intelligence",
+        "target_audience": "ML Researchers",
+        "pricing_tier": "open_source",
+        "support_level": "community"
+      },
+      "relationships": {
+        "related_products": ["50001", "50003"],
+        "alternative_products": ["50004", "50005"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "60001",
+      "name": "Figma",
+      "aliases": ["figma", "figma.com", "figma design"],
+      "category": "Design Tools",
+      "subcategory": "UI/UX Design",
+      "description": "Collaborative interface design tool for teams",
+      "tags": ["design", "ui", "ux", "collaboration", "prototyping"],
+      "business_unit": "Design Tools",
+      "created_date": "2023-04-01",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 93,
+        "market_segment": "Creative Tools",
+        "target_audience": "UI/UX Designers",
+        "pricing_tier": "freemium",
+        "support_level": "commercial"
+      },
+      "relationships": {
+        "related_products": ["60002", "60003"],
+        "alternative_products": ["60004", "60005"],
+        "dependent_products": []
+      }
+    },
+    {
+      "id": "60002",
+      "name": "Sketch",
+      "aliases": ["sketch", "sketch app", "sketch design"],
+      "category": "Design Tools",
+      "subcategory": "UI/UX Design",
+      "description": "Digital design toolkit for creating interfaces and prototypes",
+      "tags": ["design", "ui", "ux", "mac", "vector"],
+      "business_unit": "Design Tools",
+      "created_date": "2023-04-05",
+      "status": "active",
+      "metadata": {
+        "popularity_score": 78,
+        "market_segment": "Creative Tools",
+        "target_audience": "Mac-based Designers",
+        "pricing_tier": "subscription",
+        "support_level": "commercial"
+      },
+      "relationships": {
+        "related_products": ["60001", "60003"],
+        "alternative_products": ["60004", "60005"],
+        "dependent_products": []
+      }
+    }
+  ],
+  "categories": [
+    {
+      "id": "js-libs",
+      "name": "JavaScript Libraries",
+      "parent_id": "development-tools",
+      "description": "Client-side and server-side JavaScript libraries and frameworks",
+      "product_count": 13,
+      "subcategories": ["HTTP Clients", "UI Frameworks", "Web Frameworks", "Framework Integrations", "Full-Stack Frameworks", "Static Site Generators"]
+    },
+    {
+      "id": "databases",
+      "name": "Databases",
+      "parent_id": "infrastructure",
+      "description": "Database management systems and data storage solutions",
+      "product_count": 3,
+      "subcategories": ["SQL Databases", "NoSQL Databases"]
+    },
+    {
+      "id": "testing",
+      "name": "Testing Tools",
+      "parent_id": "development-tools",
+      "description": "Testing frameworks and quality assurance tools",
+      "product_count": 2,
+      "subcategories": ["JavaScript Testing", "E2E Testing"]
+    },
+    {
+      "id": "devops",
+      "name": "DevOps Tools",
+      "parent_id": "infrastructure",
+      "description": "Tools for deployment, orchestration, and infrastructure management",
+      "product_count": 2,
+      "subcategories": ["Containerization", "Container Orchestration"]
+    },
+    {
+      "id": "ml-tools",
+      "name": "Machine Learning",
+      "parent_id": "ai-tools",
+      "description": "Machine learning and artificial intelligence frameworks",
+      "product_count": 2,
+      "subcategories": ["Deep Learning Frameworks"]
+    },
+    {
+      "id": "design-tools",
+      "name": "Design Tools",
+      "parent_id": "creative-tools",
+      "description": "User interface and user experience design tools",
+      "product_count": 2,
+      "subcategories": ["UI/UX Design"]
+    },
+    {
+      "id": "development-tools",
+      "name": "Development Tools",
+      "parent_id": null,
+      "description": "Software development tools and utilities",
+      "product_count": 15,
+      "subcategories": []
+    },
+    {
+      "id": "infrastructure",
+      "name": "Infrastructure",
+      "parent_id": null,
+      "description": "Infrastructure and platform tools",
+      "product_count": 5,
+      "subcategories": []
+    }
+  ]
+}

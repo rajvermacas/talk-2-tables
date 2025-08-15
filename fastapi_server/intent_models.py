@@ -14,6 +14,9 @@ from pydantic import BaseModel, Field
 class IntentClassification(str, Enum):
     """Intent classification results."""
     DATABASE_QUERY = "database_query"
+    PRODUCT_LOOKUP = "product_lookup"
+    PRODUCT_SEARCH = "product_search"
+    HYBRID_QUERY = "hybrid_query"
     CONVERSATION = "conversation"
     SYSTEM_COMMAND = "system_command"
     UNCLEAR = "unclear"
@@ -25,6 +28,7 @@ class DetectionMethod(str, Enum):
     SEMANTIC_CACHE_HIT = "semantic_cache_hit" 
     EXACT_CACHE_HIT = "exact_cache_hit"
     LLM_CLASSIFICATION = "llm_classification"
+    QUERY_PLAN_GENERATION = "query_plan_generation"
     HYBRID_COMPARISON = "hybrid_comparison"
     FALLBACK_LEGACY = "fallback_legacy"
 
@@ -41,6 +45,12 @@ class IntentDetectionResult(BaseModel):
     metadata_used: bool = Field(..., description="Whether database metadata was used")
     reasoning: Optional[str] = Field(None, description="LLM reasoning for classification")
     similarity_score: Optional[float] = Field(None, description="Semantic similarity score if applicable")
+    
+    # Multi-server extensions
+    required_servers: List[str] = Field(default_factory=list, description="List of required server IDs")
+    extracted_entities: Dict[str, Any] = Field(default_factory=dict, description="Extracted entities from query")
+    query_plan_hint: Optional[str] = Field(None, description="Hint for query plan generation")
+    server_capabilities_used: List[str] = Field(default_factory=list, description="Server capabilities considered")
 
 
 class QueryNormalizationResult(BaseModel):

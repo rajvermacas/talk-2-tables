@@ -17,6 +17,7 @@ from .models import (
     ErrorResponse, HealthResponse, ErrorDetail
 )
 from .chat_handler import chat_handler
+from .mcp_platform import MCPPlatform
 
 # Configure logging
 logging.basicConfig(
@@ -25,25 +26,42 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Initialize MCP Platform
+mcp_platform = MCPPlatform()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
-    logger.info("Starting FastAPI server for Talk2Tables")
+    logger.info("Starting FastAPI server for Talk2Tables Multi-MCP Platform")
     logger.info(f"Using LLM provider: {config.llm_provider}")
     if config.llm_provider == "gemini":
         logger.info(f"Gemini model: {config.gemini_model}")
-    logger.info(f"MCP server URL: {config.mcp_server_url}")
+    logger.info(f"Legacy MCP server URL: {config.mcp_server_url}")
     
-    # Test connections on startup
+    # Initialize MCP Platform
     try:
-        # Test MCP connection
+        await mcp_platform.initialize()
+        logger.info("✓ MCP Platform initialized successfully")
+        
+        # Get platform status
+        platform_status = await mcp_platform.get_platform_status()
+        enabled_servers = platform_status.get("server_registry", {}).get("enabled_servers", 0)
+        healthy_servers = platform_status.get("server_registry", {}).get("healthy_servers", 0)
+        logger.info(f"✓ Platform ready with {healthy_servers}/{enabled_servers} healthy servers")
+        
+    except Exception as e:
+        logger.error(f"✗ MCP Platform initialization failed: {e}")
+    
+    # Test legacy connections for backward compatibility
+    try:
+        # Test legacy MCP connection
         mcp_connected = await chat_handler.mcp_client.test_connection()
         if mcp_connected:
-            logger.info("✓ MCP server connection successful")
+            logger.info("✓ Legacy MCP server connection successful")
         else:
-            logger.warning("✗ MCP server connection failed")
+            logger.warning("✗ Legacy MCP server connection failed")
         
         # Test LLM provider connection
         llm_connected = await chat_handler.llm_client.test_connection()
@@ -54,13 +72,14 @@ async def lifespan(app: FastAPI):
             logger.warning(f"✗ {provider_name} connection failed")
             
     except Exception as e:
-        logger.error(f"Error during startup tests: {str(e)}")
+        logger.error(f"Error during legacy startup tests: {str(e)}")
     
     yield
     
     # Shutdown
     logger.info("Shutting down FastAPI server")
     try:
+        await mcp_platform.shutdown()
         await chat_handler.mcp_client.disconnect()
     except Exception as e:
         logger.error(f"Error during shutdown: {str(e)}")
@@ -103,14 +122,18 @@ async def global_exception_handler(_: Request, exc: Exception):
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
-    """Health check endpoint."""
+    """Health check endpoint with multi-server platform status."""
     try:
-        # Test MCP connection
+        # Test legacy MCP connection
         mcp_status = "connected" if await chat_handler.mcp_client.test_connection() else "disconnected"
         
+        # Get platform status
+        platform_status = await mcp_platform.get_platform_status()
+        platform_healthy = platform_status.get("initialized", False)
+        
         return HealthResponse(
-            status="healthy",
-            version="0.1.0",
+            status="healthy" if platform_healthy else "degraded",
+            version="2.0.0",  # Updated version for multi-server platform
             timestamp=int(time.time()),
             mcp_server_status=mcp_status
         )
@@ -231,17 +254,163 @@ async def test_integration():
         )
 
 
+@app.post("/v2/chat")
+async def create_platform_chat(request: Dict[str, Any]):
+    """
+    Enhanced chat endpoint using the multi-server platform.
+    
+    Supports queries across multiple data sources with intelligent routing.
+    """
+    try:
+        query = request.get("query", "").strip()
+        user_id = request.get("user_id")
+        context = request.get("context", {})
+        
+        if not query:
+            raise HTTPException(
+                status_code=400,
+                detail="Query is required"
+            )
+        
+        logger.info(f"Processing platform query: {query[:100]}...")
+        
+        # Process through multi-server platform
+        platform_response = await mcp_platform.process_query(
+            query=query,
+            user_id=user_id,
+            context=context
+        )
+        
+        return platform_response.to_dict()
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in platform chat: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing platform query: {str(e)}"
+        )
+
+
+@app.get("/platform/status")
+async def platform_status():
+    """Get comprehensive platform status including all servers."""
+    try:
+        status = await mcp_platform.get_platform_status()
+        return status
+    except Exception as e:
+        logger.error(f"Error getting platform status: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting platform status: {str(e)}"
+        )
+
+
+@app.post("/platform/reload")
+async def reload_platform_config():
+    """Reload platform configuration."""
+    try:
+        success = await mcp_platform.reload_configuration()
+        return {
+            "success": success,
+            "message": "Configuration reloaded successfully" if success else "Configuration reload failed"
+        }
+    except Exception as e:
+        logger.error(f"Error reloading configuration: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error reloading configuration: {str(e)}"
+        )
+
+
+@app.get("/servers")
+async def list_servers():
+    """List all registered MCP servers and their status."""
+    try:
+        servers = []
+        registry = mcp_platform.server_registry
+        
+        for server_id in registry.get_all_servers():
+            server_info = registry.get_server_info(server_id)
+            server_caps = registry.get_server_capabilities(server_id)
+            is_healthy = registry.is_server_healthy(server_id)
+            
+            server_data = {
+                "id": server_id,
+                "name": server_info.name if server_info else server_id,
+                "url": server_info.url if server_info else "unknown",
+                "enabled": server_info.enabled if server_info else False,
+                "healthy": is_healthy,
+                "capabilities": server_caps.supported_operations if server_caps else [],
+                "data_types": server_caps.data_types if server_caps else []
+            }
+            servers.append(server_data)
+        
+        return {"servers": servers}
+        
+    except Exception as e:
+        logger.error(f"Error listing servers: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error listing servers: {str(e)}"
+        )
+
+
+@app.get("/servers/{server_id}/status")
+async def get_server_status(server_id: str):
+    """Get detailed status for a specific server."""
+    try:
+        registry = mcp_platform.server_registry
+        
+        server_info = registry.get_server_info(server_id)
+        if not server_info:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Server {server_id} not found"
+            )
+        
+        server_caps = registry.get_server_capabilities(server_id)
+        is_healthy = registry.is_server_healthy(server_id)
+        
+        return {
+            "id": server_id,
+            "info": server_info.to_dict(),
+            "capabilities": server_caps.model_dump() if server_caps else None,
+            "healthy": is_healthy
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting server status: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting server status: {str(e)}"
+        )
+
+
 @app.get("/")
 async def root():
     """Root endpoint with API information."""
     return {
-        "name": "Talk2Tables FastAPI Server",
-        "version": "0.1.0",
-        "description": "Chat completions API with database query capabilities",
+        "name": "Talk2Tables Multi-MCP Platform",
+        "version": "2.0.0",
+        "description": "Enhanced chat API with multi-server data access capabilities",
+        "features": [
+            "Multi-server MCP coordination",
+            "Intelligent query routing",
+            "Product metadata integration", 
+            "Enhanced intent detection",
+            "Hybrid query execution"
+        ],
         "endpoints": {
-            "chat_completions": "/chat/completions",
+            "legacy_chat_completions": "/chat/completions",
+            "platform_chat": "/v2/chat",
             "health": "/health",
             "models": "/models",
+            "platform_status": "/platform/status",
+            "servers": "/servers",
             "mcp_status": "/mcp/status",
             "integration_test": "/test/integration"
         },

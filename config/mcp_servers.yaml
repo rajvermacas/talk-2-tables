@@ -1,0 +1,218 @@
+# MCP Servers Configuration for Talk2Tables Multi-MCP Platform
+# This file defines all MCP servers and their connection information
+
+platform:
+  name: "Talk2Tables Multi-MCP Platform"
+  version: "2.0"
+  default_timeout: 30
+  max_concurrent_steps: 5
+  enable_caching: true
+  cache_ttl: 300
+  enable_retries: true
+  max_retries: 2
+  health_check_interval: 60
+
+servers:
+  # Database Server (existing SQLite MCP server)
+  - server_id: "database"
+    name: "SQLite Database Server"
+    url: "http://localhost:8000"
+    transport: "streamable-http"
+    capabilities: 
+      - "sql_query"
+      - "schema_discovery"
+      - "data_analysis"
+    priority: 1
+    health_check_endpoint: "/health"
+    description: "Primary SQLite database with business data"
+    data_types:
+      - "sql_results"
+      - "table_schema"
+      - "database_metadata"
+    
+  # Product Metadata Server (new server implementation)
+  - server_id: "product_metadata"
+    name: "Product Metadata Server"
+    url: "http://localhost:8001"
+    transport: "streamable-http"
+    capabilities:
+      - "product_lookup"
+      - "product_search"
+      - "category_management"
+      - "product_enrichment"
+    priority: 2
+    health_check_endpoint: "/health"
+    description: "Product catalog and metadata information"
+    data_source: "static_json"
+    data_path: "data/products.json"
+    data_types:
+      - "product_info"
+      - "category_info"
+      - "product_catalog"
+    
+  # Future servers can be added here
+  
+  # Inventory System Server (placeholder for future implementation)
+  - server_id: "inventory_system"
+    name: "Inventory Management Server"
+    url: "http://localhost:8002"
+    transport: "streamable-http"
+    capabilities:
+      - "stock_levels"
+      - "warehouse_info"
+      - "supplier_data"
+      - "inventory_analytics"
+    priority: 3
+    health_check_endpoint: "/health"
+    description: "Real-time inventory and warehouse management"
+    enabled: false  # Disabled until implemented
+    data_types:
+      - "inventory_levels"
+      - "warehouse_data"
+      - "supplier_info"
+  
+  # Analytics Server (placeholder for future implementation)
+  - server_id: "analytics_engine"
+    name: "Business Analytics Server"
+    url: "http://localhost:8003"
+    transport: "streamable-http"
+    capabilities:
+      - "trend_analysis"
+      - "predictive_modeling"
+      - "performance_metrics"
+      - "business_insights"
+    priority: 4
+    health_check_endpoint: "/health"
+    description: "Advanced analytics and business intelligence"
+    enabled: false  # Disabled until implemented
+    data_types:
+      - "analytics_results"
+      - "trend_data"
+      - "predictions"
+
+# Routing rules for intelligent query planning
+routing_rules:
+  # Simple product information queries
+  product_queries:
+    patterns:
+      - "what is {product}"
+      - "tell me about {product}"
+      - "{product} information"
+      - "describe {product}"
+      - "product {product}"
+    required_servers: ["product_metadata"]
+    intent_type: "product_lookup"
+    cache_ttl: 600  # Cache for 10 minutes
+    
+  # Product search queries
+  product_search_queries:
+    patterns:
+      - "find products {query}"
+      - "search for {query}"
+      - "products like {query}"
+      - "similar to {query}"
+    required_servers: ["product_metadata"]
+    intent_type: "product_search"
+    cache_ttl: 300  # Cache for 5 minutes
+    
+  # Database-only queries
+  database_queries:
+    patterns:
+      - "SELECT {sql}"
+      - "show {data}"
+      - "list {data}"
+      - "count {data}"
+      - "total {data}"
+    required_servers: ["database"]
+    intent_type: "database_only"
+    cache_ttl: 180  # Cache for 3 minutes
+    
+  # Hybrid queries requiring both product resolution and database lookup
+  sales_queries:
+    patterns:
+      - "{product} sales"
+      - "sales of {product}"
+      - "revenue from {product}"
+      - "{product} performance"
+      - "how much {product}"
+    required_servers: ["product_metadata", "database"]
+    execution_order: ["product_metadata", "database"]
+    intent_type: "hybrid"
+    cache_ttl: 120  # Cache for 2 minutes
+    
+  # General hybrid queries
+  hybrid_queries:
+    patterns:
+      - "{product} {metric}"
+      - "{metric} for {product}"
+      - "{product} data"
+      - "analyze {product}"
+    required_servers: ["product_metadata", "database"]
+    execution_order: ["product_metadata", "database"]
+    intent_type: "hybrid"
+    cache_ttl: 180  # Cache for 3 minutes
+    
+  # Category-based queries
+  category_queries:
+    patterns:
+      - "{category} products"
+      - "products in {category}"
+      - "list {category}"
+      - "show {category}"
+    required_servers: ["product_metadata"]
+    intent_type: "product_search"
+    cache_ttl: 600  # Cache for 10 minutes
+
+# Performance and optimization settings
+optimization:
+  # Enable parallel execution when possible
+  enable_parallel_execution: true
+  
+  # Maximum time to wait for slow servers
+  slow_server_timeout: 10
+  
+  # Retry strategy for failed operations
+  retry_strategy:
+    initial_delay: 1
+    max_delay: 10
+    backoff_factor: 2
+    
+  # Cache configuration
+  cache_backend: "memory"  # or "redis" for production
+  cache_key_prefix: "t2t_platform"
+  
+  # Load balancing (when multiple servers support same operation)
+  load_balancing:
+    strategy: "priority"  # "priority", "round_robin", "least_connections"
+    health_weight: 0.3    # Weight given to server health in selection
+
+# Error handling and fallback strategies
+error_handling:
+  # What to do when a server is unavailable
+  server_unavailable_strategy: "graceful_degradation"
+  
+  # Whether to continue with partial results
+  allow_partial_results: true
+  
+  # Timeout for entire query plan execution
+  max_plan_execution_time: 60
+  
+  # Fallback servers for critical operations
+  fallback_servers:
+    database: []  # No fallback for database (single source of truth)
+    product_metadata: []  # No fallback for product metadata
+    
+# Monitoring and logging configuration
+monitoring:
+  # Enable detailed performance logging
+  enable_performance_logging: true
+  
+  # Log slow queries (in seconds)
+  slow_query_threshold: 5
+  
+  # Enable health check logging
+  enable_health_logging: false
+  
+  # Metrics collection
+  enable_metrics: true
+  metrics_endpoint: "/metrics"
