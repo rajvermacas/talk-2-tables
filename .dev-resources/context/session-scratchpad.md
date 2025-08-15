@@ -29,7 +29,7 @@
 
 ---
 
-## Current Session (Session 14 - 2025-08-15)
+## Session 14 - 2025-08-15
 **Focus Area**: UI accessibility improvements, send button positioning fixes, and comprehensive browser automation testing.
 
 ### Key Accomplishments
@@ -87,6 +87,64 @@
 - **Testing Infrastructure**: ✅ Puppeteer MCP tool comprehensively validated for future UI automation
 - **Visual Quality**: ✅ Professional appearance maintained with no UI overlap issues
 - **User Experience**: ✅ Smooth interaction flow with proper spacing and accessibility compliance
+
+---
+
+## Current Session (Session 15 - 2025-08-15)
+**Focus Area**: Architectural documentation for enhanced intent detection system with multi-domain support and future multi-MCP server routing.
+
+### Key Accomplishments
+- **Comprehensive Architecture Document**: Created detailed architectural specification for enhanced intent detection system in `.dev-resources/architecture/enhanced-intent-detection-architecture.md`
+- **Multi-Domain Strategy**: Documented approach to replace regex-based detection with LLM-based classification for universal domain support
+- **Semantic Caching Design**: Specified intelligent caching strategy using semantic similarity for cost optimization
+- **Multi-Server Routing Architecture**: Defined future architecture for federated query execution across multiple MCP servers
+- **Implementation Roadmap**: Created phased implementation plan with risk assessment and migration strategy
+
+### Technical Architecture Documentation
+- **Enhanced Intent Detection System**: Comprehensive architectural specification covering LLM-based intent classification to replace current regex approach
+- **Domain Agnostic Design**: Strategy for supporting healthcare, finance, manufacturing, retail, and other business domains without manual keyword configuration
+- **Semantic Caching Architecture**: Multi-tier caching strategy using embedding-based similarity matching for 50-80% cache hit rates
+- **Database Metadata Integration**: Schema-aware classification that considers available data when making intent decisions
+- **Multi-MCP Server Foundation**: Future architecture for query routing across multiple data sources with federated execution
+- **Performance Optimization**: Cost-benefit analysis, TCO calculations, and performance optimization strategies for enterprise deployment
+
+### Architectural Planning Process
+1. **Current State Analysis**: Evaluated existing regex-based intent detection limitations across business domains
+2. **Problem Definition**: Identified domain variability challenge - system will be deployed across diverse industries with unique vocabularies
+3. **Solution Architecture**: Designed LLM-first approach with semantic caching and metadata awareness for universal domain support
+4. **Multi-Server Planning**: Defined future architecture for federated query execution across multiple MCP servers and data sources
+5. **Implementation Strategy**: Created phased rollout plan with migration path, risk assessment, and success metrics
+
+### Architecture Documentation Results
+- **✅ Comprehensive Coverage**: 800+ line architectural document covering all aspects of enhanced intent detection
+- **✅ Technical Specifications**: Detailed API specs, configuration schemas, and database designs
+- **✅ Implementation Roadmap**: 4-phase implementation plan spanning 12+ weeks with clear deliverables
+- **✅ Risk Assessment**: Comprehensive risk analysis with mitigation strategies for technical and business risks
+- **✅ Future Vision**: Long-term roadmap including AI-driven evolution and ecosystem integration
+- **✅ Decision Framework**: TCO analysis and decision matrix for deployment scenarios
+
+### Key Architectural Decisions Made
+- **LLM-First Classification**: Replace regex patterns with LLM-based intent detection for universal domain support (95%+ accuracy target)
+- **Semantic Caching Strategy**: Implement embedding-based similarity matching for 50-80% cache hit rates to optimize costs
+- **Metadata-Aware Decisions**: Include database schema information in classification to prevent false positives
+- **Multi-Server Foundation**: Design extensible architecture ready for federated query execution across multiple data sources
+- **Phased Migration Approach**: 4-phase implementation starting with enhanced detection, progressing to multi-server routing
+- **Cost-Accuracy Balance**: Prioritize accuracy over performance while maintaining acceptable response times through intelligent caching
+
+### Files Created
+1. **`.dev-resources/architecture/enhanced-intent-detection-architecture.md`**:
+   - **Comprehensive architectural document** (800+ lines) covering enhanced intent detection system
+   - **Technical specifications** including API designs, configuration schemas, and database schemas
+   - **Implementation roadmap** with 4-phase approach spanning 12+ weeks
+   - **Risk assessment** with mitigation strategies and decision frameworks
+
+### Current State After This Session
+- **Architectural Foundation**: ✅ Comprehensive documentation for enhanced intent detection system completed
+- **Multi-Domain Strategy**: ✅ LLM-based approach documented to support all business domains without manual configuration
+- **Implementation Roadmap**: ✅ 4-phase rollout plan with clear deliverables, timelines, and success criteria defined
+- **Technical Specifications**: ✅ API designs, configuration schemas, and database designs documented
+- **Risk Management**: ✅ Comprehensive risk assessment with mitigation strategies for technical and business risks
+- **Decision Framework**: ✅ TCO analysis and decision matrix for evaluating deployment scenarios
 
 ---
 
@@ -212,8 +270,8 @@ pytest tests/e2e_react_chatbot_test.py -v
 
 ## File Status
 - **Last Updated**: 2025-08-15
-- **Session Count**: 14
-- **Project Phase**: ✅ **FULL-STACK COMPLETE WITH MODERN UI, MULTI-LLM SUPPORT, COMPREHENSIVE DARK MODE, AND OPTIMIZED ACCESSIBILITY**
+- **Session Count**: 15
+- **Project Phase**: ✅ **FULL-STACK COMPLETE WITH COMPREHENSIVE ARCHITECTURAL ROADMAP FOR ENHANCED INTENT DETECTION**
 
 ---
 
@@ -221,7 +279,7 @@ pytest tests/e2e_react_chatbot_test.py -v
 The project has evolved from a simple MCP server to a complete, multi-tier, full-stack application with modern UI design, multi-LLM capabilities, and accessibility-focused improvements. Key evolution phases include foundation building, productionization, integration, validation, reliability improvements, frontend development, resource discovery fixes, modern UI transformation, multi-LLM architecture, dark mode implementation, and accessibility optimization.
 
 ## Session Handoff Context
-✅ **FULL-STACK APPLICATION WITH MODERN TAILWIND CSS UI, MULTI-LLM SUPPORT, COMPREHENSIVE DARK MODE, AND OPTIMIZED ACCESSIBILITY COMPLETE**. All system components are working:
+✅ **FULL-STACK APPLICATION WITH COMPREHENSIVE ARCHITECTURAL ROADMAP FOR ENHANCED INTENT DETECTION COMPLETE**. All system components are working with future architecture documented:
 1. ✅ **Modern Tailwind CSS Frontend**: Complete TypeScript chatbot with professional glassmorphism design, red/black/gray/white theme, smooth animations, optimized performance, comprehensive dark/light mode support, and accessibility-compliant UI spacing.
 2. ✅ **Multi-LLM Backend**: Complete LangChain-based architecture supporting both OpenRouter and Google Gemini providers with unified interface.
 3. ✅ **Configuration Flexibility**: Environment-based provider switching allowing seamless transition between LLM providers.
@@ -229,7 +287,7 @@ The project has evolved from a simple MCP server to a complete, multi-tier, full
 5. ✅ **MCP Resource Discovery**: All protocol mismatches resolved, database metadata fully accessible.
 6. ✅ **Modern UI/UX**: Professional glassmorphism design with reduced bundle size, faster loading, superior user experience, accessibility-compliant dark mode, and optimized button positioning preventing UI overlap issues.
 7. ✅ **Extensible Architecture**: Clean abstraction layer ready for adding additional providers (Claude, GPT-4, Llama, etc.).
-8. ✅ **UI Accessibility**: Send button and scrollbar overlap completely resolved, comprehensive spacing optimization, and cross-theme compatibility validated.
-9. ✅ **Testing Infrastructure**: Puppeteer MCP integration validated for comprehensive browser automation testing workflows.
+8. ✅ **Enhanced Intent Detection Architecture**: Comprehensive architectural documentation for LLM-based intent detection supporting universal domain deployment without manual configuration.
+9. ✅ **Multi-Server Routing Foundation**: Future architecture documented for federated query execution across multiple MCP servers and data sources.
 
-**Current Status**: ✅ **PRODUCTION READY WITH MODERN UI, MULTI-LLM CAPABILITIES, COMPREHENSIVE DARK MODE, AND ACCESSIBILITY OPTIMIZATION**. The system features a sophisticated LangChain-based architecture with multiple LLM providers, a stunning modern Tailwind CSS interface with complete dark/light mode support, accessibility improvements including proper UI spacing and overlap prevention, and comprehensive browser automation testing capabilities. All critical runtime errors have been resolved, React hooks compliance is maintained, connection status visibility has been dramatically improved with WCAG-compliant color contrast, and UI elements are properly positioned to prevent overlap issues. The React frontend features professional glassmorphism design with red/black/gray/white theme, smooth transitions, theme persistence, and optimized accessibility. Users can seamlessly switch between OpenRouter and Google Gemini via environment configuration, toggle between light and dark modes with a professional theme system, and interact with UI elements without overlap or accessibility issues. The system is ready for production deployment with superior UI/UX, multi-provider flexibility, accessibility compliance, and comprehensive testing infrastructure.
+**Current Status**: ✅ **PRODUCTION READY WITH COMPREHENSIVE ARCHITECTURAL ROADMAP FOR NEXT-GENERATION CAPABILITIES**. The system features a sophisticated LangChain-based architecture with multiple LLM providers, a stunning modern Tailwind CSS interface with complete dark/light mode support, accessibility improvements including proper UI spacing and overlap prevention, and comprehensive browser automation testing capabilities. Additionally, a detailed architectural specification has been created for enhanced intent detection that will enable universal domain support (healthcare, finance, manufacturing, retail, etc.) through LLM-based classification, semantic caching for cost optimization, and metadata-aware decisions. The architecture includes a 4-phase implementation roadmap spanning 12+ weeks, comprehensive risk assessment, TCO analysis, and future vision for multi-server federated query execution. The system is ready for production deployment with superior UI/UX, multi-provider flexibility, accessibility compliance, and a clear path to next-generation multi-domain capabilities.
