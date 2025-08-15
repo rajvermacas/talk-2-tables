@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talk2Tables AI Chatbot - Style Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        // Initialize dark mode toggle
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('darkMode', isDark);
+            
+            // Update toggle button icon
+            const sunIcon = document.getElementById('sun-icon');
+            const moonIcon = document.getElementById('moon-icon');
+            if (isDark) {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            } else {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+        }
+
+        // Load saved theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('darkMode');
+            if (savedTheme === 'true' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('sun-icon').style.display = 'block';
+                document.getElementById('moon-icon').style.display = 'none';
+            }
+        });
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'Consolas', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom glassmorphism and design system styles */
+        .glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .dark .glass {
+            background: rgba(31, 41, 55, 0.8);
+            border: 1px solid rgba(75, 85, 99, 0.5);
+        }
+        
+        .message-bubble {
+            position: relative;
+            border-radius: 1rem;
+            padding: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .message-bubble:hover {
+            box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            border-radius: 50%;
+            background-color: currentColor;
+            animation: typing 1.4s ease-in-out infinite both;
+        }
+        
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            padding: 1px;
+            background: linear-gradient(45deg, #dc2626, #b91c1c);
+            border-radius: inherit;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans antialiased transition-colors duration-300">
+    <!-- Header with Dark Mode Toggle -->
+    <div class="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-r from-red-600 to-red-700 flex items-center justify-center">
+                    <span class="text-white font-bold text-sm">T2T</span>
+                </div>
+                <h1 class="text-xl font-semibold">Talk2Tables Style Guide</h1>
+            </div>
+            <button 
+                onclick="toggleDarkMode()" 
+                class="p-2 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
+                title="Toggle dark mode"
+            >
+                <svg id="sun-icon" class="h-5 w-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+                <svg id="moon-icon" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto px-6 py-8 space-y-12">
+        <!-- Introduction -->
+        <div class="text-center space-y-4">
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent">
+                Talk2Tables AI Chatbot Style Guide
+            </h1>
+            <p class="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                A comprehensive style guide for the Talk2Tables AI chatbot interface featuring a modern glassmorphism design 
+                with red/black/gray/white color scheme. Toggle between light and dark modes using the button in the header.
+            </p>
+        </div>
+
+        <!-- Color Palette -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold border-b border-gray-200 dark:border-gray-700 pb-2">Color Palette</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="space-y-2">
+                    <div class="h-20 bg-red-600 rounded-lg shadow-lg"></div>
+                    <div class="text-sm"><code>red-600</code> - Primary</div>
+                </div>
+                <div class="space-y-2">
+                    <div class="h-20 bg-red-700 rounded-lg shadow-lg"></div>
+                    <div class="text-sm"><code>red-700</code> - Primary Dark</div>
+                </div>
+                <div class="space-y-2">
+                    <div class="h-20 bg-gray-900 dark:bg-white rounded-lg shadow-lg border border-gray-200"></div>
+                    <div class="text-sm"><code>gray-900/white</code> - Text</div>
+                </div>
+                <div class="space-y-2">
+                    <div class="h-20 bg-gray-50 dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"></div>
+                    <div class="text-sm"><code>gray-50/gray-900</code> - Background</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Typography -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold border-b border-gray-200 dark:border-gray-700 pb-2">Typography</h2>
+            <div class="space-y-4">
+                <h1 class="text-4xl font-bold">Heading 1 - Inter Bold</h1>
+                <h2 class="text-3xl font-semibold">Heading 2 - Inter Semibold</h2>
+                <h3 class="text-2xl font-medium">Heading 3 - Inter Medium</h3>
+                <h4 class="text-xl font-medium">Heading 4 - Inter Medium</h4>
+                <p class="text-base">Body text - Inter Regular. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Small text - Inter Regular. Used for secondary information and metadata.</p>
+                <code class="text-sm font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">Code snippet - JetBrains Mono</code>
+                <pre class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg font-mono text-sm overflow-x-auto">function example() {
+  return "JetBrains Mono for code blocks";
+}</pre>
+            </div>
+        </section>
+
+        <!-- Buttons -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold border-b border-gray-200 dark:border-gray-700 pb-2">Buttons</h2>
+            <div class="flex flex-wrap gap-4">
+                <button class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-red-500/30">
+                    Primary Button
+                </button>
+                <button class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 font-medium py-2 px-4 rounded-lg transition-all duration-200 border border-gray-300 dark:border-gray-600">
+                    Secondary Button
+                </button>
+                <button class="bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-400 font-medium py-2 px-4 rounded-lg transition-all duration-200 border border-red-200 dark:border-red-800">
+                    Danger Button
+                </button>
+                <button class="bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 font-medium py-2 px-4 rounded-lg cursor-not-allowed opacity-50" disabled>
+                    Disabled Button
+                </button>
+                <button class="p-2 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- Chat Bubbles -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold border-b border-gray-200 dark:border-gray-700 pb-2">Chat Bubbles</h2>
+            <div class="space-y-4 max-w-2xl">
+                <!-- User Message -->
+                <div class="flex justify-end">
+                    <div class="message-bubble bg-gradient-to-r from-red-600 to-red-700 text-white ml-12 max-w-xs">
+                        <p>Show me the sales data for the last quarter.</p>
+                        <div class="text-xs opacity-75 mt-2">User • 2:34 PM</div>
+                    </div>
+                </div>
+                
+                <!-- AI Message -->
+                <div class="flex justify-start">
+                    <div class="message-bubble bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 mr-12 max-w-xs">
+                        <p>I'll help you analyze the sales data for Q4. Let me query the database for that information.</p>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">Assistant • 2:34 PM</div>
+                    </div>
+                </div>
+                
+                <!-- Typing Indicator -->
+                <div class="flex justify-start">
+                    <div class="message-bubble bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 mr-12">
+                        <div class="typing-indicator text-gray-400">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Form Inputs -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold border-b border-gray-200 dark:border-gray-700 pb-2">Form Inputs</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium">Text Input</label>
+                    <input type="text" placeholder="Enter your message..." 
+                        class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all duration-200 shadow-sm">
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium">Select Dropdown</label>
+                    <select class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-gray-100 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all duration-200 shadow-sm">
+                        <option>Choose an option...</option>
+                        <option>Sales Data</option>
+                        <option>Customer Analytics</option>
+                        <option>Product Reports</option>
+                    </select>
+                </div>
+                
+                <div class="space-y-3">
+                    <label class="block text-sm font-medium">Checkboxes</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" class="w-4 h-4 text-red-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-red-500 focus:ring-2">
+                            <span class="ml-2 text-sm">Include metadata</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" class="w-4 h-4 text-red-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-red-500 focus:ring-2" checked>
+                            <span class="ml-2 text-sm">Format as table</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <label class="block text-sm font-medium">Radio Buttons</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center">
+                            <input type="radio" name="format" class="w-4 h-4 text-red-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-red-500 focus:ring-2">
+                            <span class="ml-2 text-sm">JSON Format</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="format" class="w-4 h-4 text-red-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-red-500 focus:ring-2" checked>
+                            <span class="ml-2 text-sm">Table Format</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="md:col-span-2 space-y-2">
+                    <label class="block text-sm font-medium">Textarea</label>
+                    <textarea placeholder="Enter your SQL query or describe what you're looking for..." 
+                        class="w-full h-24 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all duration-200 shadow-sm resize-none"></textarea>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tables -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold border-b border-gray-200 dark:border-gray-700 pb-2">Tables</h2>
+            <div class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
+                <table class="w-full">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Customer ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">001</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">John Doe</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">john@example.com</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">Active</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">002</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">Jane Smith</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">jane@example.com</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">Pending</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">003</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">Bob Johnson</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">bob@example.com</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400">Inactive</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cards / Panels -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold border-b border-gray-200 dark:border-gray-700 pb-2">Cards / Panels</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Standard Card -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+                    <h3 class="text-lg font-semibold mb-2">Standard Card</h3>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Basic card component with border and shadow.</p>
+                    <button class="text-red-600 hover:text-red-700 text-sm font-medium">Learn more →</button>
+                </div>
+                
+                <!-- Glass Card -->
+                <div class="glass rounded-xl p-6">
+                    <h3 class="text-lg font-semibold mb-2">Glass Card</h3>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Glassmorphism card with backdrop blur effect.</p>
+                    <button class="text-red-600 hover:text-red-700 text-sm font-medium">Learn more →</button>
+                </div>
+                
+                <!-- Stats Card -->
+                <div class="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-6 text-white">
+                    <h3 class="text-lg font-semibold mb-2">Stats Card</h3>
+                    <div class="text-3xl font-bold mb-1">1,247</div>
+                    <p class="text-red-100 text-sm">Total database queries</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Notifications / Alerts -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold border-b border-gray-200 dark:border-gray-700 pb-2">Notifications / Alerts</h2>
+            <div class="space-y-4">
+                <!-- Success Alert -->
+                <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+                    <div class="flex items-start gap-3">
+                        <svg class="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            <h4 class="text-sm font-medium text-green-800 dark:text-green-200">Query executed successfully</h4>
+                            <p class="text-sm text-green-700 dark:text-green-300 mt-1">Your database query returned 42 rows of data.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Warning Alert -->
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+                    <div class="flex items-start gap-3">
+                        <svg class="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                        <div>
+                            <h4 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">Connection warning</h4>
+                            <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">Database connection is slow. Some features may be limited.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Error Alert -->
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                    <div class="flex items-start gap-3">
+                        <svg class="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div class="flex-1">
+                            <h4 class="text-sm font-medium text-red-800 dark:text-red-200">Query failed</h4>
+                            <p class="text-sm text-red-700 dark:text-red-300 mt-1">SQL syntax error: unexpected token near 'FROM'</p>
+                        </div>
+                        <button class="p-1.5 rounded-lg bg-red-100 dark:bg-red-800 hover:bg-red-200 dark:hover:bg-red-700 transition-colors">
+                            <svg class="h-3 w-3 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Info Alert -->
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                    <div class="flex items-start gap-3">
+                        <svg class="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            <h4 class="text-sm font-medium text-blue-800 dark:text-blue-200">Database info</h4>
+                            <p class="text-sm text-blue-700 dark:text-blue-300 mt-1">Connected to SQLite database with 3 tables and 5,247 total records.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Badges / Tags -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold border-b border-gray-200 dark:border-gray-700 pb-2">Badges / Tags</h2>
+            <div class="flex flex-wrap gap-3">
+                <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400">
+                    Primary
+                </span>
+                <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
+                    Success
+                </span>
+                <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">
+                    Warning
+                </span>
+                <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400">
+                    Info
+                </span>
+                <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300">
+                    Neutral
+                </span>
+                <span class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400">
+                    Customers
+                    <span class="ml-1.5 inline-block w-4 h-4 text-xs bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-300 rounded-full">247</span>
+                </span>
+            </div>
+        </section>
+
+        <!-- Interactive Demo -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold border-b border-gray-200 dark:border-gray-700 pb-2">Interactive Demo</h2>
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                <!-- Chat Header -->
+                <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-r from-red-600 to-red-700 flex items-center justify-center">
+                                <span class="text-white font-bold text-sm">T2T</span>
+                            </div>
+                            <h3 class="text-lg font-semibold">Talk2Tables Chat</h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Connected</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sample Chat Messages -->
+                <div class="p-6 space-y-4 max-h-96 overflow-y-auto">
+                    <div class="flex justify-start">
+                        <div class="message-bubble bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 mr-12 max-w-md">
+                            <p class="text-sm">Welcome to Talk2Tables! I can help you query your database using natural language. What would you like to know?</p>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">Assistant • 2:30 PM</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <div class="message-bubble bg-gradient-to-r from-red-600 to-red-700 text-white ml-12 max-w-md">
+                            <p class="text-sm">Show me all customers from California</p>
+                            <div class="text-xs opacity-75 mt-2">You • 2:31 PM</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-start">
+                        <div class="message-bubble bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 mr-12 max-w-md">
+                            <p class="text-sm mb-3">Here are all customers from California:</p>
+                            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-xs">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="text-gray-500 dark:text-gray-400">
+                                            <th class="text-left pb-1">Name</th>
+                                            <th class="text-left pb-1">City</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-gray-900 dark:text-gray-100">
+                                        <tr><td>Alice Johnson</td><td>Los Angeles</td></tr>
+                                        <tr><td>Bob Smith</td><td>San Francisco</td></tr>
+                                        <tr><td>Carol Davis</td><td>San Diego</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">Assistant • 2:31 PM</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Input Area -->
+                <div class="border-t border-gray-200 dark:border-gray-700 p-4">
+                    <div class="flex gap-3">
+                        <input type="text" placeholder="Ask about your data..." 
+                            class="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all duration-200">
+                        <button class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white p-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-red-500/30">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-200 dark:border-gray-700 mt-16 py-8">
+        <div class="max-w-6xl mx-auto px-6 text-center text-sm text-gray-600 dark:text-gray-400">
+            <p>Talk2Tables AI Chatbot Style Guide • Built with Tailwind CSS • Supports Light & Dark Modes</p>
+        </div>
+    </footer>
+</body>
+</html>

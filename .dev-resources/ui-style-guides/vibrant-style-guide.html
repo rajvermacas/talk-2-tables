@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talk2Tables - Vibrant Style Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('darkMode', isDark);
+            
+            const sunIcon = document.getElementById('sun-icon');
+            const moonIcon = document.getElementById('moon-icon');
+            if (isDark) {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            } else {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('darkMode');
+            if (savedTheme === 'true' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('sun-icon').style.display = 'block';
+                document.getElementById('moon-icon').style.display = 'none';
+            }
+        });
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'Consolas', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-mesh {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 6s ease infinite;
+        }
+        
+        .dark .gradient-mesh {
+            background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 100%);
+            background-size: 400% 400%;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .glow-blue {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+        
+        .glow-purple {
+            box-shadow: 0 0 20px rgba(147, 51, 234, 0.5);
+        }
+        
+        .glow-green {
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+        }
+        
+        .glass-vibrant {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .dark .glass-vibrant {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            animation: typing 1.4s ease-in-out infinite both;
+        }
+        
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1.2); opacity: 1; }
+        }
+        
+        .rainbow-border {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #ffeaa7, #dda0dd);
+            background-size: 300% 300%;
+            animation: rainbow 3s ease infinite;
+        }
+        
+        @keyframes rainbow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .neon-text {
+            text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+        }
+        
+        .pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white font-sans antialiased transition-all duration-500 overflow-x-hidden">
+    <!-- Animated Background -->
+    <div class="fixed inset-0 gradient-mesh opacity-20"></div>
+    
+    <!-- Header -->
+    <div class="relative z-10 border-b border-white/10 bg-black/20 backdrop-blur-xl">
+        <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center rainbow-border p-[2px]">
+                    <div class="w-full h-full bg-gray-900 rounded-xl flex items-center justify-center">
+                        <span class="text-white font-bold">T2T</span>
+                    </div>
+                </div>
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                    Talk2Tables Vibrant
+                </h1>
+            </div>
+            <button 
+                onclick="toggleDarkMode()" 
+                class="p-3 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 transition-all duration-300 hover:glow-blue"
+                title="Toggle theme"
+            >
+                <svg id="sun-icon" class="h-5 w-5 hidden text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+                <svg id="moon-icon" class="h-5 w-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="relative z-10 max-w-6xl mx-auto px-6 py-12 space-y-20">
+        <!-- Introduction -->
+        <div class="text-center space-y-6">
+            <h1 class="text-5xl font-extrabold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent neon-text">
+                Vibrant Design System
+            </h1>
+            <p class="text-xl text-gray-300 leading-relaxed max-w-3xl mx-auto">
+                An energetic, modern approach with bold colors, gradients, and dynamic interactions. 
+                Perfect for engaging users with a futuristic, high-energy aesthetic.
+            </p>
+            <div class="flex justify-center gap-2">
+                <div class="w-3 h-3 bg-blue-500 rounded-full pulse-slow"></div>
+                <div class="w-3 h-3 bg-purple-500 rounded-full pulse-slow" style="animation-delay: 0.2s;"></div>
+                <div class="w-3 h-3 bg-pink-500 rounded-full pulse-slow" style="animation-delay: 0.4s;"></div>
+            </div>
+        </div>
+
+        <!-- Color Palette -->
+        <section class="space-y-8">
+            <h2 class="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Color Spectrum</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+                <div class="space-y-3">
+                    <div class="h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl glow-blue"></div>
+                    <div class="text-sm text-blue-300 font-medium">Primary Blue</div>
+                </div>
+                <div class="space-y-3">
+                    <div class="h-20 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl glow-purple"></div>
+                    <div class="text-sm text-purple-300 font-medium">Purple</div>
+                </div>
+                <div class="space-y-3">
+                    <div class="h-20 bg-gradient-to-br from-pink-400 to-pink-600 rounded-2xl"></div>
+                    <div class="text-sm text-pink-300 font-medium">Pink</div>
+                </div>
+                <div class="space-y-3">
+                    <div class="h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl glow-green"></div>
+                    <div class="text-sm text-green-300 font-medium">Success</div>
+                </div>
+                <div class="space-y-3">
+                    <div class="h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl"></div>
+                    <div class="text-sm text-yellow-300 font-medium">Warning</div>
+                </div>
+                <div class="space-y-3">
+                    <div class="h-20 bg-gradient-to-br from-red-400 to-red-600 rounded-2xl"></div>
+                    <div class="text-sm text-red-300 font-medium">Error</div>
+                </div>
+                <div class="space-y-3">
+                    <div class="h-20 bg-gradient-to-br from-cyan-400 to-teal-500 rounded-2xl"></div>
+                    <div class="text-sm text-cyan-300 font-medium">Info</div>
+                </div>
+                <div class="space-y-3">
+                    <div class="h-20 bg-gradient-to-br from-gray-600 to-gray-800 rounded-2xl border border-gray-600"></div>
+                    <div class="text-sm text-gray-400 font-medium">Neutral</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Typography -->
+        <section class="space-y-8">
+            <h2 class="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">Typography</h2>
+            <div class="space-y-6">
+                <h1 class="text-5xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">Display XL</h1>
+                <h2 class="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">Display Large</h2>
+                <h3 class="text-3xl font-bold text-cyan-400">Heading 1</h3>
+                <h4 class="text-2xl font-semibold text-blue-300">Heading 2</h4>
+                <h5 class="text-xl font-medium text-purple-300">Heading 3</h5>
+                <p class="text-lg text-gray-200 leading-relaxed">Body Large - Perfect for important content and descriptions with enhanced readability.</p>
+                <p class="text-base text-gray-300 leading-relaxed">Body Regular - Standard text for most content areas. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+                <p class="text-sm text-gray-400">Body Small - Secondary information and metadata with reduced emphasis.</p>
+                <code class="text-sm font-mono bg-gray-800 border border-purple-500/30 px-3 py-1 rounded-lg text-cyan-300">const code = "vibrant";</code>
+                <pre class="bg-gray-800 border border-blue-500/30 p-4 rounded-xl font-mono text-sm text-green-300 overflow-x-auto">function vibrantExample() {
+  return "Colorful code blocks with syntax highlighting";
+}</pre>
+            </div>
+        </section>
+
+        <!-- Buttons -->
+        <section class="space-y-8">
+            <h2 class="text-3xl font-bold bg-gradient-to-r from-green-400 to-cyan-500 bg-clip-text text-transparent">Interactive Buttons</h2>
+            <div class="flex flex-wrap gap-4">
+                <button class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 glow-blue hover:scale-105">
+                    Primary Action
+                </button>
+                <button class="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 glow-purple hover:scale-105">
+                    Secondary
+                </button>
+                <button class="px-6 py-3 bg-gradient-to-r from-green-500 to-cyan-600 hover:from-green-600 hover:to-cyan-700 text-white font-semibold rounded-xl transition-all duration-300 glow-green hover:scale-105">
+                    Success
+                </button>
+                <button class="px-6 py-3 border-2 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white font-semibold rounded-xl transition-all duration-300 hover:glow-blue">
+                    Outline
+                </button>
+                <button class="px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 text-gray-300 hover:bg-white/20 font-semibold rounded-xl transition-all duration-300">
+                    Glass
+                </button>
+                <button class="px-6 py-3 bg-gray-700 text-gray-500 font-semibold rounded-xl cursor-not-allowed opacity-50" disabled>
+                    Disabled
+                </button>
+            </div>
+        </section>
+
+        <!-- Chat Bubbles -->
+        <section class="space-y-8">
+            <h2 class="text-3xl font-bold bg-gradient-to-r from-pink-400 to-red-500 bg-clip-text text-transparent">Chat Interface</h2>
+            <div class="space-y-6 max-w-3xl">
+                <!-- User Message -->
+                <div class="flex justify-end">
+                    <div class="max-w-md bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-2xl rounded-br-lg shadow-2xl glow-blue">
+                        <p class="mb-2">Show me the quarterly revenue breakdown with visualizations</p>
+                        <div class="text-xs opacity-80">User • 3:45 PM</div>
+                    </div>
+                </div>
+                
+                <!-- AI Message -->
+                <div class="flex justify-start">
+                    <div class="max-w-md glass-vibrant p-4 rounded-2xl rounded-bl-lg shadow-2xl border border-cyan-500/30">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-2 h-2 bg-green-400 rounded-full pulse-slow"></div>
+                            <span class="text-xs text-cyan-300">AI Assistant</span>
+                        </div>
+                        <p class="text-gray-200 mb-2">I'll analyze your quarterly revenue data and create beautiful visualizations for you. Let me process that information.</p>
+                        <div class="text-xs text-gray-400">Assistant • 3:45 PM</div>
+                    </div>
+                </div>
+                
+                <!-- Typing Indicator -->
+                <div class="flex justify-start">
+                    <div class="glass-vibrant p-4 rounded-2xl rounded-bl-lg border border-purple-500/30">
+                        <div class="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Form Elements -->
+        <section class="space-y-8">
+            <h2 class="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-green-500 bg-clip-text text-transparent">Dynamic Forms</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
+                <div class="space-y-3">
+                    <label class="block text-sm font-semibold text-blue-300">Magic Input</label>
+                    <input type="text" placeholder="Type something amazing..." 
+                        class="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-blue-500/30 rounded-xl text-white placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/50 transition-all duration-300 focus:glow-blue">
+                </div>
+                
+                <div class="space-y-3">
+                    <label class="block text-sm font-semibold text-purple-300">Smart Select</label>
+                    <select class="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-purple-500/30 rounded-xl text-white focus:border-purple-400 focus:ring-2 focus:ring-purple-500/50 transition-all duration-300 focus:glow-purple">
+                        <option value="" class="bg-gray-800">Choose your destiny...</option>
+                        <option value="1" class="bg-gray-800">Data Analytics</option>
+                        <option value="2" class="bg-gray-800">Machine Learning</option>
+                        <option value="3" class="bg-gray-800">Quantum Computing</option>
+                    </select>
+                </div>
+                
+                <div class="md:col-span-2 space-y-3">
+                    <label class="block text-sm font-semibold text-green-300">Neural Network Query</label>
+                    <textarea placeholder="Describe your data dreams..." rows="4"
+                        class="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-green-500/30 rounded-xl text-white placeholder-gray-400 focus:border-green-400 focus:ring-2 focus:ring-green-500/50 transition-all duration-300 focus:glow-green resize-none"></textarea>
+                </div>
+                
+                <div class="space-y-4">
+                    <label class="block text-sm font-semibold text-pink-300">Power Options</label>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" class="w-5 h-5 rounded bg-white/10 border border-pink-500/30 focus:ring-2 focus:ring-pink-500/50 text-pink-500">
+                            <span class="text-gray-300 group-hover:text-pink-300 transition-colors">Enable AI Enhancement</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" class="w-5 h-5 rounded bg-white/10 border border-pink-500/30 focus:ring-2 focus:ring-pink-500/50 text-pink-500" checked>
+                            <span class="text-gray-300 group-hover:text-pink-300 transition-colors">Quantum Acceleration</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <label class="block text-sm font-semibold text-cyan-300">Data Source</label>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="radio" name="source" class="w-5 h-5 bg-white/10 border border-cyan-500/30 focus:ring-2 focus:ring-cyan-500/50 text-cyan-500">
+                            <span class="text-gray-300 group-hover:text-cyan-300 transition-colors">Local Database</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="radio" name="source" class="w-5 h-5 bg-white/10 border border-cyan-500/30 focus:ring-2 focus:ring-cyan-500/50 text-cyan-500" checked>
+                            <span class="text-gray-300 group-hover:text-cyan-300 transition-colors">Cloud Nexus</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tables -->
+        <section class="space-y-8">
+            <h2 class="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">Data Matrix</h2>
+            <div class="glass-vibrant rounded-2xl overflow-hidden border border-blue-500/30">
+                <table class="w-full text-sm">
+                    <thead class="bg-gradient-to-r from-blue-600/20 to-purple-600/20">
+                        <tr>
+                            <th class="px-6 py-4 text-left font-bold text-blue-300">Quantum ID</th>
+                            <th class="px-6 py-4 text-left font-bold text-purple-300">Entity Name</th>
+                            <th class="px-6 py-4 text-left font-bold text-green-300">Neural Status</th>
+                            <th class="px-6 py-4 text-left font-bold text-cyan-300">Energy Level</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/10">
+                        <tr class="hover:bg-white/5 transition-all duration-300 group">
+                            <td class="px-6 py-4 font-mono text-blue-400">QNT-001</td>
+                            <td class="px-6 py-4 font-semibold text-gray-200 group-hover:text-white">Neural Corp Alpha</td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 bg-gradient-to-r from-green-500 to-cyan-500 text-white text-xs font-bold rounded-full glow-green">ACTIVE</span>
+                            </td>
+                            <td class="px-6 py-4 text-cyan-300 font-mono">99.7%</td>
+                        </tr>
+                        <tr class="hover:bg-white/5 transition-all duration-300 group">
+                            <td class="px-6 py-4 font-mono text-blue-400">QNT-002</td>
+                            <td class="px-6 py-4 font-semibold text-gray-200 group-hover:text-white">Cyber Solutions Beta</td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs font-bold rounded-full">PENDING</span>
+                            </td>
+                            <td class="px-6 py-4 text-cyan-300 font-mono">73.2%</td>
+                        </tr>
+                        <tr class="hover:bg-white/5 transition-all duration-300 group">
+                            <td class="px-6 py-4 font-mono text-blue-400">QNT-003</td>
+                            <td class="px-6 py-4 font-semibold text-gray-200 group-hover:text-white">Digital Nexus Gamma</td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold rounded-full">OFFLINE</span>
+                            </td>
+                            <td class="px-6 py-4 text-cyan-300 font-mono">12.8%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cards -->
+        <section class="space-y-8">
+            <h2 class="text-3xl font-bold bg-gradient-to-r from-red-400 to-pink-500 bg-clip-text text-transparent">Quantum Cards</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="glass-vibrant p-6 rounded-2xl border border-blue-500/30 hover:border-blue-400/50 transition-all duration-300 hover:glow-blue group">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-3 h-3 bg-blue-500 rounded-full pulse-slow"></div>
+                        <h3 class="text-lg font-bold text-blue-300 group-hover:text-blue-200">Neural Network</h3>
+                    </div>
+                    <p class="text-gray-300 leading-relaxed mb-4">Advanced AI processing with quantum acceleration capabilities for ultra-fast data analysis.</p>
+                    <button class="text-blue-400 hover:text-blue-300 font-semibold text-sm transition-colors">Activate →</button>
+                </div>
+                
+                <div class="bg-gradient-to-br from-purple-600/20 to-pink-600/20 p-6 rounded-2xl border border-purple-500/30 hover:border-purple-400/50 transition-all duration-300 hover:glow-purple group">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-3 h-3 bg-purple-500 rounded-full pulse-slow" style="animation-delay: 0.2s;"></div>
+                        <h3 class="text-lg font-bold text-purple-300 group-hover:text-purple-200">Data Fusion</h3>
+                    </div>
+                    <div class="text-3xl font-bold text-white mb-2">24,847</div>
+                    <p class="text-purple-200 text-sm">Neural connections established</p>
+                </div>
+                
+                <div class="bg-gradient-to-br from-green-600/20 to-cyan-600/20 p-6 rounded-2xl border border-green-500/30 hover:border-green-400/50 transition-all duration-300 hover:glow-green group">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-3 h-3 bg-green-500 rounded-full pulse-slow" style="animation-delay: 0.4s;"></div>
+                        <h3 class="text-lg font-bold text-green-300 group-hover:text-green-200">Quantum Core</h3>
+                    </div>
+                    <p class="text-gray-300 leading-relaxed">Real-time quantum processing with infinite scalability and zero-latency responses.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Alerts -->
+        <section class="space-y-8">
+            <h2 class="text-3xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">System Notifications</h2>
+            <div class="space-y-4 max-w-3xl">
+                <div class="glass-vibrant p-4 rounded-xl border-l-4 border-cyan-400 bg-cyan-500/10">
+                    <div class="flex items-start gap-3">
+                        <div class="w-2 h-2 bg-cyan-400 rounded-full pulse-slow mt-2"></div>
+                        <div>
+                            <h4 class="text-sm font-bold text-cyan-300 mb-1">Neural Link Established</h4>
+                            <p class="text-sm text-gray-300">Quantum database connection optimized for maximum throughput.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="glass-vibrant p-4 rounded-xl border-l-4 border-green-400 bg-green-500/10 glow-green">
+                    <div class="flex items-start gap-3">
+                        <div class="w-2 h-2 bg-green-400 rounded-full pulse-slow mt-2"></div>
+                        <div>
+                            <h4 class="text-sm font-bold text-green-300 mb-1">Quantum Query Successful</h4>
+                            <p class="text-sm text-gray-300">Data matrix processed: 99,847 neural pathways analyzed in 0.003ms.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="glass-vibrant p-4 rounded-xl border-l-4 border-yellow-400 bg-yellow-500/10">
+                    <div class="flex items-start gap-3">
+                        <div class="w-2 h-2 bg-yellow-400 rounded-full pulse-slow mt-2"></div>
+                        <div>
+                            <h4 class="text-sm font-bold text-yellow-300 mb-1">Dimensional Shift Detected</h4>
+                            <p class="text-sm text-gray-300">Large dataset approaching quantum threshold. Initiating parallel processing.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="glass-vibrant p-4 rounded-xl border-l-4 border-red-400 bg-red-500/10">
+                    <div class="flex items-start gap-3">
+                        <div class="w-2 h-2 bg-red-400 rounded-full pulse-slow mt-2"></div>
+                        <div class="flex-1">
+                            <h4 class="text-sm font-bold text-red-300 mb-1">Quantum Entanglement Error</h4>
+                            <p class="text-sm text-gray-300">Neural pathway disruption in query matrix. Attempting auto-repair.</p>
+                        </div>
+                        <button class="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-300 text-xs transition-all duration-300 hover:glow-red">
+                            RETRY
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Demo -->
+        <section class="space-y-8">
+            <h2 class="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-500 bg-clip-text text-transparent">Neural Interface Demo</h2>
+            <div class="glass-vibrant rounded-2xl border border-blue-500/30 max-w-4xl overflow-hidden">
+                <!-- Header -->
+                <div class="border-b border-white/10 px-6 py-4 bg-gradient-to-r from-blue-600/10 to-purple-600/10">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center rainbow-border p-[1px]">
+                                <div class="w-full h-full bg-gray-900 rounded-lg flex items-center justify-center">
+                                    <span class="text-white font-bold text-xs">AI</span>
+                                </div>
+                            </div>
+                            <h3 class="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Quantum Assistant</h3>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 bg-green-400 rounded-full pulse-slow"></div>
+                                <span class="text-xs text-green-300 font-semibold">NEURAL LINK ACTIVE</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Messages -->
+                <div class="p-6 space-y-6 h-80 overflow-y-auto">
+                    <div class="flex justify-start">
+                        <div class="glass-vibrant border border-cyan-500/30 px-4 py-3 rounded-2xl rounded-bl-lg max-w-md">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-2 h-2 bg-cyan-400 rounded-full pulse-slow"></div>
+                                <span class="text-xs text-cyan-300 font-semibold">QUANTUM AI</span>
+                            </div>
+                            <p class="text-gray-200 text-sm">Greetings! I'm your quantum-enhanced database assistant. I can analyze multidimensional data across infinite possibilities.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-3 rounded-2xl rounded-br-lg max-w-md glow-blue">
+                            <p class="text-sm mb-2">Show me neural network performance metrics with quantum visualization</p>
+                            <div class="text-xs opacity-80">Neural User • 15:42</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-start">
+                        <div class="glass-vibrant border border-green-500/30 px-4 py-3 rounded-2xl rounded-bl-lg max-w-md">
+                            <p class="text-gray-200 text-sm mb-3">Accessing quantum data matrices... Here's your neural performance visualization:</p>
+                            <div class="bg-gradient-to-br from-blue-900/50 to-purple-900/50 p-3 rounded-lg border border-blue-500/30">
+                                <div class="text-xs text-green-300 font-mono space-y-1">
+                                    <div>Neural Efficiency: <span class="text-cyan-300">97.3%</span></div>
+                                    <div>Quantum Coherence: <span class="text-purple-300">89.7%</span></div>
+                                    <div>Data Throughput: <span class="text-blue-300">2.4TB/s</span></div>
+                                    <div>Active Connections: <span class="text-pink-300">847,293</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Input -->
+                <div class="border-t border-white/10 p-4 bg-gradient-to-r from-gray-900/50 to-gray-800/50">
+                    <div class="flex gap-3">
+                        <input type="text" placeholder="Enter quantum query..." 
+                            class="flex-1 px-4 py-3 bg-white/5 backdrop-blur-xl border border-blue-500/30 rounded-xl text-white placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/50 transition-all duration-300 focus:glow-blue">
+                        <button class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 glow-blue hover:scale-105">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="relative z-10 border-t border-white/10 mt-20 py-8 bg-black/20 backdrop-blur-xl">
+        <div class="max-w-6xl mx-auto px-6 text-center">
+            <p class="text-gray-400">
+                <span class="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent font-semibold">Talk2Tables Vibrant Style Guide</span>
+                • Powered by Quantum CSS • Neural Networks Enabled
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

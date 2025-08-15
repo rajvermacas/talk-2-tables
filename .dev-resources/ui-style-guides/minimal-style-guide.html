@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talk2Tables - Minimal Style Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('darkMode', isDark);
+            
+            const sunIcon = document.getElementById('sun-icon');
+            const moonIcon = document.getElementById('moon-icon');
+            if (isDark) {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            } else {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('darkMode');
+            if (savedTheme === 'true' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('sun-icon').style.display = 'block';
+                document.getElementById('moon-icon').style.display = 'none';
+            }
+        });
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'Consolas', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .typing-indicator span {
+            height: 6px;
+            width: 6px;
+            border-radius: 50%;
+            background-color: currentColor;
+            animation: typing 1.4s ease-in-out infinite both;
+        }
+        
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans antialiased transition-colors duration-300">
+    <!-- Header -->
+    <div class="border-b border-gray-100 dark:border-gray-800">
+        <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-6 h-6 bg-gray-900 dark:bg-white rounded"></div>
+                <h1 class="text-lg font-medium">Talk2Tables - Minimal</h1>
+            </div>
+            <button 
+                onclick="toggleDarkMode()" 
+                class="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors"
+                title="Toggle theme"
+            >
+                <svg id="sun-icon" class="h-4 w-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+                <svg id="moon-icon" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="max-w-5xl mx-auto px-6 py-12 space-y-16">
+        <!-- Introduction -->
+        <div class="space-y-4">
+            <h1 class="text-3xl font-light text-gray-900 dark:text-gray-100">Minimal Design System</h1>
+            <p class="text-gray-600 dark:text-gray-400 leading-relaxed max-w-2xl">
+                A clean, minimal approach to the Talk2Tables interface focused on typography, whitespace, and subtle interactions. 
+                Emphasizes content over decoration with careful attention to hierarchy and readability.
+            </p>
+        </div>
+
+        <!-- Color Palette -->
+        <section class="space-y-8">
+            <h2 class="text-xl font-medium text-gray-900 dark:text-gray-100">Colors</h2>
+            <div class="grid grid-cols-6 gap-3">
+                <div class="space-y-2">
+                    <div class="h-16 bg-gray-900 dark:bg-white"></div>
+                    <div class="text-xs text-gray-500">Primary</div>
+                </div>
+                <div class="space-y-2">
+                    <div class="h-16 bg-gray-700 dark:bg-gray-200"></div>
+                    <div class="text-xs text-gray-500">Secondary</div>
+                </div>
+                <div class="space-y-2">
+                    <div class="h-16 bg-gray-500 dark:bg-gray-400"></div>
+                    <div class="text-xs text-gray-500">Muted</div>
+                </div>
+                <div class="space-y-2">
+                    <div class="h-16 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"></div>
+                    <div class="text-xs text-gray-500">Surface</div>
+                </div>
+                <div class="space-y-2">
+                    <div class="h-16 bg-blue-600"></div>
+                    <div class="text-xs text-gray-500">Accent</div>
+                </div>
+                <div class="space-y-2">
+                    <div class="h-16 bg-red-500"></div>
+                    <div class="text-xs text-gray-500">Error</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Typography -->
+        <section class="space-y-8">
+            <h2 class="text-xl font-medium text-gray-900 dark:text-gray-100">Typography</h2>
+            <div class="space-y-6">
+                <h1 class="text-3xl font-light">Display Large</h1>
+                <h2 class="text-2xl font-light">Display Medium</h2>
+                <h3 class="text-xl font-medium">Heading Large</h3>
+                <h4 class="text-lg font-medium">Heading Medium</h4>
+                <p class="text-base leading-relaxed">Body text with comfortable line height for extended reading. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Small text for secondary information and metadata.</p>
+                <code class="text-sm font-mono bg-gray-50 dark:bg-gray-900 px-2 py-1">inline code</code>
+            </div>
+        </section>
+
+        <!-- Buttons -->
+        <section class="space-y-8">
+            <h2 class="text-xl font-medium text-gray-900 dark:text-gray-100">Buttons</h2>
+            <div class="flex flex-wrap gap-4">
+                <button class="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors">
+                    Primary
+                </button>
+                <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    Secondary
+                </button>
+                <button class="px-4 py-2 text-gray-600 dark:text-gray-400 text-sm font-medium hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                    Ghost
+                </button>
+                <button class="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 text-sm font-medium cursor-not-allowed" disabled>
+                    Disabled
+                </button>
+            </div>
+        </section>
+
+        <!-- Chat Interface -->
+        <section class="space-y-8">
+            <h2 class="text-xl font-medium text-gray-900 dark:text-gray-100">Chat Interface</h2>
+            <div class="space-y-4 max-w-2xl">
+                <!-- User Message -->
+                <div class="flex justify-end">
+                    <div class="max-w-xs bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-4 py-3 text-sm">
+                        <p>What are the total sales for this quarter?</p>
+                        <div class="text-xs opacity-60 mt-1">12:34</div>
+                    </div>
+                </div>
+                
+                <!-- AI Message -->
+                <div class="flex justify-start">
+                    <div class="max-w-xs border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm">
+                        <p>I'll help you analyze the quarterly sales data. Let me query the database.</p>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">12:34</div>
+                    </div>
+                </div>
+                
+                <!-- Typing -->
+                <div class="flex justify-start">
+                    <div class="border border-gray-200 dark:border-gray-700 px-4 py-3">
+                        <div class="typing-indicator text-gray-400">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Form Elements -->
+        <section class="space-y-8">
+            <h2 class="text-xl font-medium text-gray-900 dark:text-gray-100">Forms</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium">Input Field</label>
+                    <input type="text" placeholder="Enter text..." 
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 text-sm focus:border-gray-900 dark:focus:border-white focus:outline-none transition-colors">
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium">Select</label>
+                    <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 text-sm focus:border-gray-900 dark:focus:border-white focus:outline-none transition-colors">
+                        <option>Choose option...</option>
+                        <option>Option 1</option>
+                        <option>Option 2</option>
+                    </select>
+                </div>
+                
+                <div class="md:col-span-2 space-y-2">
+                    <label class="block text-sm font-medium">Textarea</label>
+                    <textarea placeholder="Enter message..." rows="3"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 text-sm focus:border-gray-900 dark:focus:border-white focus:outline-none transition-colors resize-none"></textarea>
+                </div>
+                
+                <div class="space-y-3">
+                    <label class="block text-sm font-medium">Checkboxes</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" class="w-4 h-4">
+                            <span class="text-sm">Option A</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" class="w-4 h-4" checked>
+                            <span class="text-sm">Option B</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <label class="block text-sm font-medium">Radio Buttons</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="choice" class="w-4 h-4">
+                            <span class="text-sm">Choice 1</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="choice" class="w-4 h-4" checked>
+                            <span class="text-sm">Choice 2</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tables -->
+        <section class="space-y-8">
+            <h2 class="text-xl font-medium text-gray-900 dark:text-gray-100">Data Tables</h2>
+            <div class="border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-900">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-medium">ID</th>
+                            <th class="px-4 py-3 text-left font-medium">Customer</th>
+                            <th class="px-4 py-3 text-left font-medium">Status</th>
+                            <th class="px-4 py-3 text-left font-medium">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                            <td class="px-4 py-3">001</td>
+                            <td class="px-4 py-3">John Smith</td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs">Active</span>
+                            </td>
+                            <td class="px-4 py-3">$1,250</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                            <td class="px-4 py-3">002</td>
+                            <td class="px-4 py-3">Jane Doe</td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs">Pending</span>
+                            </td>
+                            <td class="px-4 py-3">$890</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                            <td class="px-4 py-3">003</td>
+                            <td class="px-4 py-3">Bob Johnson</td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs">Inactive</span>
+                            </td>
+                            <td class="px-4 py-3">$0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cards -->
+        <section class="space-y-8">
+            <h2 class="text-xl font-medium text-gray-900 dark:text-gray-100">Cards</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="border border-gray-200 dark:border-gray-700 p-6">
+                    <h3 class="text-lg font-medium mb-2">Basic Card</h3>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Clean card design with minimal styling and focus on content.</p>
+                </div>
+                
+                <div class="bg-gray-50 dark:bg-gray-900 p-6">
+                    <h3 class="text-lg font-medium mb-2">Elevated Card</h3>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Subtle background differentiation for hierarchy.</p>
+                </div>
+                
+                <div class="border-l-2 border-blue-600 pl-6 py-2">
+                    <h3 class="text-lg font-medium mb-2">Accent Card</h3>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Left border accent for visual emphasis.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Alerts -->
+        <section class="space-y-8">
+            <h2 class="text-xl font-medium text-gray-900 dark:text-gray-100">Alerts</h2>
+            <div class="space-y-4 max-w-2xl">
+                <div class="border-l-2 border-blue-600 bg-blue-50 dark:bg-blue-950 p-4">
+                    <p class="text-sm text-blue-800 dark:text-blue-200">Information: Database connection established successfully.</p>
+                </div>
+                
+                <div class="border-l-2 border-green-600 bg-green-50 dark:bg-green-950 p-4">
+                    <p class="text-sm text-green-800 dark:text-green-200">Success: Query executed and returned 47 results.</p>
+                </div>
+                
+                <div class="border-l-2 border-yellow-600 bg-yellow-50 dark:bg-yellow-950 p-4">
+                    <p class="text-sm text-yellow-800 dark:text-yellow-200">Warning: Large dataset detected. Query may take longer than usual.</p>
+                </div>
+                
+                <div class="border-l-2 border-red-600 bg-red-50 dark:bg-red-950 p-4">
+                    <p class="text-sm text-red-800 dark:text-red-200">Error: SQL syntax error in query. Please check your statement.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Demo -->
+        <section class="space-y-8">
+            <h2 class="text-xl font-medium text-gray-900 dark:text-gray-100">Chat Demo</h2>
+            <div class="border border-gray-200 dark:border-gray-700 max-w-2xl">
+                <!-- Header -->
+                <div class="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-medium">Database Assistant</h3>
+                        <div class="flex items-center gap-2 text-xs text-gray-500">
+                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                            Connected
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Messages -->
+                <div class="p-4 space-y-4 h-64 overflow-y-auto">
+                    <div class="flex justify-start">
+                        <div class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm max-w-xs">
+                            Hello! I can help you query your database using natural language.
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <div class="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-3 py-2 text-sm max-w-xs">
+                            Show me top 5 customers by revenue
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-start">
+                        <div class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm max-w-xs">
+                            <div class="mb-2">Here are the top 5 customers:</div>
+                            <div class="bg-gray-50 dark:bg-gray-900 p-2 text-xs">
+                                1. Enterprise Corp - $45,000<br>
+                                2. Tech Solutions - $32,000<br>
+                                3. Global Inc - $28,500<br>
+                                4. Innovation Labs - $22,000<br>
+                                5. Digital Agency - $19,500
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Input -->
+                <div class="border-t border-gray-200 dark:border-gray-700 p-4">
+                    <div class="flex gap-2">
+                        <input type="text" placeholder="Ask a question..." 
+                            class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 text-sm focus:border-gray-900 dark:focus:border-white focus:outline-none">
+                        <button class="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm">Send</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
