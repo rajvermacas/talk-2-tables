@@ -168,9 +168,9 @@ const QueryResults: React.FC<QueryResultsProps> = ({
   };
 
   return (
-    <div className="bg-white mt-4 border border-gray-300 rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 mt-4 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
       {/* Header Toolbar */}
-      <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
+      <div className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Results Info */}
           <div className="flex items-center gap-3">
@@ -195,7 +195,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({
                 placeholder="Search results..."
                 value={searchTerm}
                 onChange={handleSearch}
-                className="pl-9 pr-3 py-2 w-48 glass-dark border-gray-600/50 rounded-lg text-sm text-gray-100 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                className="pl-9 pr-3 py-2 w-48 glass border-gray-300 dark:border-gray-600/50 rounded-lg text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
               />
             </div>
 
@@ -223,16 +223,16 @@ const QueryResults: React.FC<QueryResultsProps> = ({
       {/* Table */}
       <div className="overflow-auto max-h-96 scrollbar-thin">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-gray-100 backdrop-blur-sm">
-            <tr className="border-b border-gray-200">
+          <thead className="sticky top-0 bg-gray-100 dark:bg-gray-800 backdrop-blur-sm">
+            <tr className="border-b border-gray-200 dark:border-gray-700">
               {columns.map(column => (
                 <th
                   key={column}
-                  className="text-left px-4 py-3 font-semibold text-gray-700"
+                  className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300"
                 >
                   <button
                     onClick={() => handleSort(column)}
-                    className="flex items-center gap-1 hover:text-white transition-colors group"
+                    className="flex items-center gap-1 hover:text-gray-900 dark:hover:text-white transition-colors group"
                   >
                     <span>{column}</span>
                     <div className="flex flex-col">
@@ -259,14 +259,14 @@ const QueryResults: React.FC<QueryResultsProps> = ({
               <tr 
                 key={index}
                 className={clsx(
-                  'border-b border-gray-100 hover:bg-gray-50 transition-colors',
-                  index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
+                  'border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors',
+                  index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50/50 dark:bg-gray-800/50'
                 )}
               >
                 {columns.map(column => (
                   <td 
                     key={column}
-                    className="px-4 py-3 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap text-gray-900"
+                    className="px-4 py-3 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap text-gray-900 dark:text-gray-100"
                     title={String(row[column] ?? '')}
                   >
                     {row[column] ?? ''}
@@ -280,9 +280,9 @@ const QueryResults: React.FC<QueryResultsProps> = ({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="bg-gray-50 border-t border-gray-200 px-4 py-3">
+        <div className="bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-4 py-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, sortedData.length)} of {sortedData.length} rows
             </p>
             
