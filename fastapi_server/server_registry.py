@@ -90,6 +90,7 @@ class MCPServerRegistry:
         # Routing intelligence
         self.operation_server_map: Dict[ServerOperationType, Set[str]] = {}
         self.server_type_map: Dict[str, Set[str]] = {}
+        self.routing_rules: Dict[str, Any] = {}
         
         # Runtime state
         self._health_check_task: Optional[asyncio.Task] = None
@@ -134,6 +135,11 @@ class MCPServerRegistry:
                 for server_config in config_data["servers"]:
                     server_info = ServerConnectionInfo(**server_config)
                     await self.register_server(server_info)
+            
+            # Load routing rules
+            if "routing_rules" in config_data:
+                self.routing_rules = config_data["routing_rules"]
+                logger.info(f"Loaded {len(self.routing_rules)} routing rule groups")
             
             self._last_config_reload = datetime.now()
             logger.info(f"Loaded configuration for {len(self.servers)} servers")
@@ -508,6 +514,81 @@ class MCPServerRegistry:
                 logger.error(f"Error in health monitoring loop: {e}")
                 await asyncio.sleep(5)  # Brief pause before retrying
     
+    def get_routing_rules(self) -> Dict[str, Any]:
+        """Get all routing rules loaded from configuration."""
+        return self.routing_rules
+    
+    def match_query_to_routing_rules(self, query: str) -> Optional[Dict[str, Any]]:
+        """Match a query against routing rules and return matching rule info.
+        
+        Args:
+            query: User query to match against patterns
+            
+        Returns:
+            Dictionary with routing rule info if match found, None otherwise
+        """
+        query_lower = query.lower().strip()
+        
+        for rule_group, rule_config in self.routing_rules.items():
+            patterns = rule_config.get("patterns", [])
+            
+            for pattern in patterns:
+                # Convert YAML pattern to regex
+                # Replace {variable} with capture groups
+                # Allow product names with letters, numbers, spaces, hyphens, underscores, dots
+                regex_pattern = pattern.replace("{product}", r"([a-zA-Z][\w\s\-_.]*)")
+                regex_pattern = regex_pattern.replace("{query}", r"(.+)")
+                regex_pattern = regex_pattern.replace("{category}", r"([a-zA-Z][\w\s\-_.]*)")
+                regex_pattern = regex_pattern.replace("{data}", r"(.+)")
+                regex_pattern = regex_pattern.replace("{metric}", r"([a-zA-Z][\w\s\-_.]*)")
+                regex_pattern = regex_pattern.replace("{sql}", r"(.+)")
+                
+                # Convert to full regex with optional punctuation
+                regex_pattern = f"^{regex_pattern}[.!?]*$"
+                
+                try:
+                    import re
+                    match = re.search(regex_pattern, query_lower, re.IGNORECASE)
+                    if match:
+                        # Extract captured variables based on pattern
+                        extracted_vars = {}
+                        
+                        # Count variables in pattern to map to captured groups
+                        variables = []
+                        if "{product}" in pattern:
+                            variables.append("product")
+                        if "{query}" in pattern:
+                            variables.append("query")
+                        if "{category}" in pattern:
+                            variables.append("category")
+                        if "{data}" in pattern:
+                            variables.append("data")
+                        if "{metric}" in pattern:
+                            variables.append("metric")
+                        if "{sql}" in pattern:
+                            variables.append("sql")
+                        
+                        # Map captured groups to variables
+                        for i, var_name in enumerate(variables):
+                            if i + 1 <= match.lastindex:
+                                extracted_vars[var_name] = match.group(i + 1).strip()
+                        
+                        return {
+                            "rule_group": rule_group,
+                            "matched_pattern": pattern,
+                            "regex_pattern": regex_pattern,
+                            "required_servers": rule_config.get("required_servers", []),
+                            "intent_type": rule_config.get("intent_type", "unknown"),
+                            "execution_order": rule_config.get("execution_order", None),
+                            "cache_ttl": rule_config.get("cache_ttl", 300),
+                            "extracted_variables": extracted_vars
+                        }
+                except Exception as e:
+                    logger.warning(f"Error matching pattern '{pattern}': {e}")
+                    continue
+        
+        return None
+
     def get_registry_stats(self) -> Dict[str, Any]:
         """Get statistics about the server registry.
         

@@ -41,27 +41,10 @@ class MultiServerIntentDetector(EnhancedIntentDetector):
         super().__init__(config)
         self.server_registry = server_registry
         
-        # Multi-server patterns
-        self.product_patterns = [
-            r'\b(?:what is|tell me about|describe)\s+([a-zA-Z][a-zA-Z0-9\-_.]*)\b',
-            r'\bproduct\s+([a-zA-Z][a-zA-Z0-9\-_.]*)\b',
-            r'\b([a-zA-Z][a-zA-Z0-9\-_.]*)\s+(?:info|information|details)\b',
-        ]
+        # Pattern matching disabled - using LLM-based detection for better accuracy
+        # The system now relies on semantic understanding rather than brittle regex patterns
         
-        self.product_search_patterns = [
-            r'\b(?:find|search)\s+products?\s+(.+)',
-            r'\bproducts?\s+(?:like|similar to)\s+(.+)',
-            r'\bshow\s+me\s+(.+)\s+products?\b',
-        ]
-        
-        self.hybrid_patterns = [
-            r'\b([a-zA-Z][a-zA-Z0-9\-_.]*)\s+(?:sales|revenue|performance|data|analytics)\b',
-            r'\b(?:sales|revenue|data)\s+(?:of|for|from)\s+([a-zA-Z][a-zA-Z0-9\-_.]*)\b',
-            r'\bhow\s+much\s+([a-zA-Z][a-zA-Z0-9\-_.]*)\b',
-            r'\banalyze\s+([a-zA-Z][a-zA-Z0-9\-_.]*)\b',
-        ]
-        
-        logger.info("Initialized Multi-Server Intent Detector")
+        logger.info("Initialized Multi-Server Intent Detector (LLM-based routing)")
         logger.info(f"Available servers: {self.server_registry.get_all_servers()}")
     
     async def detect_intent_with_planning(
@@ -395,7 +378,12 @@ Generate appropriate SQL query:
         query_lower = query.lower().strip()
         processing_time = (time.time() - start_time) * 1000
         
-        # Check for explicit SQL
+        # DISABLED: Pattern matching is too brittle for production use
+        # The LLM-based detection is more reliable and handles edge cases better
+        # Keeping only explicit SQL detection as that's unambiguous
+        
+        # Check for explicit SQL - this is the only pattern we keep
+        # because SQL queries are unambiguous and don't need LLM interpretation
         if self._has_explicit_sql(query):
             return IntentDetectionResult(
                 classification=IntentClassification.DATABASE_QUERY,
@@ -409,60 +397,8 @@ Generate appropriate SQL query:
                 reasoning="Explicit SQL pattern detected"
             )
         
-        # Check for product lookup patterns
-        for pattern in self.product_patterns:
-            match = re.search(pattern, query_lower)
-            if match:
-                product_name = match.group(1)
-                return IntentDetectionResult(
-                    classification=IntentClassification.PRODUCT_LOOKUP,
-                    needs_database=False,
-                    confidence=0.85,
-                    detection_method=DetectionMethod.REGEX_FAST_PATH,
-                    processing_time_ms=processing_time,
-                    cache_hit=False,
-                    metadata_used=False,
-                    required_servers=["product_metadata"],
-                    extracted_entities={"product_name": product_name},
-                    reasoning=f"Product lookup pattern detected for: {product_name}"
-                )
-        
-        # Check for product search patterns
-        for pattern in self.product_search_patterns:
-            match = re.search(pattern, query_lower)
-            if match:
-                search_terms = match.group(1)
-                return IntentDetectionResult(
-                    classification=IntentClassification.PRODUCT_SEARCH,
-                    needs_database=False,
-                    confidence=0.8,
-                    detection_method=DetectionMethod.REGEX_FAST_PATH,
-                    processing_time_ms=processing_time,
-                    cache_hit=False,
-                    metadata_used=False,
-                    required_servers=["product_metadata"],
-                    extracted_entities={"search_terms": search_terms},
-                    reasoning=f"Product search pattern detected for: {search_terms}"
-                )
-        
-        # Check for hybrid patterns
-        for pattern in self.hybrid_patterns:
-            match = re.search(pattern, query_lower)
-            if match:
-                product_name = match.group(1)
-                return IntentDetectionResult(
-                    classification=IntentClassification.HYBRID_QUERY,
-                    needs_database=True,
-                    confidence=0.9,
-                    detection_method=DetectionMethod.REGEX_FAST_PATH,
-                    processing_time_ms=processing_time,
-                    cache_hit=False,
-                    metadata_used=False,
-                    required_servers=["product_metadata", "database"],
-                    extracted_entities={"product_name": product_name},
-                    reasoning=f"Hybrid query pattern detected for: {product_name}"
-                )
-        
+        # Return None to proceed to semantic cache and LLM-based detection
+        # Pattern matching disabled in favor of more intelligent LLM-based routing
         return None
     
     async def _check_semantic_cache_with_servers(
@@ -509,20 +445,27 @@ Available servers and their capabilities:
 Your task is to classify the user query and determine which servers are needed.
 
 Classification types:
-- DATABASE_QUERY: Needs SQL database access only
-- PRODUCT_LOOKUP: Needs product metadata lookup (single product)
-- PRODUCT_SEARCH: Needs product search/discovery
-- HYBRID_QUERY: Needs both product lookup and database query
-- CONVERSATION: General conversation, no data access needed
+- PRODUCT_LOOKUP: Questions about specific products (e.g., "What is QuantumFlux DataProcessor?", "Tell me about Axios", "Describe product X")
+- PRODUCT_SEARCH: Searching for products (e.g., "Find AI products", "Show me processors", "Products in category X")
+- DATABASE_QUERY: Needs SQL database access for business data (e.g., sales, revenue, analytics, or explicit SQL)
+- HYBRID_QUERY: Needs BOTH product info AND database data (e.g., "Axios sales", "revenue for product X")
+- CONVERSATION: General chat that doesn't need data access
 - UNCLEAR: Cannot determine intent
+
+Important routing rules:
+- If asking "What is X?" where X could be a product name → PRODUCT_LOOKUP with product_metadata server
+- If asking about product details, info, or description → PRODUCT_LOOKUP with product_metadata server
+- If searching for products by criteria → PRODUCT_SEARCH with product_metadata server
+- If asking about sales/revenue/data for a specific product → HYBRID_QUERY with both servers
+- Only use DATABASE_QUERY if no product context is involved
 
 Respond with JSON format:
 {{
     "classification": "PRODUCT_LOOKUP|PRODUCT_SEARCH|DATABASE_QUERY|HYBRID_QUERY|CONVERSATION|UNCLEAR",
     "confidence": 0.0-1.0,
-    "required_servers": ["server1", "server2"],
+    "required_servers": ["database", "product_metadata"],
     "reasoning": "explanation",
-    "extracted_entities": {{"key": "value"}},
+    "extracted_entities": {{"product_name": "extracted_product_name_if_any"}},
     "needs_database": true/false
 }}
 """

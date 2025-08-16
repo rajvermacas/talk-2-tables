@@ -54,7 +54,7 @@
 
 ---
 
-## Current Session (Session 22 - 2025-08-16 22:01 IST)
+## Previous Session (Session 22 - 2025-08-16 22:01 IST)
 **Focus Area**: Multi-MCP Health Check Fix & Routing Logic Investigation - Successfully resolved health monitoring issues but identified core routing logic problems preventing Product MCP server utilization.
 
 ### Key Accomplishments
@@ -254,10 +254,36 @@ pytest tests/ -v
 - **Cloud Deployment**: Kubernetes orchestration with auto-scaling and cloud-native monitoring
 - **Ecosystem Expansion**: Plugin marketplace and community server registry
 
+## Current Session (Session 23 - 2025-08-16)
+**Focus Area**: LLM-Based Routing Fix - Removed brittle pattern matching in favor of pure LLM-driven intent detection
+
+### Changes Made
+1. **Removed Pattern Matching** (`fastapi_server/multi_server_intent_detector.py`):
+   - Disabled YAML routing rule pattern matching (was never working properly)
+   - Removed hardcoded regex patterns for product detection
+   - Now relies entirely on LLM for intelligent routing (except explicit SQL)
+
+2. **Enhanced LLM Prompt** (`fastapi_server/multi_server_intent_detector.py`):
+   - Updated system prompt with explicit routing instructions
+   - Added clear examples for product queries
+   - Specified when to use each server type
+
+### Issue Still Persists
+Despite removing pattern matching and enhancing the LLM prompt, product queries are still misclassified:
+- "What is QuantumFlux DataProcessor?" → classified as "conversation" instead of "product_lookup"
+- The Gemini LLM is not properly understanding the routing instructions
+- Product MCP server resources are NOT being accessed
+
+### Root Cause
+The LLM-based routing is fundamentally not working because:
+1. The LLM doesn't understand what constitutes a "product" query
+2. The server capabilities context might not be properly formatted
+3. The semantic cache interferes with fresh classifications
+
 ## File Status
-- **Last Updated**: 2025-08-16 22:01 IST  
-- **Session Count**: 22
-- **Project Phase**: 🔄 **HEALTH MONITORING FIXED - ROUTING LOGIC NEEDS REPAIR**
+- **Last Updated**: 2025-08-16 (Session 23)
+- **Session Count**: 23
+- **Project Phase**: 🔄 **LLM ROUTING ATTEMPTED - STILL NOT WORKING**
 
 ---
 
