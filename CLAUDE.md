@@ -30,25 +30,28 @@ pip install -e ".[dev,fastapi]"
 cd react-chatbot && npm install && cd ..
 ```
 
-### Full Stack Development (3 terminals required)
+### Full Stack Development (4 terminals required)
 ```bash
-# Terminal 1: MCP Server (database interface)
-python -m talk_2_tables_mcp.remote_server
+# Terminal 1: MCP Server (database interface) (port 8000)
+python -m talk_2_tables_mcp.server --transport sse
 
-# Terminal 2: FastAPI Backend (AI agent)
-cd fastapi_server && python main.py
+# Terminal 2: FastAPI Backend (AI agent) (port 8002)
+python -m talk_2_tables_mcp.product_metadata_server --transport sse --host 0.0.0.0
 
-# Terminal 3: React Frontend
+# Terminal 3: Product metadata mcp server (port 8001)
+python3 -m fastapi_server.main
+
+# Terminal 4: React Frontend (port 3000)
 ./start-chatbot.sh
 ```
 
 ### Component-Specific Development
 ```bash
-# MCP Server only (local CLI)
+# Database MCP Server only
 python -m talk_2_tables_mcp.server
 
-# MCP Server (HTTP for network access)
-python -m talk_2_tables_mcp.server --transport streamable-http --host 0.0.0.0 --port 8000
+# Database MCP Server (SSE for network access)
+python -m talk_2_tables_mcp.server --transport sse --host 0.0.0.0 --port 8000
 
 # FastAPI Server only
 cd fastapi_server && uvicorn main:app --reload --port 8001

@@ -311,7 +311,7 @@ This project is licensed under the MIT License.
 # Execution Steps
 Run these four commands in separate terminals in venv:
 1. Start remote mcp server with sse transport prtocol at port 8000
-python3 -m talk_2_tables_mcp.server --transport sse
+python -m talk_2_tables_mcp.server --transport sse
 
 2. Start product metadata mcp server - port 8002
 python -m talk_2_tables_mcp.product_metadata_server --transport sse --host 0.0.0.0
