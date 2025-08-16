@@ -146,7 +146,7 @@ def create_remote_config() -> ServerConfig:
     
     # Override defaults for remote deployment
     if config.transport == "stdio":
-        config.transport = "streamable-http"
+        config.transport = "sse"
     
     if config.host == "localhost":
         config.host = "0.0.0.0"  # Bind to all interfaces

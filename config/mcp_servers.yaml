@@ -17,7 +17,7 @@ servers:
   - server_id: "database"
     name: "SQLite Database Server"
     url: "http://localhost:8000"
-    transport: "streamable-http"
+    transport: "sse"
     capabilities: 
       - "sql_query"
       - "schema_discovery"
@@ -33,8 +33,8 @@ servers:
   # Product Metadata Server (new server implementation)
   - server_id: "product_metadata"
     name: "Product Metadata Server"
-    url: "http://localhost:8001"
-    transport: "streamable-http"
+    url: "http://localhost:8002"
+    transport: "sse"
     capabilities:
       - "product_lookup"
       - "product_search"
@@ -55,8 +55,8 @@ servers:
   # Inventory System Server (placeholder for future implementation)
   - server_id: "inventory_system"
     name: "Inventory Management Server"
-    url: "http://localhost:8002"
-    transport: "streamable-http"
+    url: "http://localhost:8003"
+    transport: "sse"
     capabilities:
       - "stock_levels"
       - "warehouse_info"
@@ -74,8 +74,8 @@ servers:
   # Analytics Server (placeholder for future implementation)
   - server_id: "analytics_engine"
     name: "Business Analytics Server"
-    url: "http://localhost:8003"
-    transport: "streamable-http"
+    url: "http://localhost:8004"
+    transport: "sse"
     capabilities:
       - "trend_analysis"
       - "predictive_modeling"

@@ -17,6 +17,7 @@ from .query_models import (
 )
 from .server_registry import MCPServerRegistry
 from .mcp_client import MCPDatabaseClient
+from .product_mcp_client import ProductMCPClient
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,19 @@ class QueryOrchestrator:
         # Initialize database client for backward compatibility
         self.db_client = MCPDatabaseClient()
         
+        # Initialize product metadata client for multi-server support
+        self.product_client = ProductMCPClient()
+        
         logger.info("Initialized Query Orchestrator")
+    
+    async def shutdown(self) -> None:
+        """Shutdown the query orchestrator and disconnect all clients."""
+        try:
+            await self.db_client.disconnect()
+            await self.product_client.disconnect()
+            logger.info("Query orchestrator shutdown complete")
+        except Exception as e:
+            logger.error(f"Error during query orchestrator shutdown: {e}")
     
     async def execute_query_plan(self, plan: QueryPlan) -> QueryResult:
         """Execute a complete query plan across multiple servers.
@@ -79,6 +92,8 @@ class QueryOrchestrator:
                 if len(step_ids) == 1:
                     # Single step - execute directly
                     step = plan.get_step_by_id(step_ids[0])
+                    if step is None:
+                        raise QueryExecutionError(f"Step {step_ids[0]} not found in plan")
                     result = await self._execute_step(step, plan, step_results)
                     step_results[step.step_id] = result
                 else:
@@ -86,6 +101,8 @@ class QueryOrchestrator:
                     tasks = []
                     for step_id in step_ids:
                         step = plan.get_step_by_id(step_id)
+                        if step is None:
+                            raise QueryExecutionError(f"Step {step_id} not found in plan")
                         task = asyncio.create_task(
                             self._execute_step(step, plan, step_results)
                         )
@@ -320,34 +337,52 @@ class QueryOrchestrator:
         Returns:
             Result from product metadata execution
         """
-        # For now, simulate product metadata operations
-        # In a real implementation, this would connect to the actual product metadata server
+        # Connect to product metadata server if not already connected
+        if not self.product_client.connected:
+            await self.product_client.connect()
         
         if step.operation == ServerOperationType.LOOKUP_PRODUCT:
             product_name = step.parameters.get("product_name")
             if not product_name:
                 raise QueryExecutionError("No product_name specified for lookup")
             
-            # Simulate product lookup (replace with actual MCP client call)
-            return {
-                "id": "12345",
-                "name": "Axios",
-                "category": "JavaScript Libraries",
-                "description": "Promise-based HTTP client for browser and Node.js"
-            }
+            # Call actual Product MCP server
+            result = await self.product_client.get_product_by_name(product_name)
+            
+            if not result.get("success", True):
+                raise QueryExecutionError(f"Product lookup failed: {result.get('error', 'Unknown error')}")
+            
+            return result
             
         elif step.operation == ServerOperationType.SEARCH_PRODUCTS:
             query = step.parameters.get("query")
             limit = step.parameters.get("limit", 10)
             
-            # Simulate product search
-            return [
-                {
-                    "id": "12345",
-                    "name": "Axios",
-                    "relevance_score": 95
-                }
-            ]
+            if not query:
+                raise QueryExecutionError("No query specified for product search")
+            
+            # Call actual Product MCP server
+            result = await self.product_client.search_products(query, limit)
+            
+            if not result.get("success", True):
+                raise QueryExecutionError(f"Product search failed: {result.get('error', 'Unknown error')}")
+            
+            return result
+            
+        elif step.operation == ServerOperationType.GET_PRODUCTS_BY_CATEGORY:
+            category = step.parameters.get("category")
+            limit = step.parameters.get("limit", 20)
+            
+            if not category:
+                raise QueryExecutionError("No category specified for category lookup")
+            
+            # Call actual Product MCP server
+            result = await self.product_client.get_products_by_category(category, limit)
+            
+            if not result.get("success", True):
+                raise QueryExecutionError(f"Category lookup failed: {result.get('error', 'Unknown error')}")
+            
+            return result
             
         else:
             raise QueryExecutionError(f"Unsupported product metadata operation: {step.operation}")
@@ -463,6 +498,13 @@ class QueryOrchestrator:
     
     def close_all_connections(self) -> None:
         """Close all active server connections."""
+        # Schedule async disconnection (this is called from sync context)
+        try:
+            asyncio.create_task(self.shutdown())
+        except RuntimeError:
+            # If no event loop, can't disconnect gracefully
+            logger.warning("No event loop available for graceful disconnection")
+        
         self.active_connections.clear()
         logger.info("All server connections closed")
     

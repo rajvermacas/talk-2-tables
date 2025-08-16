@@ -88,6 +88,20 @@ python scripts/test_remote_server.py      # Test MCP server connectivity
 python scripts/test_multi_llm.py          # Test Gemini integration
 ```
 
+## Session Context Management
+
+### Session Scratchpad
+This project maintains a **session scratchpad** at `.dev-resources/context/session-scratchpad.md` to track the progress done till now and how the project has evolved overtime.  
+Read the instructions at `/root/.claude/commands/persist-session.md` to get an understanding on the how to update the session scratchpad.
+
+**Important**: Always read and update the session scratchpad when working on this project to maintain context continuity across different Claude Code sessions.
+
+### Incremental Development Approach
+**Build one task at a time** - this project follows an incremental development strategy:
+- Focus on **single, well-defined tasks** rather than attempting massive changes at once
+- Complete and test each component thoroughly before moving to the next
+- Update the session scratchpad after each task completion to maintain progress tracking
+
 ## Architecture & Key Components
 
 ### Core Data Flow
@@ -260,3 +274,7 @@ Natural language database querying system with:
 3. **Follow async patterns**: Critical for MCP HTTP transport compatibility
 4. **Maintain configuration consistency**: Pydantic v2 validation throughout
 5. **Preserve cost optimization**: Keep Gemini-only configuration for production
+
+## Memorize
+- test using puppeteer mcp tool for UI related tasks
+- Always use SSE MCP protocol
