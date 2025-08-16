@@ -266,3 +266,5 @@ Natural language database querying system with:
 ## Memorize
 - test using puppeteer mcp tool for UI related tasks
 - Always use SSE MCP protocol
+- MCP Servers don't have health endpoints
+- Do not ignore UI testing. You have to test all the 4 servers.
