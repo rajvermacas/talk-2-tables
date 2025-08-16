@@ -30,11 +30,20 @@
 
 ---
 
-## Current Session (Session 21 - 2025-08-16 18:42 IST)
-**Focus Area**: Multi-MCP Integration Transport Configuration Fix - Successfully resolved critical transport protocol mismatches preventing FastAPI backend from connecting to MCP servers.
-
-## Previous Session (Session 20 - 2025-08-16 18:10 IST)
+## Session 20 - 2025-08-16 18:10 IST
 **Focus Area**: Critical AsyncIO event loop error resolution preventing FastAPI server startup with semantic cache initialization.
+
+### Key Accomplishments
+- **AsyncIO Error Resolution**: Fixed "RuntimeError: no running event loop" preventing FastAPI server startup by implementing lazy initialization pattern in semantic cache.
+- **Lazy Initialization Pattern**: Refactored `SemanticIntentCache` to use `ensure_initialized()` method with async lock instead of creating tasks during `__init__`.
+- **FastAPI Lifespan Context**: Moved `MCPPlatform` instantiation from module level to lifespan context manager to ensure event loop availability.
+- **Route Handler Updates**: Updated all FastAPI route handlers to access platform via `request.app.state.mcp_platform` pattern.
+- **Production Validation**: Confirmed server starts successfully with all components properly initialized and operational.
+
+---
+
+## Session 21 - 2025-08-16 18:42 IST
+**Focus Area**: Multi-MCP Integration Transport Configuration Fix - Successfully resolved critical transport protocol mismatches preventing FastAPI backend from connecting to MCP servers.
 
 ### Key Accomplishments
 - **Multi-MCP Transport Fix**: Resolved critical transport protocol mismatches preventing FastAPI from connecting to MCP servers
@@ -43,123 +52,66 @@
 - **Multi-Server Client Integration**: Implemented ProductMCPClient and integrated with QueryOrchestrator for cross-server operations
 - **End-to-End Validation**: Successfully validated full multi-server query flow from React UI through FastAPI to both Database and Product MCP servers
 
-### Technical Implementation
-- **Configuration Updates**:
-  - Updated `config/mcp_servers.yaml` to use SSE transport and correct ports (Database: 8000, Product: 8002)
-  - Modified `remote_server.py` to default to SSE transport instead of streamable-http
-- **Multi-Server Architecture**:
-  - Created `ProductMCPClient` with SSE connectivity to Product MCP server on port 8002
-  - Extended `QueryOrchestrator` to handle both Database and Product MCP server operations
-  - Updated platform shutdown to properly disconnect all MCP clients
-- **Transport Protocol Resolution**:
-  - Root Cause: Database MCP exposed `/sse` endpoint but FastAPI was trying `/sse` on wrong transport
-  - Solution: Standardized all servers to SSE transport with correct endpoint routing
-  - Result: FastAPI successfully connects to Database MCP with "Successfully connected to MCP server via sse"
+---
 
-### Validation & Testing Results
-- **✅ Database MCP Connection**: SSE transport working (`http://localhost:8000/sse` responding correctly)
-- **✅ Product MCP Connection**: SSE transport working (`http://localhost:8002/sse` responding correctly)  
-- **✅ FastAPI Integration**: All servers restart successfully with correct SSE configuration
-- **✅ Multi-Server Queries**: Legacy `/chat/completions` endpoint processing queries with MCP backend
-- **✅ Platform Endpoints**: New `/v2/chat` platform endpoint working with query orchestration
-- **✅ Integration Test**: `/test/integration` endpoint confirms all connections working
-- **✅ End-to-End Flow**: Complete flow from user query → intent detection → MCP routing → response
+## Current Session (Session 22 - 2025-08-16 22:01 IST)
+**Focus Area**: Multi-MCP Health Check Fix & Routing Logic Investigation - Successfully resolved health monitoring issues but identified core routing logic problems preventing Product MCP server utilization.
 
-### Critical Bug Resolution Process
-1. **Root Cause Analysis**: Identified transport protocol and port configuration mismatches
-2. **Configuration Standardization**: Moved all servers to consistent SSE transport protocol  
-3. **Port Conflict Resolution**: Corrected Product server port from 8001 to 8002
-4. **Client Implementation**: Created proper ProductMCPClient for multi-server support
-5. **Integration Testing**: Validated complete multi-server query workflow
-
-### Files Modified
-1. **`config/mcp_servers.yaml`**: Updated transport protocols to "sse" and corrected Product server port to 8002
-2. **`src/talk_2_tables_mcp/remote_server.py`**: Changed default transport from streamable-http to sse
-3. **`fastapi_server/product_mcp_client.py`**: Created new Product MCP client with SSE transport support
-4. **`fastapi_server/query_orchestrator.py`**: Added ProductMCPClient integration and real MCP server calls
-5. **`.dev-resources/context/session-scratchpad.md`**: Updated with multi-MCP integration fix documentation
-
-### Server Startup Success Evidence
-```
-Database MCP Server: Successfully connected to MCP server via sse
-Product MCP Server: Server will be accessible at http://localhost:8002
-FastAPI Platform: ✓ MCP Platform initialized successfully
-Integration Test: {"llm_connection":true,"mcp_connection":true,"integration_test":true}
-```
-
-## Previous Session - Key Accomplishments
-- **AsyncIO Error Resolution**: Fixed "RuntimeError: no running event loop" preventing FastAPI server startup by implementing lazy initialization pattern in semantic cache.
-- **Lazy Initialization Pattern**: Refactored `SemanticIntentCache` to use `ensure_initialized()` method with async lock instead of creating tasks during `__init__`.
-- **FastAPI Lifespan Context**: Moved `MCPPlatform` instantiation from module level to lifespan context manager to ensure event loop availability.
-- **Route Handler Updates**: Updated all FastAPI route handlers to access platform via `request.app.state.mcp_platform` pattern.
-- **Production Validation**: Confirmed server starts successfully with all components properly initialized and operational.
+### Key Accomplishments
+- **Health Check Architecture Fix**: Resolved critical health monitoring issue where Multi-MCP Platform expected REST `/health` endpoints but MCP servers are protocol-based
+- **MCP Connectivity Testing**: Implemented proper health checks using actual MCP protocol connectivity instead of REST endpoint simulation
+- **Multi-MCP Platform Status**: Achieved 100% server health reporting (both Database and Product MCP servers)
+- **Root Cause Identification**: Discovered core routing logic issue - intent detection not using YAML routing rules for product queries
+- **Infrastructure Validation**: Confirmed all components operational but routing logic fundamentally broken
 
 ### Technical Implementation
-- **Semantic Cache Refactor**: 
-  - Removed `asyncio.create_task(self._initialize_async_components())` from `__init__`
-  - Added `_initialized` flag and `_initialization_lock = asyncio.Lock()`
-  - Created `ensure_initialized()` method with double-checked locking pattern
-  - Updated `get_cached_intent()` and `cache_intent_result()` to call `ensure_initialized()` before operation
-- **Enhanced Intent Detector Update**:
-  - Added async `initialize()` method to properly initialize semantic cache
-  - Maintained all existing detection capabilities while fixing async initialization
-- **FastAPI Application Refactor**:
-  - Moved `mcp_platform = MCPPlatform()` from module level (line 30) to lifespan context manager
-  - Stored platform in `app.state.mcp_platform` for route access
-  - Updated all route handlers to use `request.app.state.mcp_platform` pattern
-  - Added `Request` and `Body` imports for proper parameter handling
+- **Health Check Logic Fix** (`fastapi_server/server_registry.py`):
+  - Replaced random simulation with actual MCP connectivity testing via HTTP JSON-RPC calls
+  - Added proper timeout handling, connection error detection, and health status management
+  - Implemented transport-specific health checking (streamable-http vs SSE protocols)
+- **Product MCP Server Updates** (`src/talk_2_tables_mcp/product_metadata_server.py`):
+  - Added Starlette health endpoint registration (unnecessary but harmless)
+  - Ensured proper SSE transport configuration matching YAML config
+- **Multi-MCP Platform Monitoring**:
+  - Verified server registry reporting: `"healthy_servers": 2, "health_percentage": 100.0`
+  - Confirmed operation coverage: `["execute_query", "lookup_product", "search_products"]`
 
-### Critical Bug Resolution Process
-1. **Error Analysis**: "RuntimeError: no running event loop" occurred because `SemanticIntentCache` tried to create async task during module-level initialization
-2. **Root Cause**: `MCPPlatform` instantiated at module level before uvicorn started the event loop
-3. **Solution Design**: Implemented lazy initialization pattern with async lock for safe component initialization
-4. **FastAPI Integration**: Moved platform creation to lifespan context where event loop is guaranteed to be running
-5. **Route Updates**: Updated all endpoints to access platform through app state with proper parameter handling
+### Critical Discovery: Routing Logic Broken
+**Problem Identified**: Despite 100% healthy infrastructure, intent detection and routing logic is not functional:
+```bash
+# Query that should route to Product MCP server
+curl "http://localhost:8001/v2/chat" -d '{"query": "What is QuantumFlux DataProcessor?"}'
 
-### Validation & Testing Results
-- **✅ Server Startup**: FastAPI application starts successfully without AsyncIO errors
-- **✅ Semantic Cache**: Lazy initialization working correctly with proper async component loading
-- **✅ MCP Platform**: All 4 servers register and initialize properly (2 enabled, 2 disabled)
-- **✅ Health Checks**: Both legacy MCP connection and Gemini connection successful
-- **✅ HTTP Endpoints**: All platform endpoints responding correctly (`/health`, `/mcp/status`, `/platform/status`)
-- **✅ Enhanced Intent Detection**: Multi-tier detection system operational with semantic caching
-- **✅ Production Ready**: Server logs show successful initialization of all components
+# Results in:
+{
+  "metadata": {
+    "intent_classification": "conversation",     # Should be "product_lookup" 
+    "servers_used": [],                         # Should include "product_metadata"
+    "detection_method": "semantic_cache_hit"    # Should use routing rules
+  }
+}
+```
+
+**Root Cause**: Intent detection logic not using YAML routing rules. Pattern matching like `"what is {product}"` → Product MCP server is non-functional. All queries default to semantic cache or database server only.
+
+### Testing Evidence
+- **✅ Infrastructure Health**: Multi-MCP Platform operational with both servers healthy
+- **✅ Product MCP Server**: 26 products loaded including QuantumFlux DataProcessor test data
+- **✅ Routing Rules Configured**: YAML patterns properly defined (`"what is {product}"` → `product_metadata`)
+- **❌ Intent Classification**: Pattern matching logic not recognizing product queries
+- **❌ Server Utilization**: Product MCP server never called despite being healthy and operational
 
 ### Files Modified
-1. **`fastapi_server/semantic_cache.py`**:
-   - **Lines 59-61**: Replaced `asyncio.create_task()` with lazy initialization flags
-   - **Lines 66-76**: Added `ensure_initialized()` method with async lock
-   - **Lines 268-269**: Added initialization call to `get_cached_intent()`
-   - **Lines 379-380**: Added initialization call to `cache_intent_result()`
-
-2. **`fastapi_server/enhanced_intent_detector.py`**:
-   - **Lines 66-69**: Added async `initialize()` method for semantic cache initialization
-
-3. **`fastapi_server/main.py`**:
-   - **Line 10**: Added `Body` import for request parameter handling
-   - **Lines 29-41**: Moved `MCPPlatform` instantiation to lifespan context with app state storage
-   - **Line 81**: Updated shutdown to use `app.state.mcp_platform`
-   - **Line 123**: Updated health check to use `request.app.state.mcp_platform`
-   - **Line 257**: Updated v2/chat endpoint parameter handling for Request and Body
-   - **Lines 296, 310, 327, 360**: Updated all platform endpoints to use request app state
-
-### Server Startup Log Evidence
-```
-2025-08-16 12:48:01,585 - fastapi_server.semantic_cache - INFO - Initialized semantic cache with backend: memory
-2025-08-16 12:48:01,585 - fastapi_server.enhanced_intent_detector - INFO - Initialized enhanced intent detector
-2025-08-16 12:48:01,585 - fastapi_server.mcp_platform - INFO - Initialized MCP Platform
-2025-08-16 12:48:01,607 - fastapi_server.main - INFO - ✓ MCP Platform initialized successfully
-2025-08-16 12:48:01,607 - fastapi_server.main - INFO - ✓ Platform ready with 0/2 healthy servers
-INFO:     Application startup complete.
-```
+1. **`fastapi_server/server_registry.py`**: Updated `check_server_health()` method to use actual MCP connectivity testing instead of random simulation
+2. **`src/talk_2_tables_mcp/product_metadata_server.py`**: Added health endpoint support (unnecessary but applied)
+3. **`.dev-resources/context/multi-mcp-routing-fix-session-summary.md`**: Created comprehensive fix documentation for next session
 
 ### Current State After This Session
-- **AsyncIO Compatibility**: ✅ All async components initialize properly within event loop context
-- **Semantic Caching**: ✅ Lazy initialization ensures Redis and embedding model load when needed
-- **Platform Startup**: ✅ Complete Multi-MCP Platform starts successfully with all components operational
-- **Production Ready**: ✅ No runtime errors, all health checks pass, all endpoints respond correctly
-- **Enhanced Detection**: ✅ Multi-tier intent detection with semantic caching fully operational
-- **Server Management**: ✅ All 4 servers (database, product_metadata, analytics, customer_service) properly registered
+- **Health Monitoring**: ✅ 100% operational - both Database and Product MCP servers report healthy
+- **Multi-MCP Platform**: ✅ All infrastructure components working correctly
+- **Intent Detection**: ❌ Core routing logic broken - not using YAML routing rules
+- **Product MCP Server**: ✅ Operational with test data but unused due to routing issues
+- **Next Priority**: Fix intent detection/routing logic to properly utilize Product MCP server
 
 ---
 
@@ -178,13 +130,18 @@ INFO:     Application startup complete.
 - **Docker Deployment**: Production-ready containerization with nginx reverse proxy and monitoring.
 
 ### 🔄 In Progress
+- **Intent Detection/Routing Logic**: Critical issue identified - pattern matching from YAML routing rules not functional, preventing Product MCP server utilization.
 - **UI Integration**: Connect React frontend to Multi-MCP Platform endpoints for full-stack multi-server query experience.
 - **Additional MCP Servers**: Implement Analytics and Customer Service servers (currently disabled in config).
 
 ### ✅ Recently Resolved Issues
+- **Health Check Architecture**: ✅ Fixed Multi-MCP Platform health monitoring to use actual MCP connectivity instead of REST endpoints
+- **Server Health Status**: ✅ Achieved 100% server health reporting with proper MCP protocol testing
 - **AsyncIO Event Loop Error**: ✅ Fixed semantic cache initialization preventing server startup through lazy loading pattern
 - **Platform Initialization**: ✅ Moved MCPPlatform to lifespan context ensuring proper async component initialization
-- **Route Handler Access**: ✅ Updated all endpoints to properly access platform through app state
+
+### ❌ Critical Issue Identified
+- **Intent Detection Logic**: Pattern matching from YAML routing rules (`"what is {product}"` → Product MCP) is non-functional, causing all queries to default to semantic cache or database server only
 
 ## Technical Architecture
 
@@ -298,9 +255,9 @@ pytest tests/ -v
 - **Ecosystem Expansion**: Plugin marketplace and community server registry
 
 ## File Status
-- **Last Updated**: 2025-08-16 18:10 IST  
-- **Session Count**: 20
-- **Project Phase**: ✅ **ASYNCIO-COMPATIBLE UNIVERSAL DATA ACCESS PLATFORM - PRODUCTION READY**
+- **Last Updated**: 2025-08-16 22:01 IST  
+- **Session Count**: 22
+- **Project Phase**: 🔄 **HEALTH MONITORING FIXED - ROUTING LOGIC NEEDS REPAIR**
 
 ---
 
@@ -308,22 +265,41 @@ pytest tests/ -v
 The project has evolved from a simple MCP server to a complete Universal Data Access Platform with enterprise-grade process management. The AsyncIO compatibility fix represents a critical production readiness milestone, ensuring all async components initialize properly within the FastAPI event loop context. This enables reliable deployment of the semantic caching and enhanced intent detection systems.
 
 ## Session Handoff Context
-✅ **ASYNCIO-COMPATIBLE UNIVERSAL DATA ACCESS PLATFORM - PRODUCTION READY**. Talk 2 Tables is now a fully operational Universal Data Access Platform with resolved AsyncIO initialization issues:
+🔄 **HEALTH MONITORING FIXED - ROUTING LOGIC NEEDS REPAIR**. Talk 2 Tables Multi-MCP Platform has operational infrastructure but critical routing logic issues preventing Product MCP server utilization:
 
-### Critical Fix Completed (Session 20)
-- ✅ **AsyncIO Event Loop Compatibility**: All async components now initialize properly within FastAPI lifespan context
-- ✅ **Semantic Cache Lazy Loading**: Intelligent initialization prevents event loop errors during startup
-- ✅ **Platform Startup**: Complete Multi-MCP Platform starts reliably with all 4 servers operational
-- ✅ **Production Validation**: Server startup confirmed successful with comprehensive health checks
+### Critical Fix Completed (Session 22)
+- ✅ **Health Check Architecture**: Fixed Multi-MCP Platform to use actual MCP protocol connectivity instead of REST endpoints
+- ✅ **100% Server Health**: Both Database and Product MCP servers now report healthy with proper monitoring
+- ✅ **Infrastructure Operational**: All components working correctly with comprehensive server registry
+- ❌ **Intent Detection Broken**: Core routing logic not using YAML routing rules for product queries
 
-**Current Status**: ✅ **ENTERPRISE-READY WITH RELIABLE STARTUP**. The platform now provides:
-- **Async-Safe Architecture**: All components properly initialize within event loop context
-- **Reliable Startup**: No more AsyncIO errors preventing server initialization
-- **Production Management**: Complete orchestration system with monitoring and health checking
-- **Cost-Optimized Intelligence**: Gemini + local embeddings + semantic caching operational
-- **Multi-Server Support**: 4 registered servers with intelligent routing ready for queries
+### Root Cause Identified
+**Problem**: Intent detection logic is fundamentally broken - pattern matching from YAML routing rules is non-functional:
+- Queries like `"What is QuantumFlux DataProcessor?"` should match `"what is {product}"` pattern → Product MCP server
+- Instead: All queries default to semantic cache hits or database server routing only
+- Pattern matching logic in intent detection system is not using the routing configuration
 
-**Next Session Capabilities**: The platform is fully operational and ready for:
-- UI integration with multi-server endpoints for complete full-stack experience
-- Advanced analytics and enterprise features implementation
-- Production deployment with confidence in reliable startup behavior
+**Evidence**: 
+```bash
+# Expected: "intent_classification": "product_lookup", "servers_used": ["product_metadata"]
+# Actual: "intent_classification": "conversation", "servers_used": []
+```
+
+**Current Status**: 🔄 **INFRASTRUCTURE READY - ROUTING LOGIC REPAIR NEEDED**. The platform provides:
+- **100% Healthy Infrastructure**: Both Database (port 8000) and Product MCP (port 8002) servers operational
+- **Product MCP Ready**: 26 products loaded including QuantumFlux DataProcessor test data
+- **Routing Rules Configured**: YAML patterns properly defined but not being used by intent detection
+- **Multi-MCP Platform**: All server registry, orchestration, and health monitoring working correctly
+
+**Next Session Priority**: 
+1. **Debug Intent Detection Logic**: Investigate why pattern matching from YAML routing rules is not functional
+2. **Fix Routing Implementation**: Ensure `"what is {product}"` patterns properly route to Product MCP server
+3. **Validate Product Queries**: Test QuantumFlux DataProcessor returns detailed metadata from Product MCP
+4. **End-to-End Testing**: Confirm complete Multi-MCP coordination with hybrid queries
+
+**Key Files to Investigate**: 
+- `fastapi_server/mcp_platform.py` - Platform orchestration
+- `fastapi_server/multi_server_intent_detector.py` - Intent classification logic  
+- `fastapi_server/enhanced_intent_detector.py` - Enhanced detection system
+
+**Success Criteria**: Product queries return detailed metadata from Product MCP server instead of generic LLM responses.

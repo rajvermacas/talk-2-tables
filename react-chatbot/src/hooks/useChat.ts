@@ -162,34 +162,26 @@ export const useChat = ({
       ));
       setIsTyping(false);
 
-      // Prepare messages for API (include recent context)
-      const recentMessages = messages.slice(-10).map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
+      // Send to Multi-MCP Platform endpoint (simpler interface)
+      const response = await apiService.sendPlatformQuery(
+        content.trim(),
+        `user_${Date.now()}`, // Simple user ID
+        { 
+          chat_history: messages.slice(-5).map(msg => ({ // Include last 5 messages as context
+            role: msg.role,
+            content: msg.content
+          }))
+        }
+      );
 
-      // Add the current user message
-      recentMessages.push({
-        role: 'user',
-        content: content.trim()
-      });
-
-      // Send to API
-      const response = await apiService.sendChatCompletion({
-        messages: recentMessages,
-        max_tokens: 2000,
-        temperature: 0.7
-      });
-
-      if (response.choices && response.choices.length > 0) {
-        const choice = response.choices[0];
-        const assistantResponse = choice.message.content;
+      if (response.success) {
+        const assistantResponse = response.response;
         
-        // First try to get query results from the response structure
-        let queryResult = choice.query_result || undefined;
-        
-        // If not found, fall back to parsing from content
-        if (!queryResult) {
+        // Extract query result if available
+        let queryResult = undefined;
+        if (response.query_result) {
+          queryResult = response.query_result;
+        } else {
           queryResult = processQueryResults(assistantResponse);
         }
 
@@ -200,7 +192,8 @@ export const useChat = ({
           queryResult
         });
       } else {
-        throw new Error('No response from assistant');
+        const errorMessage = response.errors?.join('; ') || 'Platform query failed';
+        throw new Error(errorMessage);
       }
 
     } catch (err) {

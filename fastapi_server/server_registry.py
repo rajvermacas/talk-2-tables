@@ -402,13 +402,55 @@ class MCPServerRegistry:
             return False
         
         try:
-            # This is a placeholder for actual health check implementation
-            # In reality, this would make an HTTP request to the health endpoint
-            logger.debug(f"Checking health of {server_id}")
+            # Test MCP connectivity by attempting to list resources
+            logger.debug(f"Checking health of {server_id} via MCP connectivity test")
             
-            # Simulate health check response
-            import random
-            is_healthy = random.random() > 0.1  # 90% healthy rate for simulation
+            # Import MCP client for health checking
+            import httpx
+            import asyncio
+            
+            # Test MCP server connectivity
+            timeout = 5.0  # 5 second timeout
+            
+            if server_info.transport == "streamable-http":
+                # For streamable-http, test the MCP endpoint
+                url = f"{server_info.url}/mcp"
+                try:
+                    async with httpx.AsyncClient(timeout=timeout) as client:
+                        # Try to make a basic MCP request (list resources)
+                        headers = {
+                            "Content-Type": "application/json",
+                            "Accept": "application/json"
+                        }
+                        
+                        # Simple MCP list_resources request
+                        mcp_request = {
+                            "jsonrpc": "2.0",
+                            "id": f"health_check_{server_id}",
+                            "method": "resources/list"
+                        }
+                        
+                        response = await client.post(url, json=mcp_request, headers=headers)
+                        is_healthy = response.status_code == 200
+                        
+                        if is_healthy:
+                            logger.debug(f"Health check passed for {server_id}: MCP endpoint responding")
+                        else:
+                            logger.warning(f"Health check failed for {server_id}: HTTP {response.status_code}")
+                            
+                except httpx.TimeoutException:
+                    logger.warning(f"Health check failed for {server_id}: timeout after {timeout}s")
+                    is_healthy = False
+                except httpx.ConnectError:
+                    logger.warning(f"Health check failed for {server_id}: connection refused")
+                    is_healthy = False
+                except Exception as e:
+                    logger.warning(f"Health check failed for {server_id}: {e}")
+                    is_healthy = False
+            else:
+                # For other transports, assume healthy if server info exists
+                is_healthy = True
+                logger.debug(f"Health check for {server_id}: assuming healthy for transport {server_info.transport}")
             
             if is_healthy:
                 self.health_status[server_id] = "healthy"

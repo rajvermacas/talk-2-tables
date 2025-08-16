@@ -73,7 +73,7 @@ class ApiService {
   }
 
   /**
-   * Send a chat completion request
+   * Send a chat completion request (legacy single-MCP endpoint)
    */
   async sendChatCompletion(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {
     try {
@@ -84,6 +84,25 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('Chat completion error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send a query using the Multi-MCP Platform (new endpoint)
+   */
+  async sendPlatformQuery(query: string, user_id?: string, context?: any): Promise<any> {
+    try {
+      const request = {
+        query: query,
+        user_id: user_id,
+        context: context || {}
+      };
+      
+      const response = await this.client.post('/v2/chat', request);
+      return response.data;
+    } catch (error) {
+      console.error('Platform query error:', error);
       throw error;
     }
   }

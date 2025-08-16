@@ -14,6 +14,8 @@ from typing import List, Optional, Dict, Any
 
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
+from starlette.responses import JSONResponse
+from starlette.routing import Route
 
 from .product_metadata import ProductDataLoader, ProductInfo, CategoryInfo, ServerCapabilities
 from .config import ServerConfig
@@ -80,6 +82,7 @@ class ProductMetadataMCP:
         # Register tools and resources
         self._register_tools()
         self._register_resources()
+        self._register_health_endpoint()
         
         logger.info(f"Initialized {server_name}")
     
@@ -395,6 +398,42 @@ class ProductMetadataMCP:
                 logger.error(error_msg)
                 raise ValueError(error_msg)
     
+    def _register_health_endpoint(self) -> None:
+        """Register health endpoint for Multi-MCP Platform integration."""
+        
+        async def health_check(request):
+            """Health check endpoint for Multi-MCP Platform monitoring."""
+            try:
+                # Check if data loader is working
+                catalog = self.data_loader.get_catalog()
+                product_count = len(catalog.products) if catalog else 0
+                
+                # Check catalog integrity
+                is_healthy = self.data_loader.validate_catalog_integrity()
+                
+                return JSONResponse({
+                    "status": "healthy" if is_healthy else "unhealthy",
+                    "server": "product_metadata",
+                    "server_name": self.server_name,
+                    "product_count": product_count,
+                    "catalog_loaded": self.data_loader.is_loaded(),
+                    "timestamp": asyncio.get_event_loop().time()
+                })
+                
+            except Exception as e:
+                logger.error(f"Health check failed: {e}")
+                return JSONResponse({
+                    "status": "unhealthy",
+                    "server": "product_metadata", 
+                    "server_name": self.server_name,
+                    "error": str(e),
+                    "timestamp": asyncio.get_event_loop().time()
+                }, status_code=503)
+        
+        # This will be called during run() to add the route to the Starlette app
+        self._health_endpoint_handler = health_check
+        logger.info("Health endpoint handler registered")
+    
     def run(self, host: str = "localhost", port: int = 8002, transport: str = "streamable-http") -> None:
         """Run the MCP server.
         
@@ -426,6 +465,21 @@ class ProductMetadataMCP:
                 self.mcp.settings.host = host
             if hasattr(self.mcp.settings, 'port'):
                 self.mcp.settings.port = port
+            
+            # Add health endpoint to the Starlette app
+            try:
+                if transport == "streamable-http":
+                    app = self.mcp.streamable_http_app()
+                elif transport == "sse":
+                    app = self.mcp.sse_app()
+                
+                if hasattr(self, '_health_endpoint_handler'):
+                    health_route = Route('/health', self._health_endpoint_handler, methods=['GET'])
+                    app.routes.append(health_route)
+                    logger.info("Health endpoint added to Starlette app at /health")
+                
+            except Exception as e:
+                logger.warning(f"Failed to add health endpoint: {e}")
         
         logger.info(f"Server will be accessible at http://{host}:{port}")
         self.mcp.run(transport=transport)
@@ -461,6 +515,21 @@ class ProductMetadataMCP:
                 self.mcp.settings.host = host
             if hasattr(self.mcp.settings, 'port'):
                 self.mcp.settings.port = port
+            
+            # Add health endpoint to the Starlette app
+            try:
+                if transport == "streamable-http":
+                    app = self.mcp.streamable_http_app()
+                elif transport == "sse":
+                    app = self.mcp.sse_app()
+                
+                if hasattr(self, '_health_endpoint_handler'):
+                    health_route = Route('/health', self._health_endpoint_handler, methods=['GET'])
+                    app.routes.append(health_route)
+                    logger.info("Health endpoint added to Starlette app at /health")
+                
+            except Exception as e:
+                logger.warning(f"Failed to add health endpoint: {e}")
         
         logger.info(f"Server will be accessible at http://{host}:{port}")
         
