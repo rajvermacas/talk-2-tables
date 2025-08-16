@@ -52,6 +52,7 @@ coverage.xml
 
 # Logging
 *.log
+logs/
 
 # Database files
 *.db
