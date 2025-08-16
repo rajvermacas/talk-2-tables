@@ -310,12 +310,15 @@ This project is licensed under the MIT License.
 
 # Execution Steps
 Run these three commands in separate terminals in venv:
-1. Start remote mcp server with sse transport prtocol
+1. Start remote mcp server with sse transport prtocol at port 8000
 python3 -m talk_2_tables_mcp.server --transport sse
 
-2. Start FastAPI Backend (Terminal 2)  
+2. Start product metadata mcp server - port 8002
+python -m talk_2_tables_mcp.product_metadata_server --transport sse --host 0.0.0.0
+
+3. Start FastAPI Backend (Terminal 2) - port 8001
 python3 -m fastapi_server.main
 
-3. Start React Frontend (Terminal 3)  
+4. Start React Frontend (Terminal 3) - port 3000
 ./start-chatbot.sh
 
