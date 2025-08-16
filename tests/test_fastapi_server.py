@@ -9,11 +9,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from fastapi.testclient import TestClient
 
 from fastapi_server.main import app
-from fastapi_server.models import ChatMessage, ChatCompletionRequest, MessageRole
 from fastapi_server.config import FastAPIServerConfig
-from fastapi_server.llm_manager import LLMManager
-from fastapi_server.mcp_client import MCPDatabaseClient
-from fastapi_server.chat_handler import ChatCompletionHandler
 
 
 class TestFastAPIServer:
@@ -78,43 +74,44 @@ class TestFastAPIServer:
         assert data["status"] == "healthy"
         assert "timestamp" in data
     
-    @patch('fastapi_server.main.chat_handler')
-    def test_chat_completions_endpoint(self, mock_chat_handler, client, mock_config):
-        """Test chat completions endpoint."""
-        # Mock the response
-        mock_response = MagicMock()
-        mock_response.id = "test_id"
-        mock_response.created = 1234567890
-        mock_response.model = "qwen/qwen3-coder:free"
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].index = 0
-        mock_response.choices[0].message = ChatMessage(
-            role=MessageRole.ASSISTANT,
-            content="Test response"
-        )
-        mock_response.choices[0].finish_reason = "stop"
-        mock_response.usage = None
-        
-        mock_chat_handler.process_chat_completion = AsyncMock(return_value=mock_response)
+    @patch('fastapi_server.main.app.state')
+    def test_v2_chat_endpoint(self, mock_app_state, client, mock_config):
+        """Test v2 chat endpoint."""
+        # Mock the platform response
+        mock_platform = MagicMock()
+        mock_platform.process_query = AsyncMock(return_value=MagicMock(
+            to_dict=MagicMock(return_value={
+                "success": True,
+                "response": "Hello! I'm here to help.",
+                "execution_time": 0.5,
+                "errors": [],
+                "metadata": {
+                    "intent_classification": "conversation",
+                    "servers_used": [],
+                    "detection_method": "semantic_cache"
+                }
+            })
+        ))
+        mock_app_state.mcp_platform = mock_platform
         
         # Test request
         request_data = {
-            "messages": [
-                {"role": "user", "content": "Hello, world!"}
-            ]
+            "query": "Hello, world!",
+            "user_id": "test_user",
+            "context": {}
         }
         
-        response = client.post("/chat/completions", json=request_data)
+        response = client.post("/v2/chat", json=request_data)
         assert response.status_code == 200
         
-        # Verify the handler was called
-        mock_chat_handler.process_chat_completion.assert_called_once()
+        # Verify the platform was called
+        mock_platform.process_query.assert_called_once()
     
-    def test_chat_completions_empty_messages(self, client):
-        """Test chat completions with empty messages."""
-        request_data = {"messages": []}
+    def test_v2_chat_empty_query(self, client):
+        """Test v2 chat with empty query."""
+        request_data = {"query": ""}
         
-        response = client.post("/chat/completions", json=request_data)
+        response = client.post("/v2/chat", json=request_data)
         assert response.status_code == 400
     
     @patch('fastapi_server.main.chat_handler')

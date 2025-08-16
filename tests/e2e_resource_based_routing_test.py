@@ -272,11 +272,11 @@ class ResourceBasedRoutingE2ETest:
             test_query = "What is QuantumFlux DataProcessor?"
             
             response = requests.post(
-                f"{FASTAPI_URL}/v1/chat/completions",
+                f"{FASTAPI_URL}/v2/chat",
                 json={
-                    "model": "gemini-2.5-flash",
-                    "messages": [{"role": "user", "content": test_query}],
-                    "max_tokens": 100
+                    "query": test_query,
+                    "user_id": "resource_test_user",
+                    "context": {}
                 },
                 headers={"Content-Type": "application/json"},
                 timeout=15
@@ -337,11 +337,11 @@ class ResourceBasedRoutingE2ETest:
             
             try:
                 response = requests.post(
-                    f"{FASTAPI_URL}/v1/chat/completions",
+                    f"{FASTAPI_URL}/v2/chat",
                     json={
-                        "model": "gemini-2.5-flash",
-                        "messages": [{"role": "user", "content": query}],
-                        "max_tokens": 50
+                        "query": query,
+                        "user_id": "routing_test_user",
+                        "context": {}
                     },
                     headers={"Content-Type": "application/json"},
                     timeout=10
@@ -414,11 +414,11 @@ class ResourceBasedRoutingE2ETest:
             
             try:
                 response = requests.post(
-                    f"{FASTAPI_URL}/v1/chat/completions",
+                    f"{FASTAPI_URL}/v2/chat",
                     json={
-                        "model": "gemini-2.5-flash",
-                        "messages": [{"role": "user", "content": query}],
-                        "max_tokens": 100
+                        "query": query,
+                        "user_id": "product_test_user",
+                        "context": {}
                     },
                     headers={"Content-Type": "application/json"},
                     timeout=15
@@ -497,11 +497,11 @@ class ResourceBasedRoutingE2ETest:
             
             try:
                 response = requests.post(
-                    f"{FASTAPI_URL}/v1/chat/completions",
+                    f"{FASTAPI_URL}/v2/chat",
                     json={
-                        "model": "gemini-2.5-flash",
-                        "messages": [{"role": "user", "content": query}],
-                        "max_tokens": 50
+                        "query": query,
+                        "user_id": "routing_test_user",
+                        "context": {}
                     },
                     headers={"Content-Type": "application/json"},
                     timeout=10
@@ -594,14 +594,14 @@ class ResourceBasedRoutingE2ETest:
                 if isinstance(test_case["request"], str):
                     # Send malformed JSON
                     response = requests.post(
-                        f"{FASTAPI_URL}/v1/chat/completions",
+                        f"{FASTAPI_URL}/v2/chat",
                         data=test_case["request"],
                         headers={"Content-Type": "application/json"},
                         timeout=10
                     )
                 else:
                     response = requests.post(
-                        f"{FASTAPI_URL}/v1/chat/completions",
+                        f"{FASTAPI_URL}/v2/chat",
                         json=test_case["request"],
                         headers={"Content-Type": "application/json"},
                         timeout=10

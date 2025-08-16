@@ -4,8 +4,6 @@
 
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { 
-  ChatCompletionRequest, 
-  ChatCompletionResponse, 
   HealthResponse, 
   ApiError 
 } from '../types/chat.types';
@@ -72,21 +70,6 @@ class ApiService {
     }
   }
 
-  /**
-   * Send a chat completion request (legacy single-MCP endpoint)
-   */
-  async sendChatCompletion(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {
-    try {
-      const response: AxiosResponse<ChatCompletionResponse> = await this.client.post(
-        '/chat/completions',
-        request
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Chat completion error:', error);
-      throw error;
-    }
-  }
 
   /**
    * Send a query using the Multi-MCP Platform (new endpoint)

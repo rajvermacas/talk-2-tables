@@ -23,42 +23,6 @@ class ChatMessage(BaseModel):
     name: Optional[str] = Field(default=None, description="Name of the sender")
 
 
-class ChatCompletionRequest(BaseModel):
-    """Request model for chat completions."""
-    messages: List[ChatMessage] = Field(description="List of chat messages")
-    model: Optional[str] = Field(
-        default=None,
-        description="Model to use (will use configured default if not specified)"
-    )
-    max_tokens: Optional[int] = Field(
-        default=None,
-        description="Maximum tokens in response"
-    )
-    temperature: Optional[float] = Field(
-        default=None,
-        description="Temperature for response generation"
-    )
-    stream: Optional[bool] = Field(
-        default=False,
-        description="Whether to stream the response"
-    )
-    stop: Optional[Union[str, List[str]]] = Field(
-        default=None,
-        description="Stop sequences for generation"
-    )
-    top_p: Optional[float] = Field(
-        default=None,
-        description="Top-p sampling parameter"
-    )
-    frequency_penalty: Optional[float] = Field(
-        default=None,
-        description="Frequency penalty parameter"
-    )
-    presence_penalty: Optional[float] = Field(
-        default=None,
-        description="Presence penalty parameter"
-    )
-
 
 class Usage(BaseModel):
     """Token usage information."""
@@ -94,23 +58,6 @@ class ChatCompletionResponse(BaseModel):
     )
 
 
-class StreamChoice(BaseModel):
-    """A single choice in a streaming chat completion response."""
-    index: int = Field(description="Index of this choice")
-    delta: Dict[str, Any] = Field(description="The delta for this chunk")
-    finish_reason: Optional[str] = Field(
-        default=None,
-        description="Reason the generation finished"
-    )
-
-
-class ChatCompletionStreamResponse(BaseModel):
-    """Response model for streaming chat completions."""
-    id: str = Field(description="Unique identifier for the completion")
-    object: str = Field(default="chat.completion.chunk", description="Object type")
-    created: int = Field(description="Unix timestamp of creation")
-    model: str = Field(description="Model used for completion")
-    choices: List[StreamChoice] = Field(description="List of completion choices")
 
 
 class ErrorDetail(BaseModel):

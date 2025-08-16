@@ -11,13 +11,11 @@ from fastapi import FastAPI, HTTPException, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from config import config
-from models import (
-    ChatCompletionRequest, ChatCompletionResponse, 
+from fastapi_server.config import config
+from fastapi_server.models import (
     ErrorResponse, HealthResponse, ErrorDetail
 )
-from chat_handler import chat_handler
-from mcp_platform import MCPPlatform
+from fastapi_server.mcp_platform import MCPPlatform
 
 # Configure logging
 logging.basicConfig(
@@ -53,25 +51,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"✗ MCP Platform initialization failed: {e}")
     
-    # Test legacy connections for backward compatibility
-    try:
-        # Test legacy MCP connection
-        mcp_connected = await chat_handler.mcp_client.test_connection()
-        if mcp_connected:
-            logger.info("✓ Legacy MCP server connection successful")
-        else:
-            logger.warning("✗ Legacy MCP server connection failed")
-        
-        # Test LLM provider connection
-        llm_connected = await chat_handler.llm_client.test_connection()
-        provider_name = config.llm_provider.title()
-        if llm_connected:
-            logger.info(f"✓ {provider_name} connection successful")
-        else:
-            logger.warning(f"✗ {provider_name} connection failed")
-            
-    except Exception as e:
-        logger.error(f"Error during legacy startup tests: {str(e)}")
     
     yield
     
@@ -79,7 +58,6 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down FastAPI server")
     try:
         await app.state.mcp_platform.shutdown()
-        await chat_handler.mcp_client.disconnect()
     except Exception as e:
         logger.error(f"Error during shutdown: {str(e)}")
 
@@ -123,58 +101,27 @@ async def global_exception_handler(_: Request, exc: Exception):
 async def health_check(request: Request):
     """Health check endpoint with multi-server platform status."""
     try:
-        # Test legacy MCP connection
-        mcp_status = "connected" if await chat_handler.mcp_client.test_connection() else "disconnected"
-        
         # Get platform status
         platform_status = await request.app.state.mcp_platform.get_platform_status()
         platform_healthy = platform_status.get("initialized", False)
+        server_registry = platform_status.get("server_registry", {})
+        healthy_servers = server_registry.get("healthy_servers", 0)
+        enabled_servers = server_registry.get("enabled_servers", 0)
+        
+        # Consider platform healthy if initialized and has healthy servers
+        overall_healthy = platform_healthy and healthy_servers > 0
         
         return HealthResponse(
-            status="healthy" if platform_healthy else "degraded",
+            status="healthy" if overall_healthy else "degraded",
             version="2.0.0",  # Updated version for multi-server platform
             timestamp=int(time.time()),
-            mcp_server_status=mcp_status
+            mcp_server_status=f"{healthy_servers}/{enabled_servers} servers healthy"
         )
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         raise HTTPException(
             status_code=503,
             detail="Service unhealthy"
-        )
-
-
-@app.post("/chat/completions", response_model=ChatCompletionResponse)
-async def create_chat_completion(request: ChatCompletionRequest):
-    """
-    Create a chat completion with database query capabilities.
-    
-    This endpoint provides OpenAI-compatible chat completions enhanced with
-    database query capabilities through MCP server integration.
-    """
-    try:
-        logger.info(f"Received chat completion request with {len(request.messages)} messages")
-        
-        # Validate request
-        if not request.messages:
-            raise HTTPException(
-                status_code=400,
-                detail="Messages array cannot be empty"
-            )
-        
-        # Process the chat completion
-        response = await chat_handler.process_chat_completion(request)
-        
-        logger.info("Successfully processed chat completion request")
-        return response
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error in chat completion: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error processing chat completion: {str(e)}"
         )
 
 
@@ -204,53 +151,6 @@ async def list_models():
     }
 
 
-@app.get("/mcp/status")
-async def mcp_status():
-    """Get MCP server status and capabilities."""
-    try:
-        # Test connection
-        connected = await chat_handler.mcp_client.test_connection()
-        
-        if not connected:
-            return {
-                "connected": False,
-                "error": "Cannot connect to MCP server"
-            }
-        
-        # Get server capabilities
-        tools = await chat_handler.mcp_client.list_tools()
-        resources = await chat_handler.mcp_client.list_resources()
-        metadata = await chat_handler.mcp_client.get_database_metadata()
-        
-        return {
-            "connected": True,
-            "server_url": config.mcp_server_url,
-            "transport": config.mcp_transport,
-            "tools": [{"name": tool.name, "description": tool.description} for tool in tools],
-            "resources": [{"name": res.name, "uri": res.uri} for res in resources],
-            "database_metadata": metadata
-        }
-        
-    except Exception as e:
-        logger.error(f"Error getting MCP status: {str(e)}")
-        return {
-            "connected": False,
-            "error": str(e)
-        }
-
-
-@app.get("/test/integration")
-async def test_integration():
-    """Test the integration between Google Gemini and MCP."""
-    try:
-        results = await chat_handler.test_integration()
-        return results
-    except Exception as e:
-        logger.error(f"Integration test failed: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Integration test failed: {str(e)}"
-        )
 
 
 @app.post("/v2/chat")
@@ -404,14 +304,11 @@ async def root():
             "Hybrid query execution"
         ],
         "endpoints": {
-            "legacy_chat_completions": "/chat/completions",
-            "platform_chat": "/v2/chat",
+            "chat": "/v2/chat",
             "health": "/health",
             "models": "/models",
             "platform_status": "/platform/status",
-            "servers": "/servers",
-            "mcp_status": "/mcp/status",
-            "integration_test": "/test/integration"
+            "servers": "/servers"
         },
         "documentation": "/docs"
     }

@@ -267,9 +267,14 @@ class RateLimitValidationE2ETest:
         
         try:
             # Make request to FastAPI server
+            v2_data = {
+                "query": test_data.get("messages", [{}])[-1].get("content", "test query"),
+                "user_id": "rate_limit_test_user",
+                "context": {}
+            }
             response = await self.client.post(
-                f"{self.fastapi_url}/chat/completions",
-                json=test_data,
+                f"{self.fastapi_url}/v2/chat",
+                json=v2_data,
                 timeout=120.0  # Extended timeout for retry testing
             )
             
@@ -280,7 +285,7 @@ class RateLimitValidationE2ETest:
                 data = response.json()
                 
                 # Validate response structure (tests defensive programming fixes)
-                required_fields = ["id", "object", "created", "model", "choices"]
+                required_fields = ["success", "response", "execution_time", "metadata"]
                 missing_fields = [field for field in required_fields if field not in data]
                 
                 if missing_fields:
@@ -294,17 +299,17 @@ class RateLimitValidationE2ETest:
                     )
                 
                 # Check if response has content (validates NoneType fixes)
-                if data.get("choices") and len(data["choices"]) > 0:
-                    choice = data["choices"][0]
-                    message = choice.get("message", {})
-                    content = message.get("content", "").strip()
+                if data.get("success", False):
+                    content = data.get("response", "").strip()
+                    metadata = data.get("metadata", {})
                     
                     if content:
                         performance_metrics = {
                             "response_time_ms": duration_ms,
-                            "token_usage": data.get("usage", {}),
+                            "execution_time": data.get("execution_time", 0),
                             "response_length": len(content),
-                            "model_used": data.get("model", "unknown"),
+                            "intent_classification": metadata.get("intent_classification", "unknown"),
+                            "servers_used": metadata.get("servers_used", []),
                             "retry_headers_present": "retry-after" in response.headers.get("x-retry-info", "").lower()
                         }
                         

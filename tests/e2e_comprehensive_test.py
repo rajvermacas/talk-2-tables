@@ -251,16 +251,14 @@ class ComprehensiveE2ETest:
         
         try:
             test_request = {
-                "messages": [
-                    {"role": "user", "content": "Hello! Please respond with a simple greeting."}
-                ],
-                "max_tokens": 100,
-                "temperature": 0.7
+                "query": "Hello! Please respond with a simple greeting.",
+                "user_id": "e2e_test_user",
+                "context": {}
             }
             
-            print(f"   📤 Sending request to OpenRouter LLM...")
+            print(f"   📤 Sending request to Multi-MCP Platform...")
             response = await self.client.post(
-                f"{self.fastapi_url}/chat/completions",
+                f"{self.fastapi_url}/v2/chat",
                 json=test_request,
                 timeout=45.0
             )
@@ -268,19 +266,20 @@ class ComprehensiveE2ETest:
             if response.status_code == 200:
                 data = response.json()
                 
-                # Validate OpenAI-compatible response structure
-                required_fields = ["id", "object", "created", "model", "choices"]
+                # Validate Multi-MCP Platform response structure
+                required_fields = ["success", "response", "execution_time", "metadata"]
                 missing = [f for f in required_fields if f not in data]
                 
-                if not missing and data["choices"]:
-                    message = data["choices"][0].get("message", {})
-                    content = message.get("content", "").strip()
+                if not missing and data.get("success", False):
+                    content = data.get("response", "").strip()
+                    metadata = data.get("metadata", {})
                     
                     if content:
                         print(f"{Colors.GREEN}✅ Basic chat completion successful{Colors.ENDC}")
-                        print(f"   Model: {data.get('model', 'unknown')}")
+                        print(f"   Intent: {metadata.get('intent_classification', 'unknown')}")
                         print(f"   Response: {content[:100]}{'...' if len(content) > 100 else ''}")
-                        print(f"   Tokens used: {data.get('usage', {}).get('total_tokens', 'unknown')}")
+                        print(f"   Execution time: {data.get('execution_time', 'unknown')}s")
+                        print(f"   Servers used: {metadata.get('servers_used', [])}")
                     else:
                         print(f"{Colors.RED}❌ Empty response content{Colors.ENDC}")
                         success = False
