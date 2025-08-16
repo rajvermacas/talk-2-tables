@@ -18,6 +18,9 @@ from pydantic import BaseModel, Field
 from .product_metadata import ProductDataLoader, ProductInfo, CategoryInfo, ServerCapabilities
 from .config import ServerConfig
 
+from dotenv import load_dotenv
+load_dotenv()
+
 logger = logging.getLogger(__name__)
 
 
@@ -392,7 +395,7 @@ class ProductMetadataMCP:
                 logger.error(error_msg)
                 raise ValueError(error_msg)
     
-    def run(self, host: str = "localhost", port: int = 8001, transport: str = "streamable-http") -> None:
+    def run(self, host: str = "localhost", port: int = 8002, transport: str = "streamable-http") -> None:
         """Run the MCP server.
         
         Args:
@@ -427,7 +430,7 @@ class ProductMetadataMCP:
         logger.info(f"Server will be accessible at http://{host}:{port}")
         self.mcp.run(transport=transport)
     
-    async def run_async(self, host: str = "localhost", port: int = 8001, transport: str = "streamable-http") -> None:
+    async def run_async(self, host: str = "localhost", port: int = 8002, transport: str = "streamable-http") -> None:
         """Run the MCP server asynchronously.
         
         Args:
@@ -485,7 +488,7 @@ Examples:
   %(prog)s
   
   # Run on specific host and port
-  %(prog)s --host 0.0.0.0 --port 8001
+  %(prog)s --host 0.0.0.0 --port 8002
   
   # Use custom product data file
   %(prog)s --data-path /path/to/products.json
@@ -515,8 +518,8 @@ Environment Variables:
     parser.add_argument(
         "--port", "-p",
         type=int,
-        default=8001,
-        help="Port number for the server (default: 8001)"
+        default=8002,
+        help="Port number for the server (default: 8002)"
     )
     
     parser.add_argument(

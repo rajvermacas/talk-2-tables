@@ -56,11 +56,24 @@ class SemanticIntentCache:
         # Metrics tracking
         self.metrics = IntentDetectionMetrics()
         
-        # Initialize components
-        asyncio.create_task(self._initialize_async_components())
+        # Initialization flag for lazy loading
+        self._initialized = False
+        self._initialization_lock = asyncio.Lock()
         
         logger.info(f"Initialized semantic cache with backend: {self.config.cache_backend}")
         logger.info(f"Similarity threshold: {self.config.similarity_threshold}")
+    
+    async def ensure_initialized(self) -> None:
+        """Ensure async components are initialized (lazy initialization)."""
+        if self._initialized:
+            return
+        
+        async with self._initialization_lock:
+            if self._initialized:  # Double-check after acquiring lock
+                return
+            
+            await self._initialize_async_components()
+            self._initialized = True
     
     async def _initialize_async_components(self) -> None:
         """Initialize async components like Redis connection and embedding model."""
@@ -252,6 +265,9 @@ class SemanticIntentCache:
         Returns:
             Tuple of (needs_database, classification, confidence, cache_key) if found, None otherwise
         """
+        # Ensure async components are initialized
+        await self.ensure_initialized()
+        
         try:
             # First, try exact match with normalized query
             normalized_query = self._normalize_query_content(query)
@@ -360,6 +376,9 @@ class SemanticIntentCache:
         Returns:
             Cache key used for storage
         """
+        # Ensure async components are initialized
+        await self.ensure_initialized()
+        
         try:
             # Normalize query and generate embedding
             normalized_query = self._normalize_query_content(query)

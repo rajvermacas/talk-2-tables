@@ -63,6 +63,11 @@ class EnhancedIntentDetector:
         logger.info(f"Hybrid mode: {config.enable_hybrid_mode}")
         logger.info(f"Rollout percentage: {config.rollout_percentage * 100:.1f}%")
     
+    async def initialize(self) -> None:
+        """Initialize async components of the intent detector."""
+        await self.semantic_cache.ensure_initialized()
+        logger.info("Enhanced intent detector async components initialized")
+    
     async def detect_intent(
         self,
         request: IntentDetectionRequest,

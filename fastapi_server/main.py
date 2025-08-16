@@ -7,7 +7,7 @@ import time
 from contextlib import asynccontextmanager
 from typing import Dict, Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -26,10 +26,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize MCP Platform
-mcp_platform = MCPPlatform()
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
@@ -40,7 +36,10 @@ async def lifespan(app: FastAPI):
         logger.info(f"Gemini model: {config.gemini_model}")
     logger.info(f"Legacy MCP server URL: {config.mcp_server_url}")
     
-    # Initialize MCP Platform
+    # Initialize MCP Platform (within event loop context)
+    mcp_platform = MCPPlatform()
+    app.state.mcp_platform = mcp_platform  # Store in app state for access in routes
+    
     try:
         await mcp_platform.initialize()
         logger.info("✓ MCP Platform initialized successfully")
@@ -79,7 +78,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down FastAPI server")
     try:
-        await mcp_platform.shutdown()
+        await app.state.mcp_platform.shutdown()
         await chat_handler.mcp_client.disconnect()
     except Exception as e:
         logger.error(f"Error during shutdown: {str(e)}")
@@ -121,14 +120,14 @@ async def global_exception_handler(_: Request, exc: Exception):
 
 
 @app.get("/health", response_model=HealthResponse)
-async def health_check():
+async def health_check(request: Request):
     """Health check endpoint with multi-server platform status."""
     try:
         # Test legacy MCP connection
         mcp_status = "connected" if await chat_handler.mcp_client.test_connection() else "disconnected"
         
         # Get platform status
-        platform_status = await mcp_platform.get_platform_status()
+        platform_status = await request.app.state.mcp_platform.get_platform_status()
         platform_healthy = platform_status.get("initialized", False)
         
         return HealthResponse(
@@ -255,16 +254,16 @@ async def test_integration():
 
 
 @app.post("/v2/chat")
-async def create_platform_chat(request: Dict[str, Any]):
+async def create_platform_chat(request: Request, chat_request: Dict[str, Any] = Body(...)):
     """
     Enhanced chat endpoint using the multi-server platform.
     
     Supports queries across multiple data sources with intelligent routing.
     """
     try:
-        query = request.get("query", "").strip()
-        user_id = request.get("user_id")
-        context = request.get("context", {})
+        query = chat_request.get("query", "").strip()
+        user_id = chat_request.get("user_id")
+        context = chat_request.get("context", {})
         
         if not query:
             raise HTTPException(
@@ -275,7 +274,7 @@ async def create_platform_chat(request: Dict[str, Any]):
         logger.info(f"Processing platform query: {query[:100]}...")
         
         # Process through multi-server platform
-        platform_response = await mcp_platform.process_query(
+        platform_response = await request.app.state.mcp_platform.process_query(
             query=query,
             user_id=user_id,
             context=context
@@ -294,10 +293,10 @@ async def create_platform_chat(request: Dict[str, Any]):
 
 
 @app.get("/platform/status")
-async def platform_status():
+async def platform_status(request: Request):
     """Get comprehensive platform status including all servers."""
     try:
-        status = await mcp_platform.get_platform_status()
+        status = await request.app.state.mcp_platform.get_platform_status()
         return status
     except Exception as e:
         logger.error(f"Error getting platform status: {str(e)}")
@@ -308,10 +307,10 @@ async def platform_status():
 
 
 @app.post("/platform/reload")
-async def reload_platform_config():
+async def reload_platform_config(request: Request):
     """Reload platform configuration."""
     try:
-        success = await mcp_platform.reload_configuration()
+        success = await request.app.state.mcp_platform.reload_configuration()
         return {
             "success": success,
             "message": "Configuration reloaded successfully" if success else "Configuration reload failed"
@@ -325,11 +324,11 @@ async def reload_platform_config():
 
 
 @app.get("/servers")
-async def list_servers():
+async def list_servers(request: Request):
     """List all registered MCP servers and their status."""
     try:
         servers = []
-        registry = mcp_platform.server_registry
+        registry = request.app.state.mcp_platform.server_registry
         
         for server_id in registry.get_all_servers():
             server_info = registry.get_server_info(server_id)
@@ -358,10 +357,10 @@ async def list_servers():
 
 
 @app.get("/servers/{server_id}/status")
-async def get_server_status(server_id: str):
+async def get_server_status(server_id: str, request: Request):
     """Get detailed status for a specific server."""
     try:
-        registry = mcp_platform.server_registry
+        registry = request.app.state.mcp_platform.server_registry
         
         server_info = registry.get_server_info(server_id)
         if not server_info:

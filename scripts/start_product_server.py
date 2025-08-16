@@ -35,8 +35,8 @@ def main():
     # Get configuration from environment or use defaults
     data_path = os.getenv("PRODUCT_DATA_PATH")
     host = os.getenv("PRODUCT_SERVER_HOST", "localhost")
-    port = int(os.getenv("PRODUCT_SERVER_PORT", "8001"))
-    transport = os.getenv("TRANSPORT", "streamable-http")
+    port = int(os.getenv("PRODUCT_SERVER_PORT", "8002"))
+    transport = os.getenv("TRANSPORT", "sse")
     log_level = os.getenv("LOG_LEVEL", "INFO")
     
     # Update log level if specified
