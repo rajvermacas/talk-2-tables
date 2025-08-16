@@ -20,6 +20,8 @@ from .intent_models import (
 )
 from .query_models import QueryPlan, QueryResult, QueryIntentType
 from .models import ChatMessage, MessageRole
+from .mcp_resource_fetcher import MCPResourceFetcher
+from .resource_cache_manager import ResourceCacheManager
 
 logger = logging.getLogger(__name__)
 
@@ -88,14 +90,21 @@ class MCPPlatform:
             rollout_percentage=1.0  # Full rollout for multi-server platform
         )
         
-        self.intent_detector = MultiServerIntentDetector(intent_config, self.server_registry)
+        # Initialize query orchestrator first
         self.query_orchestrator = QueryOrchestrator(self.server_registry)
+        
+        # Resource cache components (will be initialized during startup)
+        self.resource_fetcher: Optional[MCPResourceFetcher] = None
+        self.resource_cache: Optional[ResourceCacheManager] = None
+        
+        # Intent detector will be created after resource cache is available
+        self.intent_detector: Optional[MultiServerIntentDetector] = None
         
         # Platform state
         self._initialized = False
         self._startup_errors: List[str] = []
         
-        logger.info("Initialized MCP Platform")
+        logger.info("Initialized MCP Platform (awaiting resource cache initialization)")
     
     async def initialize(self) -> None:
         """Initialize the platform and all components."""
@@ -117,7 +126,31 @@ class MCPPlatform:
             if not enabled_servers:
                 raise MCPPlatformError("No enabled servers found in configuration")
             
+            # Initialize resource fetching (if MCP clients are available)
+            await self._initialize_resource_cache()
+            
+            # Now create intent detector with resource cache if available
+            intent_config = EnhancedIntentConfig(
+                enable_enhanced_detection=True,
+                enable_semantic_cache=True,
+                enable_hybrid_mode=False,
+                rollout_percentage=1.0
+            )
+            
+            self.intent_detector = MultiServerIntentDetector(
+                intent_config, 
+                self.server_registry,
+                self.resource_cache  # Pass resource cache if available
+            )
+            
             logger.info(f"Platform initialized with {len(enabled_servers)} enabled servers")
+            if self.resource_cache:
+                cache_stats = self.resource_cache.get_cache_stats()
+                logger.info(f"Resource cache initialized: {cache_stats['product_count']} products, "
+                           f"{cache_stats['table_count']} tables")
+            else:
+                logger.warning("Resource cache not available - using tool-based routing only")
+            
             self._initialized = True
             
         except Exception as e:
@@ -125,6 +158,45 @@ class MCPPlatform:
             logger.error(error_msg)
             self._startup_errors.append(error_msg)
             raise MCPPlatformError(error_msg)
+    
+    async def _initialize_resource_cache(self) -> None:
+        """Initialize resource fetching and caching if MCP clients are available."""
+        try:
+            logger.info("Initializing resource cache...")
+            
+            # Get MCP clients from query orchestrator
+            mcp_clients = {}
+            
+            # Add database client if available
+            if hasattr(self.query_orchestrator, 'db_client'):
+                mcp_clients['database'] = self.query_orchestrator.db_client
+            
+            # Add product client if available
+            if hasattr(self.query_orchestrator, 'product_client'):
+                mcp_clients['product_metadata'] = self.query_orchestrator.product_client
+            
+            if not mcp_clients:
+                logger.warning("No MCP clients available for resource fetching")
+                return
+            
+            # Create resource fetcher
+            self.resource_fetcher = MCPResourceFetcher(mcp_clients)
+            
+            # Create and initialize cache manager
+            self.resource_cache = ResourceCacheManager(
+                resource_fetcher=self.resource_fetcher,
+                cache_ttl_seconds=3600,  # 1 hour TTL
+                refresh_interval_seconds=1800  # 30 minute refresh
+            )
+            
+            await self.resource_cache.initialize()
+            logger.info("Resource cache initialized successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize resource cache: {e}")
+            # Continue without resource cache - fallback to tool-based routing
+            self.resource_fetcher = None
+            self.resource_cache = None
     
     async def process_query(
         self,
@@ -456,6 +528,11 @@ Try asking about:
         logger.info("Shutting down MCP Platform...")
         
         try:
+            # Shutdown resource cache if available
+            if self.resource_cache:
+                await self.resource_cache.shutdown()
+                logger.info("Resource cache shut down")
+            
             # Stop health monitoring
             await self.server_registry.stop_health_monitoring()
             

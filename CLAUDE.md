@@ -96,12 +96,6 @@ Read the instructions at `/root/.claude/commands/persist-session.md` to get an u
 
 **Important**: Always read and update the session scratchpad when working on this project to maintain context continuity across different Claude Code sessions.
 
-### Incremental Development Approach
-**Build one task at a time** - this project follows an incremental development strategy:
-- Focus on **single, well-defined tasks** rather than attempting massive changes at once
-- Complete and test each component thoroughly before moving to the next
-- Update the session scratchpad after each task completion to maintain progress tracking
-
 ## Architecture & Key Components
 
 ### Core Data Flow

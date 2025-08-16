@@ -31,21 +31,25 @@ logger = logging.getLogger(__name__)
 class MultiServerIntentDetector(EnhancedIntentDetector):
     """Enhanced intent detector with multi-server awareness and query planning."""
     
-    def __init__(self, config: EnhancedIntentConfig, server_registry: MCPServerRegistry):
+    def __init__(self, config: EnhancedIntentConfig, server_registry: MCPServerRegistry, resource_cache_manager=None):
         """Initialize multi-server intent detector.
         
         Args:
             config: Enhanced intent detection configuration
             server_registry: Registry of available MCP servers
+            resource_cache_manager: Optional resource cache manager for entity-aware routing
         """
         super().__init__(config)
         self.server_registry = server_registry
+        self.resource_cache = resource_cache_manager
         
         # Pattern matching disabled - using LLM-based detection for better accuracy
         # The system now relies on semantic understanding rather than brittle regex patterns
         
         logger.info("Initialized Multi-Server Intent Detector (LLM-based routing)")
         logger.info(f"Available servers: {self.server_registry.get_all_servers()}")
+        if self.resource_cache:
+            logger.info("Resource cache manager available for entity-aware routing")
     
     async def detect_intent_with_planning(
         self,
@@ -434,30 +438,109 @@ Generate appropriate SQL query:
     ) -> IntentDetectionResult:
         """LLM-based classification with server capability awareness."""
         try:
+            # Check for direct entity matches if resource cache is available
+            if self.resource_cache:
+                entity_matches = self.resource_cache.check_entity_match(query)
+                
+                if entity_matches['has_match']:
+                    # Direct match found - bypass LLM for performance
+                    if entity_matches['match_type'] == 'product':
+                        return IntentDetectionResult(
+                            classification=IntentClassification.PRODUCT_LOOKUP,
+                            needs_database=False,
+                            confidence=0.95,
+                            detection_method=DetectionMethod.REGEX_FAST_PATH,  # Will update enum later
+                            processing_time_ms=(time.time() - start_time) * 1000,
+                            cache_hit=False,
+                            metadata_used=False,
+                            required_servers=["product_metadata"],
+                            extracted_entities={"product_names": entity_matches['matched_products']},
+                            reasoning=f"Direct product match: {', '.join(entity_matches['matched_products'])}"
+                        )
+                    elif entity_matches['match_type'] == 'database':
+                        return IntentDetectionResult(
+                            classification=IntentClassification.DATABASE_QUERY,
+                            needs_database=True,
+                            confidence=0.95,
+                            detection_method=DetectionMethod.REGEX_FAST_PATH,
+                            processing_time_ms=(time.time() - start_time) * 1000,
+                            cache_hit=False,
+                            metadata_used=False,
+                            required_servers=["database"],
+                            extracted_entities={"table_names": entity_matches['matched_tables']},
+                            reasoning=f"Direct table match: {', '.join(entity_matches['matched_tables'])}"
+                        )
+                    elif entity_matches['match_type'] == 'hybrid':
+                        return IntentDetectionResult(
+                            classification=IntentClassification.HYBRID_QUERY,
+                            needs_database=True,
+                            confidence=0.90,
+                            detection_method=DetectionMethod.REGEX_FAST_PATH,
+                            processing_time_ms=(time.time() - start_time) * 1000,
+                            cache_hit=False,
+                            metadata_used=False,
+                            required_servers=["database", "product_metadata"],
+                            extracted_entities={
+                                "product_names": entity_matches['matched_products'],
+                                "table_names": entity_matches['matched_tables']
+                            },
+                            reasoning=f"Hybrid match: products={entity_matches['matched_products']}, tables={entity_matches['matched_tables']}"
+                        )
+            
             # Build server capabilities context
             server_capabilities = await self._build_server_capabilities_context()
             
+            # Log server capabilities for debugging (only first 500 chars to avoid log spam)
+            logger.info(f"Server capabilities context (truncated): {server_capabilities[:500]}...")
+            
+            # Adjust prompt based on whether we have resource data
+            if self.resource_cache and "MCP SERVERS DATA INVENTORY" in server_capabilities:
+                routing_instructions = """
+IMPORTANT: You have the COMPLETE list of products and tables above. Base routing decisions on actual data:
+- If query mentions ANY product name from the list → MUST route to product_metadata server
+- If query mentions ANY table from the database → MUST route to database server
+- If query mentions unknown product/table → Mark as CONVERSATION (don't guess)
+
+CRITICAL: Check the Data Inventory section above for exact product names and table names!"""
+            else:
+                routing_instructions = """
+CRITICAL ROUTING DECISION TREE (no resource data available):
+
+1. FIRST CHECK: Does the query contain "What is X?" pattern?
+   → If YES and X looks like a product name (capitalized, technical term, compound word) → PRODUCT_LOOKUP
+   → Examples: "What is QuantumFlux?", "What is DataProcessor?", "What is Axios Gateway?"
+
+2. SECOND CHECK: Is the query asking about a specific named entity that could be a product?
+   → Look for: Capitalized technical terms, compound words, brand-like names
+   → If found → PRODUCT_LOOKUP
+   → Examples: "Tell me about QuantumFlux", "Describe DataProcessor", "QuantumFlux details"
+
+3. THIRD CHECK: Is the query searching for products by criteria?
+   → Keywords: find, search, list, show, products with, products in category
+   → If found → PRODUCT_SEARCH
+
+4. FOURTH CHECK: Does query mention business metrics (sales, revenue, analytics)?
+   → With product name → HYBRID_QUERY (needs both servers)
+   → Without product name → DATABASE_QUERY (database only)
+
+5. ELSE: CONVERSATION (general chat, no data needed)
+
+IMPORTANT: When in doubt about whether something is a product name, assume it IS and route to PRODUCT_LOOKUP.
+Product names often include: technical terms, compound words, branded names, alphanumeric codes."""
+            
             system_prompt = f"""You are an intelligent query router for a multi-server data platform.
 
-Available servers and their capabilities:
 {server_capabilities}
 
-Your task is to classify the user query and determine which servers are needed.
+{routing_instructions}
 
 Classification types:
-- PRODUCT_LOOKUP: Questions about specific products (e.g., "What is QuantumFlux DataProcessor?", "Tell me about Axios", "Describe product X")
-- PRODUCT_SEARCH: Searching for products (e.g., "Find AI products", "Show me processors", "Products in category X")
-- DATABASE_QUERY: Needs SQL database access for business data (e.g., sales, revenue, analytics, or explicit SQL)
-- HYBRID_QUERY: Needs BOTH product info AND database data (e.g., "Axios sales", "revenue for product X")
+- PRODUCT_LOOKUP: Questions about specific products
+- PRODUCT_SEARCH: Searching for products by criteria
+- DATABASE_QUERY: Database access for business data without product context
+- HYBRID_QUERY: Needs BOTH product info AND database data
 - CONVERSATION: General chat that doesn't need data access
 - UNCLEAR: Cannot determine intent
-
-Important routing rules:
-- If asking "What is X?" where X could be a product name → PRODUCT_LOOKUP with product_metadata server
-- If asking about product details, info, or description → PRODUCT_LOOKUP with product_metadata server
-- If searching for products by criteria → PRODUCT_SEARCH with product_metadata server
-- If asking about sales/revenue/data for a specific product → HYBRID_QUERY with both servers
-- Only use DATABASE_QUERY if no product context is involved
 
 Respond with JSON format:
 {{
@@ -481,6 +564,9 @@ Respond with JSON format:
             
             llm_response = await llm_manager.create_chat_completion(messages)
             response = llm_response.choices[0].message.content if llm_response.choices else "{}"
+            
+            # Log the LLM response for debugging
+            logger.info(f"LLM Classification Response: {response[:500]}")
             
             # Parse LLM response
             import json
@@ -535,22 +621,47 @@ Respond with JSON format:
                 reasoning=f"LLM classification failed: {str(e)}"
             )
     
-    async def _build_server_capabilities_context(self) -> Dict[str, Any]:
-        """Build context about available server capabilities."""
-        capabilities_context = {}
+    async def _build_server_capabilities_context(self) -> str:
+        """Build context about available server capabilities WITH actual resource data."""
+        context_parts = []
+        
+        # First, add resource data if cache is available
+        if self.resource_cache:
+            resource_context = self.resource_cache.get_llm_context()
+            if resource_context and resource_context != "No resource data available. MCP servers may be unavailable.":
+                context_parts.append("=== MCP SERVERS DATA INVENTORY ===\n")
+                context_parts.append(resource_context)
+                context_parts.append("\n")
+        
+        # Then add server capabilities
+        context_parts.append("=== SERVER CAPABILITIES ===\n")
         
         for server_id in self.server_registry.get_enabled_servers():
             server_info = self.server_registry.get_server_info(server_id)
             server_caps = self.server_registry.get_server_capabilities(server_id)
             
             if server_info and server_caps:
-                capabilities_context[server_id] = {
-                    "name": server_info.name,
-                    "type": server_caps.server_type,
-                    "operations": [op.value for op in server_caps.supported_operations],
-                    "data_types": server_caps.data_types,
-                    "description": getattr(server_info, 'description', ''),
-                    "healthy": self.server_registry.is_server_healthy(server_id)
-                }
+                server_status = '✓ Healthy' if self.server_registry.is_server_healthy(server_id) else '✗ Unhealthy'
+                operations = ', '.join([op.value for op in server_caps.supported_operations])
+                
+                context_parts.append(
+                    f"{server_info.name} Server ({server_id}):\n"
+                    f"  Operations: {operations}\n"
+                    f"  Data Types: {', '.join(server_caps.data_types)}\n"
+                    f"  Status: {server_status}\n"
+                )
         
-        return capabilities_context
+        # Add routing rules
+        context_parts.append("\n=== ROUTING RULES ===\n")
+        if self.resource_cache:
+            context_parts.append("1. If query mentions ANY product name listed above → Route to product_metadata server\n")
+            context_parts.append("2. If query mentions database tables or SQL → Route to database server\n")
+            context_parts.append("3. If query combines product + sales/analytics → Route to BOTH servers (hybrid)\n")
+            context_parts.append("4. General questions without data needs → No server routing needed\n")
+        else:
+            context_parts.append("Note: Resource data not available. Using tool-based routing only.\n")
+            context_parts.append("1. Product-related queries → Route to product_metadata server\n")
+            context_parts.append("2. Database/SQL queries → Route to database server\n")
+            context_parts.append("3. Combined queries → Route to both servers\n")
+        
+        return ''.join(context_parts)

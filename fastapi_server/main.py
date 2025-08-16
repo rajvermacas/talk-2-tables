@@ -11,13 +11,13 @@ from fastapi import FastAPI, HTTPException, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .config import config
-from .models import (
+from config import config
+from models import (
     ChatCompletionRequest, ChatCompletionResponse, 
     ErrorResponse, HealthResponse, ErrorDetail
 )
-from .chat_handler import chat_handler
-from .mcp_platform import MCPPlatform
+from chat_handler import chat_handler
+from mcp_platform import MCPPlatform
 
 # Configure logging
 logging.basicConfig(
