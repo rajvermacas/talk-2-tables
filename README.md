@@ -93,27 +93,6 @@ python -m talk_2_tables_mcp.server --transport streamable-http --json-response -
 python -m talk_2_tables_mcp.remote_server
 ```
 
-### Docker Deployment
-
-#### Quick Start with Docker
-```bash
-# Build and run with Docker Compose
-docker-compose up -d
-
-# Or build and run manually
-docker build -t talk-2-tables-mcp .
-docker run -p 8000:8000 talk-2-tables-mcp
-```
-
-#### Production Deployment
-```bash
-# Run with nginx reverse proxy
-docker-compose --profile production up -d
-
-# With monitoring
-docker-compose --profile monitoring up -d
-```
-
 ### Environment Variables
 
 Configure the server using environment variables:

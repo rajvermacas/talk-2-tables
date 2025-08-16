@@ -144,11 +144,6 @@ def print_usage_examples():
             "command": "python -m talk_2_tables_mcp.server --transport streamable-http --stateless --port 8000",
             "url": "http://localhost:8000/mcp"
         },
-        {
-            "name": "Docker",
-            "command": "docker-compose up -d",
-            "url": "http://localhost:8000/mcp"
-        }
     ]
     
     for i, example in enumerate(examples, 1):

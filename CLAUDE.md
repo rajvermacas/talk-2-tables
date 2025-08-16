@@ -17,7 +17,7 @@ This is a production-ready, full-stack system implementing a Model Context Proto
 - **FastAPI Backend**: Production-ready AI agent using Google Gemini with enhanced intent detection and semantic caching
 - **React Frontend**: Modern glassmorphism UI with dark/light themes and accessibility compliance
 - **Enhanced Intent Detection**: LLM-based intent classification with local embeddings and intelligent caching
-- **Production Ready**: Docker deployment, cost-optimized configuration, comprehensive testing
+- **Production Ready**: Cost-optimized configuration, comprehensive testing
 
 ## Development Commands
 
@@ -202,15 +202,6 @@ Exponential backoff with configurable parameters:
 - Graceful degradation when components fail
 
 ## Production Deployment
-
-### Docker Configuration
-```bash
-# Basic deployment
-docker-compose up -d
-
-# Production with nginx
-docker-compose --profile production up -d
-```
 
 ### Cost Optimization Features
 - **Gemini API**: Affordable pricing compared to other providers

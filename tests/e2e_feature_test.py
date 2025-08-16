@@ -321,39 +321,6 @@ class MCPServerE2ETest:
             self.log_test_result("Error Handling", False, str(e))
             return False
     
-    def test_docker_configuration(self) -> bool:
-        """Test Docker configuration files."""
-        try:
-            dockerfile = self.project_root / "Dockerfile"
-            compose_file = self.project_root / "docker-compose.yml"
-            
-            if not dockerfile.exists():
-                self.log_test_result("Docker Configuration", False, "Dockerfile not found")
-                return False
-            
-            if not compose_file.exists():
-                self.log_test_result("Docker Configuration", False, "docker-compose.yml not found")
-                return False
-            
-            # Check docker-compose for expected services
-            with open(compose_file) as f:
-                compose_content = f.read()
-            
-            if "talk-2-tables-mcp" not in compose_content:
-                self.log_test_result("Docker Configuration", False, "MCP service not found in compose file")
-                return False
-            
-            if "8000:8000" not in compose_content:
-                self.log_test_result("Docker Configuration", False, "Port mapping not found")
-                return False
-            
-            self.log_test_result("Docker Configuration", True, "Docker files present and configured")
-            return True
-            
-        except Exception as e:
-            self.log_test_result("Docker Configuration", False, str(e))
-            return False
-    
     def run_all_tests(self) -> bool:
         """Run complete end-to-end test suite."""
         logger.info("=" * 60)
@@ -365,7 +332,6 @@ class MCPServerE2ETest:
             self.test_database_connection()
             self.test_configuration_loading()
             self.test_metadata_resource_validation()
-            self.test_docker_configuration()
             
             # Server startup tests
             self.test_server_startup_streamable_http()
