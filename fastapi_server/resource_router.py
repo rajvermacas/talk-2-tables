@@ -128,10 +128,10 @@ Available MCP Servers:
 
 Provide a JSON response with:
 {{
-    "primary_servers": ["list of server names that MUST handle this query"],
-    "secondary_servers": ["list of backup/supplementary servers"],
+    "primary_servers": ["list of server IDs that MUST handle this query"],
+    "secondary_servers": ["list of backup/supplementary server IDs"],
     "server_scores": {{
-        "server_name": {{
+        "server_id": {{
             "score": 0.0-1.0,
             "reasoning": "why this server is relevant",
             "capabilities_matched": ["list of matched capabilities"],
@@ -208,8 +208,8 @@ Provide a JSON response with:
             confidence=0.6
         )
         
-        # Score each server based on intent needs
-        for server_name, server_info in available_servers.items():
+        # Score each server based on intent needs - use server_id for consistency
+        for server_id, server_info in available_servers.items():
             if not isinstance(server_info, dict):
                 continue
             
@@ -242,35 +242,36 @@ Provide a JSON response with:
                 if "column_mappings" in resources:
                     resources_available.append("column_mappings")
             
-            # Bonus for suggested servers
-            if server_name in intent.suggested_servers:
+            # Bonus for suggested servers (check both ID and name)
+            server_name = server_info.get("name", server_id)
+            if server_id in intent.suggested_servers or server_name in intent.suggested_servers:
                 score += 0.2
             
             # Adjust score based on priority (lower is better)
             score *= (1.0 / (1 + priority / 100))
             
-            # Create server score
+            # Create server score - use server_id for consistency
             if score > 0:
-                decision.server_scores[server_name] = ServerScore(
-                    server_name=server_name,
+                decision.server_scores[server_id] = ServerScore(
+                    server_name=server_id,  # Use server_id for routing
                     score=score,
                     reasoning=f"Matched {len(capabilities_matched)} capabilities",
                     capabilities_matched=capabilities_matched,
                     resources_available=resources_available
                 )
         
-        # Select primary servers (score > 0.3)
+        # Select primary servers (score > 0.3) - now using server_id
         ranked_servers = sorted(
             decision.server_scores.items(),
             key=lambda x: x[1].score,
             reverse=True
         )
         
-        for server_name, server_score in ranked_servers:
+        for server_id, server_score in ranked_servers:
             if server_score.score > 0.3:
-                decision.primary_servers.append(server_name)
+                decision.primary_servers.append(server_id)
             elif server_score.score > 0.1:
-                decision.secondary_servers.append(server_name)
+                decision.secondary_servers.append(server_id)
         
         # Set fallback strategy
         if not decision.primary_servers:
@@ -312,9 +313,11 @@ Provide clear reasoning for your routing decisions."""
         """Format server information for LLM prompt."""
         
         lines = []
-        for server_name, server_info in available_servers.items():
+        for server_id, server_info in available_servers.items():
             if isinstance(server_info, dict):
-                lines.append(f"\n{server_name}:")
+                # Use display name for clarity, but include ID for reference
+                display_name = server_info.get('name', server_id)
+                lines.append(f"\n{display_name} (ID: {server_id}):")
                 lines.append(f"  Priority: {server_info.get('priority', 999)}")
                 lines.append(f"  Domains: {', '.join(server_info.get('domains', []))}")
                 lines.append(f"  Capabilities: {', '.join(server_info.get('capabilities', []))}")

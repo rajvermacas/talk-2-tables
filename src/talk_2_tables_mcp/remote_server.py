@@ -144,9 +144,9 @@ def create_remote_config() -> ServerConfig:
     from .config import load_config
     config = load_config()
     
-    # Override defaults for remote deployment
+    # Override defaults for remote deployment - use SSE for consistency
     if config.transport == "stdio":
-        config.transport = "streamable-http"
+        config.transport = "sse"
     
     if config.host == "localhost":
         config.host = "0.0.0.0"  # Bind to all interfaces

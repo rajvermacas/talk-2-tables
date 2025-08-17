@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 async def test_fastapi_chat():
     """Test a chat query to see resource listing behavior."""
-    url = "http://localhost:8001/v1/chat/completions"
+    url = "http://localhost:8001/chat/completions"
     
     # Test queries that should trigger different resource needs
     test_queries = [

@@ -10,7 +10,7 @@ import logging
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import httpx
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, AsyncExitStack
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
@@ -35,22 +35,33 @@ class MCPClientWrapper:
         self.timeout = timeout
         self.session: Optional[ClientSession] = None
         self._client = None
+        self._exit_stack: Optional[AsyncExitStack] = None
     
     async def connect(self) -> bool:
         """Connect to MCP server using SSE"""
         try:
-            self.session = ClientSession()
             self._client = httpx.AsyncClient(timeout=self.timeout)
+            self._exit_stack = AsyncExitStack()
             
-            # Initialize SSE connection using MCP SDK
-            async with sse_client(self.url) as transport:
-                await self.session.initialize(transport)
-                # Test connection by listing resources
-                resources = await self.session.list_resources()
-                logger.debug(f"Connected successfully, found {len(resources)} resources")
-                return True
+            # Initialize SSE connection using MCP SDK with persistent context
+            transport = await self._exit_stack.enter_async_context(
+                sse_client(self.url)
+            )
+            # SSE client returns (read_stream, write_stream) tuple
+            read_stream, write_stream = transport
+            # Create ClientSession with proper streams and keep it in context
+            self.session = await self._exit_stack.enter_async_context(
+                ClientSession(read_stream, write_stream)
+            )
+            await self.session.initialize()
+            
+            # Test connection by listing resources
+            resources = await self.session.list_resources()
+            logger.debug(f"Connected successfully, found {len(resources.resources)} resources")
+            return True
         except Exception as e:
-            logger.error(f"Failed to connect: {e}")
+            logger.error(f"Failed to connect to {self.url}: {e}")
+            await self.close()
             return False
     
     async def list_resources(self) -> List[Dict[str, Any]]:
@@ -61,14 +72,14 @@ class MCPClientWrapper:
         try:
             logger.debug(f"[MCP_CLIENT] Calling session.list_resources for {self.url}")
             resources = await self.session.list_resources()
-            logger.debug(f"[MCP_CLIENT] Received {len(resources)} resources from {self.url}")
+            logger.debug(f"[MCP_CLIENT] Received {len(resources.resources)} resources from {self.url}")
             return [
                 {
                     "uri": r.uri,
                     "name": r.name,
                     "description": r.description if hasattr(r, 'description') else None
                 }
-                for r in resources
+                for r in resources.resources
             ]
         except Exception as e:
             logger.error(f"Failed to list resources: {e}")
@@ -88,9 +99,13 @@ class MCPClientWrapper:
     
     async def close(self):
         """Close the MCP session"""
+        if self._exit_stack:
+            await self._exit_stack.aclose()
+            self._exit_stack = None
         if self._client:
             await self._client.aclose()
-        # Session cleanup is handled by context manager
+            self._client = None
+        self.session = None
 
 
 class MCPOrchestrator:
@@ -337,8 +352,10 @@ class MCPOrchestrator:
             await self.initialize()
         
         servers_info = {}
-        for server in self.registry.get_all_servers():
-            servers_info[server.name] = {
+        for server_id, server in self.registry._servers.items():
+            # Use server_id as the key for lookup consistency
+            servers_info[server_id] = {
+                "server_id": server_id,  # Add server ID for routing
                 "name": server.name,
                 "connected": server.connected,
                 "priority": server.config.priority,
@@ -358,7 +375,7 @@ class MCPOrchestrator:
         Gather resources from specific servers.
         
         Args:
-            server_names: List of server names to gather resources from
+            server_names: List of server IDs or names to gather resources from
             
         Returns:
             Dictionary of resources from specified servers
@@ -368,14 +385,24 @@ class MCPOrchestrator:
         
         all_resources = {}
         
-        # Get specified servers
+        # Get specified servers - try both ID and name lookup
         servers_to_query = []
-        for server_name in server_names:
-            server = self.registry.get_server(server_name)
+        for server_identifier in server_names:
+            # First try as server ID
+            server = self.registry.get_server(server_identifier)
+            
+            # If not found, try to find by display name
+            if not server:
+                for server_id, srv in self.registry._servers.items():
+                    if srv.name == server_identifier:
+                        server = srv
+                        break
+            
             if server and server.connected:
                 servers_to_query.append(server)
+                logger.info(f"[RESOURCE_LIST] Preparing to query server: {server.name} (id: {server_identifier})")
             else:
-                logger.warning(f"Server {server_name} not found or not connected")
+                logger.warning(f"Server {server_identifier} not found or not connected")
         
         if not servers_to_query:
             logger.warning("No valid servers to query")
