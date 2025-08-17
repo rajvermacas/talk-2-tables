@@ -259,6 +259,40 @@ class LLMManager:
         """Format MCP context for inclusion in chat completion."""
         context_parts = []
         
+        # Add query enhancement information if available
+        if "query_enhancement" in mcp_context:
+            enhancement = mcp_context["query_enhancement"]
+            if enhancement.get("aliases_resolved") or enhancement.get("columns_mapped"):
+                context_parts.append("Query Enhancement Applied:")
+                
+                if enhancement.get("aliases_resolved"):
+                    context_parts.append("Product aliases resolved:")
+                    for original, resolved in enhancement["aliases_resolved"].items():
+                        context_parts.append(f"  - '{original}' → '{resolved}'")
+                
+                if enhancement.get("columns_mapped"):
+                    context_parts.append("Column mappings applied:")
+                    for term, sql_expr in enhancement["columns_mapped"].items():
+                        context_parts.append(f"  - '{term}' → {sql_expr}")
+                
+                context_parts.append("")  # Add spacing
+        
+        # Add product metadata if available
+        if "product_metadata" in mcp_context:
+            product_meta = mcp_context["product_metadata"]
+            if isinstance(product_meta, dict):
+                # Check for product aliases in the metadata
+                if "product_aliases" in product_meta:
+                    context_parts.append("Product Reference Information:")
+                    aliases = product_meta["product_aliases"]
+                    if isinstance(aliases, dict) and "data" in aliases:
+                        aliases_data = aliases["data"]
+                        if isinstance(aliases_data, dict) and "product_aliases" in aliases_data:
+                            for alias, info in list(aliases_data["product_aliases"].items())[:5]:
+                                context_parts.append(f"  - '{alias}' refers to: {info.get('canonical_name', alias)}")
+                    context_parts.append("")  # Add spacing
+        
+        # Add database metadata
         if "database_metadata" in mcp_context:
             metadata = mcp_context["database_metadata"]
             context_parts.append("Available database information:")

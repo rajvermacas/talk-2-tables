@@ -15,6 +15,7 @@ from .models import (
 from .llm_manager import llm_manager
 from .mcp_client import MCPDatabaseClient, mcp_client
 from .mcp_orchestrator import MCPOrchestrator
+from .query_enhancer import QueryEnhancer
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ class ChatCompletionHandler:
         self.llm_client = llm_manager
         self.mcp_client = mcp_client
         self.orchestrator = None  # Will be initialized on first use
+        self.query_enhancer = QueryEnhancer()  # Initialize query enhancer
         
         # SQL query detection patterns
         self.sql_patterns = [
@@ -85,6 +87,7 @@ class ChatCompletionHandler:
                 await self._ensure_orchestrator()
                 
                 # Get metadata from all MCP servers
+                all_resources = {}
                 if self.orchestrator:
                     try:
                         # Gather resources from all servers
@@ -98,6 +101,34 @@ class ChatCompletionHandler:
                                 mcp_context["product_metadata"] = product_resources
                     except Exception as e:
                         logger.warning(f"Failed to get orchestrator resources: {e}")
+                
+                # Enhance the query with metadata if we have resources
+                enhanced_request = None
+                if all_resources:
+                    try:
+                        enhanced_request = await self.query_enhancer.enhance_query(
+                            user_query=user_message.content,
+                            mcp_resources=all_resources,
+                            context={"message_history": request.messages}
+                        )
+                        
+                        # Log enhancement metrics
+                        if enhanced_request.resolution_result:
+                            resolution = enhanced_request.resolution_result
+                            if resolution.aliases_resolved or resolution.columns_mapped:
+                                logger.info(f"Query enhancement: resolved {len(resolution.aliases_resolved)} aliases, "
+                                          f"mapped {len(resolution.columns_mapped)} columns in "
+                                          f"{enhanced_request.processing_time_ms:.2f}ms")
+                        
+                        # Add enhanced context to MCP context
+                        mcp_context["query_enhancement"] = {
+                            "resolved_query": enhanced_request.resolution_result.resolved_text if enhanced_request.resolution_result else user_message.content,
+                            "aliases_resolved": enhanced_request.resolution_result.aliases_resolved if enhanced_request.resolution_result else {},
+                            "columns_mapped": enhanced_request.resolution_result.columns_mapped if enhanced_request.resolution_result else {},
+                            "processing_time_ms": enhanced_request.processing_time_ms
+                        }
+                    except Exception as e:
+                        logger.error(f"Failed to enhance query: {e}")
                 
                 # Get database metadata for context (fallback to direct client)
                 metadata = await self.mcp_client.get_database_metadata()
@@ -116,7 +147,8 @@ class ChatCompletionHandler:
                     # Let the LLM decide what query to run
                     suggested_query = await self._suggest_sql_query(
                         user_message.content, 
-                        metadata
+                        metadata,
+                        enhanced_request
                     )
                     
                     if suggested_query:
@@ -305,7 +337,8 @@ class ChatCompletionHandler:
     async def _suggest_sql_query(
         self,
         user_question: str,
-        metadata: Optional[Dict[str, Any]]
+        metadata: Optional[Dict[str, Any]],
+        enhanced_request: Optional[Any] = None
     ) -> Optional[str]:
         """
         Use LLM to suggest an appropriate SQL query for the user's question.
@@ -313,6 +346,7 @@ class ChatCompletionHandler:
         Args:
             user_question: The user's question
             metadata: Database metadata
+            enhanced_request: Enhanced query request with metadata
             
         Returns:
             Suggested SQL query or None
@@ -321,16 +355,24 @@ class ChatCompletionHandler:
             return None
         
         try:
-            # Create a prompt for SQL generation
-            system_prompt = self._create_sql_generation_prompt(metadata)
-            
-            messages = [
-                ChatMessage(role=MessageRole.SYSTEM, content=system_prompt),
-                ChatMessage(
-                    role=MessageRole.USER,
-                    content=f"Generate a SQL query to answer this question: {user_question}"
-                )
-            ]
+            # Use enhanced prompt if available
+            if enhanced_request and enhanced_request.enhanced_prompt:
+                # Use the pre-built enhanced prompt
+                messages = [
+                    ChatMessage(role=MessageRole.SYSTEM, content=enhanced_request.enhanced_prompt)
+                ]
+                logger.debug("Using enhanced prompt with metadata injection")
+            else:
+                # Fall back to basic prompt generation
+                system_prompt = self._create_sql_generation_prompt(metadata)
+                
+                messages = [
+                    ChatMessage(role=MessageRole.SYSTEM, content=system_prompt),
+                    ChatMessage(
+                        role=MessageRole.USER,
+                        content=f"Generate a SQL query to answer this question: {user_question}"
+                    )
+                ]
             
             response = await self.llm_client.create_chat_completion(
                 messages=messages,

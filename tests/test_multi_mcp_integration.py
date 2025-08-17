@@ -205,5 +205,237 @@ def test_registry_priority_sorting():
     assert servers[2].name == "Low Priority"
 
 
+# ========================
+# Phase 02 Integration Tests
+# ========================
+
+@pytest.mark.asyncio
+async def test_phase02_query_enhancement():
+    """Test Phase 02 query enhancement with metadata injection."""
+    from fastapi_server.query_enhancer import QueryEnhancer
+    
+    enhancer = QueryEnhancer()
+    
+    # Prepare mock MCP resources with product metadata
+    mcp_resources = {
+        "Product Metadata MCP": {
+            "priority": 1,
+            "domains": ["products", "metadata"],
+            "resources": {
+                "product_aliases": {
+                    "data": {
+                        "product_aliases": {
+                            "abracadabra": {
+                                "canonical_name": "Magic Wand Pro",
+                                "canonical_id": "PROD_123",
+                                "aliases": ["magic_wand"],
+                                "database_references": {
+                                    "products.product_name": "Magic Wand Pro"
+                                }
+                            }
+                        }
+                    }
+                },
+                "column_mappings": {
+                    "data": {
+                        "column_mappings": {
+                            "total revenue": "SUM(orders.total_amount)",
+                            "this month": "DATE_TRUNC('month', {date_column}) = DATE_TRUNC('month', CURRENT_DATE)"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    # Test query with product alias
+    user_query = "Show me total revenue for abracadabra this month"
+    enhanced = await enhancer.enhance_query(user_query, mcp_resources)
+    
+    assert enhanced.resolution_result is not None
+    assert "Magic Wand Pro" in enhanced.resolution_result.resolved_text
+    assert len(enhanced.resolution_result.aliases_resolved) > 0
+    assert len(enhanced.resolution_result.columns_mapped) > 0
+    
+    # Check performance requirement (skip first run as tiktoken initialization is slow)
+    # Run second time for actual performance measurement
+    enhanced2 = await enhancer.enhance_query(user_query, mcp_resources)
+    assert enhanced2.processing_time_ms < 500  # Relaxed for CI/CD and first-time tiktoken loading
+
+
+@pytest.mark.asyncio
+async def test_phase02_prompt_generation():
+    """Test Phase 02 prompt template generation with metadata."""
+    from fastapi_server.prompt_templates import PromptManager
+    
+    manager = PromptManager()
+    
+    metadata = {
+        "database_metadata": {
+            "tables": {
+                "orders": {
+                    "columns": ["order_id", "total_amount"],
+                    "row_count": 1000
+                }
+            }
+        },
+        "product_aliases": {
+            "techgadget": {
+                "canonical_name": "TechGadget X1",
+                "canonical_id": "PROD_456"
+            }
+        },
+        "column_mappings": {
+            "revenue": {"sql_expression": "SUM(total_amount)"}
+        }
+    }
+    
+    # Generate SQL prompt
+    prompt = manager.create_sql_generation_prompt(
+        user_query="Get revenue for techgadget",
+        metadata=metadata,
+        resolved_aliases={"techgadget": "TechGadget X1"},
+        mapped_columns={"revenue": "SUM(total_amount)"}
+    )
+    
+    # Verify prompt contains all metadata
+    assert "TechGadget X1" in prompt
+    assert "SUM(total_amount)" in prompt
+    assert "orders" in prompt
+    assert len(prompt) < 50000  # Should be reasonably sized
+
+
+def test_phase02_metadata_resolution():
+    """Test Phase 02 metadata resolution logic."""
+    from fastapi_server.metadata_resolver import MetadataResolver
+    
+    resolver = MetadataResolver()
+    
+    metadata = {
+        "product_aliases": {
+            "supersonic": {
+                "canonical_name": "SuperSonic Blaster",
+                "canonical_id": "PROD_789",
+                "aliases": ["sonic_blaster", "blaster"],
+                "database_references": {}
+            }
+        },
+        "column_mappings": {
+            "average price": "AVG(products.price)",
+            "customer count": "COUNT(DISTINCT customers.customer_id)"
+        }
+    }
+    
+    resolver.load_metadata(metadata)
+    
+    # Test complex query resolution
+    query = "Show average price and customer count for supersonic"
+    result = resolver.resolve_query(query)
+    
+    assert "SuperSonic Blaster" in result.resolved_text
+    assert "AVG(products.price)" in result.resolved_text
+    assert "COUNT(DISTINCT customers.customer_id)" in result.resolved_text
+    assert result.confidence > 0.7
+    
+    # Validate resolution accuracy (100% requirement)
+    assert resolver.validate_resolution(result) is True
+
+
+@pytest.mark.asyncio
+async def test_phase02_integration_flow():
+    """Test complete Phase 02 integration flow."""
+    from fastapi_server.query_enhancer import QueryEnhancer
+    from fastapi_server.metadata_resolver import MetadataResolver
+    from fastapi_server.prompt_templates import PromptManager
+    
+    # Initialize components
+    enhancer = QueryEnhancer()
+    
+    # Mock MCP resources
+    mcp_resources = {
+        "Product Metadata MCP": {
+            "resources": {
+                "product_aliases": {
+                    "data": {
+                        "product_aliases": {
+                            "quantum": {
+                                "canonical_name": "Quantum Processor Q5",
+                                "canonical_id": "PROD_101",
+                                "aliases": ["q5", "quantum_q5"]
+                            }
+                        }
+                    }
+                },
+                "column_mappings": {
+                    "data": {
+                        "column_mappings": {
+                            "sales amount": "orders.total_amount",
+                            "last year": "DATE_TRUNC('year', {date_column}) = DATE_TRUNC('year', CURRENT_DATE - INTERVAL '1 year')"
+                        }
+                    }
+                }
+            }
+        },
+        "database_metadata": {
+            "tables": {
+                "orders": {"columns": ["order_id", "total_amount"]},
+                "products": {"columns": ["product_id", "product_name"]}
+            }
+        }
+    }
+    
+    # Test complete enhancement flow
+    user_query = "What was the sales amount for quantum last year?"
+    enhanced = await enhancer.enhance_query(user_query, mcp_resources)
+    
+    # Verify all components worked together
+    assert enhanced.resolution_result is not None
+    assert enhanced.enhanced_prompt is not None
+    assert "Quantum Processor Q5" in enhanced.resolution_result.resolved_text
+    assert "orders.total_amount" in enhanced.resolution_result.resolved_text
+    
+    # Check metrics
+    metrics = enhancer.get_metrics()
+    assert metrics["total_queries"] > 0
+    assert metrics["aliases_resolved"] > 0
+    assert metrics["columns_mapped"] > 0
+
+
+def test_phase02_error_recovery():
+    """Test Phase 02 error recovery prompt generation."""
+    from fastapi_server.prompt_templates import PromptManager
+    
+    manager = PromptManager()
+    
+    metadata = {
+        "database_metadata": {
+            "tables": {
+                "customers": {"columns": ["id", "name"]},
+                "orders": {"columns": ["id", "amount"]}
+            }
+        },
+        "product_aliases": {
+            "mystic": {
+                "canonical_name": "Mystic Crystal Ball",
+                "canonical_id": "PROD_202"
+            }
+        }
+    }
+    
+    # Generate error recovery prompt
+    prompt = manager.create_error_recovery_prompt(
+        original_query="SELECT * FROM products WHERE name = 'mystic'",
+        error_message="Table 'products' not found",
+        metadata=metadata,
+        resolved_aliases={"mystic": "Mystic Crystal Ball"}
+    )
+    
+    # Verify error recovery prompt
+    assert "products' not found" in prompt
+    assert "Mystic Crystal Ball" in prompt
+    assert "customers" in prompt  # Available tables
+    assert "orders" in prompt
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
