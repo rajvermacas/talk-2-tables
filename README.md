@@ -75,43 +75,10 @@ python -m talk_2_tables_mcp.server --transport sse --port 8000
 python -m talk_2_tables_mcp.server --transport sse --host 0.0.0.0 --port 8000
 ```
 
-#### 2. Streamable HTTP
-```bash
-# Basic HTTP server
-python -m talk_2_tables_mcp.server --transport streamable-http --host 0.0.0.0 --port 8000
-
-# Stateless HTTP (for scalability)
-python -m talk_2_tables_mcp.server --transport streamable-http --stateless --port 8000
-
-# JSON responses (instead of SSE streams)
-python -m talk_2_tables_mcp.server --transport streamable-http --json-response --port 8000
-```
-
-#### 3. Using the Remote Server Script
+#### 2. Using the Remote Server Script
 ```bash
 # Quick remote deployment with optimized defaults
 python -m talk_2_tables_mcp.remote_server
-```
-
-### Docker Deployment
-
-#### Quick Start with Docker
-```bash
-# Build and run with Docker Compose
-docker-compose up -d
-
-# Or build and run manually
-docker build -t talk-2-tables-mcp .
-docker run -p 8000:8000 talk-2-tables-mcp
-```
-
-#### Production Deployment
-```bash
-# Run with nginx reverse proxy
-docker-compose --profile production up -d
-
-# With monitoring
-docker-compose --profile monitoring up -d
 ```
 
 ### Environment Variables
@@ -123,7 +90,7 @@ export DATABASE_PATH="/path/to/your/database.db"
 export METADATA_PATH="/path/to/metadata.json"
 export HOST="0.0.0.0"
 export PORT="8000"
-export TRANSPORT="streamable-http"
+export TRANSPORT="sse"
 export LOG_LEVEL="INFO"
 export STATELESS_HTTP="true"
 export ALLOW_CORS="true"
@@ -181,30 +148,6 @@ The server can be configured through environment variables:
 
 Once the server is running remotely, clients can connect using different methods:
 
-#### HTTP Clients
-```python
-import asyncio
-from mcp.client.streamablehttp import streamablehttp_client
-from mcp.client.session import ClientSession
-
-async def connect_to_remote_server():
-    async with streamablehttp_client("http://your-server:8000/mcp") as (read, write, _):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            
-            # List available tools
-            tools = await session.list_tools()
-            print(f"Available tools: {[tool.name for tool in tools.tools]}")
-            
-            # Execute a query
-            result = await session.call_tool("execute_query", {
-                "query": "SELECT COUNT(*) FROM customers"
-            })
-            print(result)
-
-asyncio.run(connect_to_remote_server())
-```
-
 #### Using curl (for testing)
 ```bash
 # Test server health
@@ -219,7 +162,6 @@ curl -X POST http://your-server:8000/mcp \
 ### Server URLs
 
 - **SSE**: `http://your-server:8000/sse`
-- **Streamable HTTP**: `http://your-server:8000/mcp`
 - **Health Check**: `http://your-server:8000/health`
 
 ## Security Considerations
