@@ -1,7 +1,7 @@
 # Talk 2 Tables MCP Server - Session Summary
 
 ## Session Overview
-**Current Session (2025-08-17, Session 19)**: Fixed critical server name mismatch that was preventing resource listing (`list_resources`) from being called. Successfully enabled multi-MCP resource gathering through server ID mapping corrections.
+**Current Session (2025-08-17, Session 21)**: Comprehensive multi-MCP testing revealed critical bug - resources are gathered from both MCP servers but NOT sent to LLM due to missing formatting in `_format_mcp_context()` method.
 
 ## Historical Sessions Summary
 *Consolidated overview of Sessions 1-13 - compacted for token efficiency*
@@ -62,76 +62,44 @@
 - **Identified Testing Gap**: Discovered MCP servers weren't running during verification attempt
 - **Prepared Handoff**: Created detailed session-20-snapshot.md for seamless continuation
 
-#### Testing Status
-- FastAPI server running (PID 36232)
-- MCP servers need to be started for full validation
-- Test script ready at `scripts/test_resource_listing.py`
+### Session 21 (2025-08-17, 20:00 IST)
+**Focus Area**: Multi-MCP Testing & Critical Bug Discovery
 
-#### Technical Implementation
+#### Key Accomplishments
+- **Created Comprehensive Test Suite**: Built `scripts/test_multi_mcp_scenario.py` with 5 test scenarios
+- **Discovered Critical Bug**: Resources gathered but NOT sent to LLM
+- **Root Cause Identified**: `_format_mcp_context()` method ignores `mcp_resources` field
+- **Documented Test Results**: Created detailed analysis report and logs
 
-##### 1. Fixed MCP ClientSession Initialization
-```python
-# fastapi_server/mcp_orchestrator.py - MCPClientWrapper.connect()
-# Before (broken):
-self.session = ClientSession()  # Missing required arguments
+#### Testing Results
+- **Total Tests**: 5
+- **Passed**: 2 (40%) - Only queries using database tables alone
+- **Failed**: 3 (60%) - Queries requiring product metadata
+- **LLM Response**: "I cannot provide information on warranty periods, as this data is not available in the current database schema"
 
-# After (fixed):
-transport = await self._exit_stack.enter_async_context(sse_client(self.url))
-read_stream, write_stream = transport
-self.session = await self._exit_stack.enter_async_context(
-    ClientSession(read_stream, write_stream)
-)
+#### Critical Bug Details
+**Location**: `fastapi_server/llm_manager.py` - `_format_mcp_context()` method
+
+**Problem Chain**:
+1. ✅ Product Metadata MCP → Provides resources (product aliases, column mappings)
+2. ✅ MCP Orchestrator → Gathers resources from both servers
+3. ✅ Chat Handler → Adds resources to `mcp_context["mcp_resources"]`
+4. ❌ LLM Manager → `_format_mcp_context()` IGNORES `mcp_resources` field
+5. ❌ LLM → Never receives product metadata schema
+
+**Evidence from Logs**:
 ```
-
-##### 2. Server Information Enhancement
-```python
-# Added server_id to get_servers_info() for consistent lookup
-servers_info[server_id] = {
-    "server_id": server_id,  # Added for routing consistency
-    "name": server.name,
-    # ... other fields
-}
+[RESOURCE_LIST] Successfully fetched 3 resources from Product Metadata MCP
+Gathered resources from 2 servers
 ```
+But LLM says: "The available database schema does not contain information about product warranty"
 
-##### 3. Dual Lookup Implementation
-```python
-# gather_resources_from_servers() now handles both ID and name
-# First try as server ID
-server = self.registry.get_server(server_identifier)
-
-# If not found, try to find by display name
-if not server:
-    for server_id, srv in self.registry._servers.items():
-        if srv.name == server_identifier:
-            server = srv
-            break
-```
-
-##### 4. Resource Router Updates
-- Modified to use server IDs instead of display names
-- Updated LLM prompt instructions to return server IDs
-- Fixed intent-based routing to use server_id consistently
-
-#### Critical Bug Fixes & Solutions
-1. **ListResourcesResult Handling**: Fixed `len()` error by accessing `resources.resources` instead of the result object directly
-2. **Transport Protocol**: Standardized Talk2Tables server from "streamable-http" to "sse"
-3. **AsyncContext Management**: Added proper AsyncExitStack to maintain SSE connection context
-
-#### Evidence of Success
-From the logs:
-```
-[RESOURCE_LIST] Preparing to query server: Database MCP Server (id: database_mcp)
-[RESOURCE_LIST] Preparing to query server: Product Metadata MCP (id: product_metadata_mcp)
-[RESOURCE_LIST] Calling list_resources for server: Database MCP Server
-[RESOURCE_LIST] Calling list_resources for server: Product Metadata MCP
-```
-
-#### Current State After This Session
-- **Working Features**: Resource listing successfully calls `list_resources` on MCP servers
-- **Server Routing**: Correctly maps server IDs for orchestrator lookup
-- **Connection Management**: Proper SSE transport with maintained context
-- **Pending Items**: Handle ListResourcesResult errors in resource fetching
-- **Blocked Issues**: None - system is now operational for resource gathering
+#### Files Created This Session
+- `scripts/test_multi_mcp_scenario.py` - Multi-MCP test suite with logging
+- `resources/reports/multi_mcp_test_analysis.md` - Detailed test analysis
+- `.dev-resources/context/session-21-multi-mcp-testing.md` - Session snapshot
+- `/tmp/multi_mcp_test_log.json` - JSON test results with LLM requests/responses
+- `/tmp/multi_mcp_test_console.log` - Human-readable test execution log
 
 ---
 
@@ -140,23 +108,23 @@ From the logs:
 ### ✅ Completed Components
 - **MCP Server**: Fully implemented with FastMCP framework, security validation, and multiple transport protocols
 - **Product Metadata MCP**: Complete server with product aliases and column mappings
-- **MCP Orchestrator**: Multi-server management with successful resource listing capability
-- **LLM-Based Routing**: Intelligent intent classification and dynamic server selection with correct server ID mapping
+- **MCP Orchestrator**: Multi-server management with successful resource gathering
+- **LLM-Based Routing**: Intelligent intent classification and dynamic server selection
 - **FastAPI Backend**: OpenAI-compatible API with multi-LLM support via LangChain
 - **React Frontend**: Modern Tailwind CSS UI with glassmorphism design and dark mode
 - **Docker Deployment**: Production-ready containerization with nginx reverse proxy
 - **Testing Infrastructure**: Comprehensive unit, integration, and E2E test suites
-- **Resource Listing**: Successfully calling `list_resources` on MCP servers
+- **Resource Gathering**: Successfully gathering resources from multiple MCP servers
 
 ### 🔄 In Progress
-- **Resource Data Handling**: Need to properly handle ListResourcesResult objects
-- **Phase 03 Advanced Features**: Next phase of multi-MCP implementation
+- **Resource Formatting Fix**: Need to update `_format_mcp_context()` to include `mcp_resources`
+- **Cross-Server SQL Generation**: Enable LLM to generate SQL using both MCP schemas
 - **Documentation**: API documentation and setup guides
 
 ### ❌ Known Issues
-- **ListResourcesResult Processing**: Minor error in handling the result object structure
-- **E2E Test Harness**: Automated test environment has server startup timeout issues
-- **Type Annotations**: Some diagnostic warnings in MCP SDK type handling (non-critical)
+- **Critical Bug**: `_format_mcp_context()` doesn't format `mcp_resources` for LLM
+- **Impact**: LLM cannot access product metadata despite successful orchestration
+- **Fix Required**: Add mcp_resources formatting in `fastapi_server/llm_manager.py`
 
 ## Technical Architecture
 
@@ -173,7 +141,7 @@ From the logs:
                                                            │
                                                   ┌────────▼────────┐
                                                   │ MCP Orchestrator│
-                                                  │ (with ID mapping)│
+                                                  │ (gathers resources)│
                                                   └────────┬────────┘
                                                            │
                         ┌──────────────────────────────────┴──────────────────────────────────┐
@@ -182,96 +150,135 @@ From the logs:
               │ Database MCP Server│◄─list_resources()─►│Product Metadata MCP │
               │    (Port 8000)     │                                    │    (Port 8002)     │
               └────────────────────┘                                    └────────────────────┘
+                        │                                                          │
+                        │                                                          │
+                        ▼                                                          ▼
+                  sample.db                                            product_metadata.json
 ```
 
-### Key Configuration
-```yaml
-# mcp_config.yaml
-mcp_servers:
-  database_mcp:  # Server ID (used for lookup)
-    name: "Database MCP Server"  # Display name
-    url: "http://localhost:8000/sse"
-    transport: "sse"
-    
-  product_metadata_mcp:  # Server ID (used for lookup)  
-    name: "Product Metadata MCP"  # Display name
-    url: "http://localhost:8002/sse"
-    transport: "sse"
+### Bug Location & Fix
+```python
+# fastapi_server/llm_manager.py - _format_mcp_context() method
+# Current implementation (BROKEN):
+if "query_enhancement" in mcp_context:  # ✅ Handled
+if "product_metadata" in mcp_context:   # ✅ Handled
+if "database_metadata" in mcp_context:  # ✅ Handled
+if "query_results" in mcp_context:      # ✅ Handled
+if "available_tools" in mcp_context:    # ✅ Handled
+# MISSING:
+if "mcp_resources" in mcp_context:      # ❌ NOT HANDLED! <-- BUG HERE
+
+# Fix needed: Add formatting for mcp_resources field
 ```
 
 ## Commands Reference
 
-### Development Commands
+### Quick Start for Next Session
 ```bash
-# Start all services with SSE transport
-python -m talk_2_tables_mcp.remote_server      # Database MCP (SSE on port 8000)
-python -m product_metadata_mcp.server --transport sse --port 8002  # Product MCP
-python -m fastapi_server.main                  # FastAPI with orchestrator
-./start-chatbot.sh                            # React frontend
+# 1. Activate environment
+source venv/bin/activate
 
-# Test resource listing
-python scripts/test_resource_listing.py
+# 2. Start all servers (3 separate terminals)
+python3 -m talk_2_tables_mcp.server --transport sse --port 8000
+python -m product_metadata_mcp.server --transport sse --host 0.0.0.0 --port 8002
+python3 -m fastapi_server.main
 
-# Monitor logs for resource listing
-grep -E "RESOURCE_LIST|PRODUCT_MCP" /tmp/fastapi.log
+# 3. Run multi-MCP test
+python scripts/test_multi_mcp_scenario.py
+
+# 4. Check test results
+cat /tmp/multi_mcp_test_log.json | python -m json.tool | less
+```
+
+### Monitoring Commands
+```bash
+# Check resource gathering logs
+grep -E "RESOURCE_LIST|Gathered resources" /tmp/fastapi.log
+
+# Check LLM requests/responses
+tail -f /tmp/multi_mcp_test_console.log
+
+# Monitor all servers
+ps aux | grep -E "python.*server|python.*main"
 ```
 
 ## Next Steps & Considerations
 
-### Immediate Actions
-- Fix ListResourcesResult object handling in `_get_server_resources()`
-- Add comprehensive logging for resource data fetching
-- Test resource content retrieval after listing
+### Immediate Actions (Critical Fix)
+1. **Fix `_format_mcp_context()`**: Add handling for `mcp_resources` field
+2. **Include Product Schema**: Format product metadata tables for LLM context
+3. **Re-run Tests**: Verify LLM can now see warranty, eco_friendly fields
+4. **Validate SQL Generation**: Ensure LLM generates cross-MCP queries
+
+### Implementation Guide for Fix
+```python
+# Add to fastapi_server/llm_manager.py - _format_mcp_context() method
+if "mcp_resources" in mcp_context:
+    resources = mcp_context["mcp_resources"]
+    context_parts.append("\nAvailable Resources from MCP Servers:")
+    
+    for server_name, server_data in resources.items():
+        context_parts.append(f"\n{server_name}:")
+        if "resources" in server_data:
+            for resource in server_data["resources"]:
+                # Format each resource's data
+                context_parts.append(f"  - {resource.name}: {resource.description}")
+                # Include actual resource data/schema
+```
 
 ### Short-term Possibilities (Next 1-2 Sessions)
-- **Resource Content Processing**: Implement proper handling of fetched resource data
-- **Cross-Server Query Optimization**: Use resources from multiple servers in single query
-- **Performance Monitoring**: Add metrics for resource listing and fetching times
-- **Error Recovery**: Implement retry logic for failed resource operations
+- **Unified Schema Presentation**: Merge schemas from all MCPs for LLM
+- **Cross-Server Query Execution**: Execute parts of query on different servers
+- **Result Merging**: Combine results from multiple MCP servers
+- **Enhanced Prompting**: Better system prompts for multi-source awareness
 
 ### Future Opportunities
-- **Resource Caching Strategy**: Implement smart caching at resource level (not orchestrator level)
-- **Resource Versioning**: Track resource changes and updates
-- **Resource Discovery UI**: Visual interface showing available resources per server
-- **Intelligent Resource Selection**: Use only relevant resources based on query context
+- **Query Planning**: LLM generates execution plan across servers
+- **Federated Queries**: True distributed query execution
+- **Schema Evolution**: Handle schema changes across servers
+- **Performance Optimization**: Parallel query execution
 
 ## File Status
-- **Last Updated**: 2025-08-17, 19:05 IST
-- **Session Count**: 20
-- **Project Phase**: **MULTI-MCP WITH FUNCTIONAL RESOURCE LISTING - AWAITING VALIDATION**
+- **Last Updated**: 2025-08-17, 21:00 IST
+- **Session Count**: 21
+- **Project Phase**: **MULTI-MCP ORCHESTRATION COMPLETE - CRITICAL BUG IN LLM CONTEXT FORMATTING**
 
 ---
 
 ## Evolution Notes
 
-The system has successfully evolved from a broken resource listing state to a fully functional multi-MCP resource gathering system. The key breakthrough was identifying and fixing the server name mismatch between configuration display names and registry IDs. This session demonstrates the importance of consistent naming conventions and proper context management in distributed systems.
+This session revealed a critical insight: The multi-MCP orchestration infrastructure is **fully functional** - it successfully connects to multiple servers, routes queries appropriately, and gathers resources. The failure point is in the **final step** of formatting this gathered information for the LLM.
 
 Key insights from this session:
-1. **Naming Consistency**: Server identifiers must be consistent across all components
-2. **Context Management**: AsyncExitStack is crucial for maintaining SSE connections
-3. **Dual Lookup Strategy**: Supporting both IDs and names provides flexibility
-4. **Logging is Essential**: [RESOURCE_LIST] markers were critical for debugging
+1. **Infrastructure Success**: Multi-MCP orchestration works perfectly
+2. **Resource Gathering Works**: Resources successfully fetched from both servers
+3. **Context Formatting Bug**: `_format_mcp_context()` ignores the gathered resources
+4. **Simple Fix Available**: Just need to add mcp_resources handling to context formatter
 
 ## Session Handoff Context
 
-✅ **RESOURCE LISTING NOW OPERATIONAL**. The multi-MCP system can successfully:
+⚠️ **CRITICAL BUG IDENTIFIED**: Resources are gathered but not sent to LLM
 
-1. **Connect to Multiple Servers**: Both Talk2Tables and Product Metadata servers via SSE
-2. **Route by Server ID**: Resource router returns server IDs that orchestrator can lookup
-3. **Call list_resources**: Successfully invokes resource listing on both MCP servers
-4. **Handle Dual Lookups**: Orchestrator supports both server IDs and display names
+**What's Working**:
+1. ✅ Multi-MCP orchestration fully functional
+2. ✅ Resource gathering from both servers successful
+3. ✅ Intent classification and routing working
+4. ✅ Test infrastructure comprehensive and effective
 
-**Critical Fix Applied**: The server name mismatch has been resolved by:
-- Adding server_id field to available_servers dictionary
-- Modifying resource router to use server IDs
-- Implementing dual lookup in gather_resources_from_servers()
-- Fixing ListResourcesResult access patterns
+**What's Broken**:
+1. ❌ `_format_mcp_context()` doesn't include `mcp_resources`
+2. ❌ LLM cannot see product metadata schema
+3. ❌ Cross-MCP SQL generation impossible without schema visibility
 
-**Remaining Work**:
-- Handle resource content fetching after listing
-- Test with actual resource data retrieval
-- Monitor performance with multiple resource operations
+**Critical Files for Fix**:
+- `fastapi_server/llm_manager.py` - Add mcp_resources handling to `_format_mcp_context()`
+- `fastapi_server/openrouter_client.py` - May also need same fix
 
-**Next Session Focus**: Implement proper resource content handling and test the complete flow from query → intent → routing → resource listing → resource fetching → query execution.
+**Test Validation**:
+- Run `scripts/test_multi_mcp_scenario.py` after fix
+- Verify warranty/eco_friendly queries work
+- Check SQL includes product metadata tables
+
+**Next Session Focus**: Apply the fix to `_format_mcp_context()`, re-run tests, and achieve full multi-MCP query capability with LLM awareness of all available schemas.
 
 ---

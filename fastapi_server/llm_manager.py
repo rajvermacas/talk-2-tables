@@ -257,6 +257,11 @@ class LLMManager:
     
     def _format_mcp_context(self, mcp_context: Dict[str, Any]) -> str:
         """Format MCP context for inclusion in chat completion."""
+        logger.info("="*80)
+        logger.info("[MCP_CONTEXT_FORMATTING] Starting to format MCP context for LLM")
+        logger.info(f"[MCP_CONTEXT_FORMATTING] Available context keys: {list(mcp_context.keys())}")
+        logger.info("="*80)
+        
         context_parts = []
         
         # Add query enhancement information if available
@@ -332,7 +337,161 @@ class LLMManager:
             for tool in tools:
                 context_parts.append(f"- {tool.get('name')}: {tool.get('description')}")
         
-        return "\n".join(context_parts) if context_parts else ""
+        # CRITICAL FIX: Process multi-MCP resources
+        if "mcp_resources" in mcp_context:
+            logger.info("[MCP_RESOURCES_FOUND] Processing multi-MCP resources")
+            resources = mcp_context["mcp_resources"]
+            logger.info(f"[MCP_RESOURCES_FOUND] Number of MCP servers with resources: {len(resources)}")
+            logger.info(f"[MCP_RESOURCES_FOUND] MCP server names: {list(resources.keys())}")
+            
+            if resources:
+                context_parts.append("\n" + "="*60)
+                context_parts.append("AVAILABLE RESOURCES FROM MULTIPLE MCP SERVERS:")
+                context_parts.append("="*60)
+                
+                for server_name, server_data in resources.items():
+                    logger.info(f"[MCP_RESOURCE_PROCESSING] Processing resources from server: {server_name}")
+                    logger.info(f"[MCP_RESOURCE_PROCESSING] Server data keys: {list(server_data.keys()) if isinstance(server_data, dict) else 'Not a dict'}")
+                    
+                    context_parts.append(f"\n### MCP Server: {server_name}")
+                    
+                    if isinstance(server_data, dict):
+                        # Process resources list
+                        if "resources" in server_data:
+                            resources_list = server_data["resources"]
+                            logger.info(f"[MCP_RESOURCE_DETAIL] Server {server_name} has {len(resources_list)} resources")
+                            
+                            for resource in resources_list:
+                                if isinstance(resource, dict):
+                                    res_name = resource.get("name", "Unknown")
+                                    res_desc = resource.get("description", "No description")
+                                    res_uri = resource.get("uri", "")
+                                    
+                                    logger.info(f"[MCP_RESOURCE_ITEM] Resource: {res_name} (URI: {res_uri})")
+                                    
+                                    context_parts.append(f"\n**Resource: {res_name}**")
+                                    context_parts.append(f"  - URI: {res_uri}")
+                                    context_parts.append(f"  - Description: {res_desc}")
+                                    
+                                    # If resource has data, include it
+                                    if "data" in resource:
+                                        logger.info(f"[MCP_RESOURCE_DATA] Resource {res_name} has data field")
+                                        resource_data = resource["data"]
+                                        
+                                        # Handle product metadata specifically
+                                        if "product-aliases" in res_uri or "column-mappings" in res_uri or "metadata-summary" in res_uri:
+                                            logger.info(f"[PRODUCT_METADATA] Processing product metadata from {res_name}")
+                                            context_parts.append("  - Data Content:")
+                                            
+                                            if isinstance(resource_data, dict):
+                                                # Handle product aliases
+                                                if "product_aliases" in resource_data:
+                                                    aliases = resource_data["product_aliases"]
+                                                    logger.info(f"[PRODUCT_ALIASES] Found {len(aliases)} product aliases")
+                                                    context_parts.append("    Product Aliases (samples):")
+                                                    for alias, info in list(aliases.items())[:5]:
+                                                        context_parts.append(f"      • '{alias}' → {info.get('canonical_name', 'Unknown')}")
+                                                
+                                                # Handle column mappings
+                                                if "column_mappings" in resource_data:
+                                                    mappings = resource_data["column_mappings"]
+                                                    logger.info(f"[COLUMN_MAPPINGS] Found {len(mappings)} column mappings")
+                                                    context_parts.append("    Column Mappings:")
+                                                    for term, sql_expr in list(mappings.items())[:5]:
+                                                        context_parts.append(f"      • '{term}' → SQL: {sql_expr}")
+                                                
+                                                # Handle metadata summary
+                                                if "metadata_summary" in resource_data:
+                                                    summary = resource_data["metadata_summary"]
+                                                    logger.info(f"[METADATA_SUMMARY] Processing metadata summary")
+                                                    context_parts.append("    Metadata Summary:")
+                                                    
+                                                    if "warranty_table" in summary:
+                                                        warranty = summary["warranty_table"]
+                                                        logger.info(f"[WARRANTY_TABLE] Found warranty table: {warranty.get('table_name')}")
+                                                        context_parts.append(f"      • Warranty Table: {warranty.get('table_name')}")
+                                                        context_parts.append(f"        - Column: {warranty.get('column_name')}")
+                                                        context_parts.append(f"        - Type: {warranty.get('data_type')}")
+                                                    
+                                                    if "eco_friendly_table" in summary:
+                                                        eco = summary["eco_friendly_table"]
+                                                        logger.info(f"[ECO_TABLE] Found eco-friendly table: {eco.get('table_name')}")
+                                                        context_parts.append(f"      • Eco-Friendly Table: {eco.get('table_name')}")
+                                                        context_parts.append(f"        - Column: {eco.get('column_name')}")
+                                                        context_parts.append(f"        - Type: {eco.get('data_type')}")
+                                                    
+                                                    if "specifications_table" in summary:
+                                                        specs = summary["specifications_table"]
+                                                        logger.info(f"[SPECS_TABLE] Found specifications table: {specs.get('table_name')}")
+                                                        context_parts.append(f"      • Specifications Table: {specs.get('table_name')}")
+                                                        context_parts.append(f"        - Column: {specs.get('column_name')}")
+                                                        context_parts.append(f"        - Type: {specs.get('data_type')}")
+                                                    
+                                                    if "available_categories" in summary:
+                                                        categories = summary["available_categories"]
+                                                        logger.info(f"[CATEGORIES] Found {len(categories)} product categories")
+                                                        context_parts.append(f"      • Available Categories: {', '.join(categories[:5])}...")
+                                                
+                                                # Log any other keys for debugging
+                                                other_keys = [k for k in resource_data.keys() 
+                                                            if k not in ["product_aliases", "column_mappings", "metadata_summary"]]
+                                                if other_keys:
+                                                    logger.info(f"[OTHER_DATA] Resource has additional data keys: {other_keys}")
+                                        
+                                        # Handle database metadata
+                                        elif "database" in res_name.lower() or "table" in res_uri.lower():
+                                            logger.info(f"[DATABASE_METADATA] Processing database metadata from {res_name}")
+                                            if isinstance(resource_data, dict) and "tables" in resource_data:
+                                                tables = resource_data["tables"]
+                                                logger.info(f"[DATABASE_TABLES] Found {len(tables)} tables")
+                                                context_parts.append(f"  - Database Tables ({len(tables)} total):")
+                                                for table_name, table_info in tables.items():
+                                                    context_parts.append(f"    • Table: {table_name}")
+                                                    if "columns" in table_info:
+                                                        cols = table_info["columns"]
+                                                        col_names = list(cols.keys()) if isinstance(cols, dict) else cols
+                                                        context_parts.append(f"      Columns: {', '.join(col_names[:10])}")
+                                                    if "row_count" in table_info:
+                                                        context_parts.append(f"      Rows: {table_info['row_count']}")
+                        
+                        # Process tools if available
+                        if "tools" in server_data:
+                            tools_list = server_data["tools"]
+                            logger.info(f"[MCP_TOOLS] Server {server_name} has {len(tools_list)} tools")
+                            context_parts.append(f"\n**Available Tools from {server_name}:**")
+                            for tool in tools_list:
+                                if isinstance(tool, dict):
+                                    tool_name = tool.get("name", "Unknown")
+                                    tool_desc = tool.get("description", "No description")
+                                    logger.info(f"[MCP_TOOL] Tool: {tool_name}")
+                                    context_parts.append(f"  - {tool_name}: {tool_desc}")
+                
+                context_parts.append("\n" + "="*60)
+                logger.info(f"[MCP_RESOURCES_FORMATTED] Successfully formatted {len(resources)} MCP server resources")
+        else:
+            logger.warning("[NO_MCP_RESOURCES] No 'mcp_resources' field found in context")
+            logger.info(f"[CONTEXT_KEYS] Available keys: {list(mcp_context.keys())}")
+        
+        # Add routing decision info if available
+        if "routing_decision" in mcp_context:
+            routing = mcp_context["routing_decision"]
+            logger.info(f"[ROUTING_INFO] Adding routing decision to context")
+            context_parts.append("\nRouting Decision:")
+            context_parts.append(f"  - Selected Servers: {', '.join(routing.get('primary_servers', []))}")
+            context_parts.append(f"  - Strategy: {routing.get('strategy', 'Unknown')}")
+            context_parts.append(f"  - Confidence: {routing.get('confidence', 0):.2f}")
+        
+        final_context = "\n".join(context_parts) if context_parts else ""
+        
+        logger.info("="*80)
+        logger.info(f"[MCP_CONTEXT_COMPLETE] Final context length: {len(final_context)} characters")
+        logger.info(f"[MCP_CONTEXT_COMPLETE] Context has {len(context_parts)} parts")
+        if final_context:
+            logger.info("[MCP_CONTEXT_PREVIEW] First 500 chars of context:")
+            logger.info(final_context[:500])
+        logger.info("="*80)
+        
+        return final_context
     
     async def test_connection(self) -> bool:
         """Test the connection to the configured LLM provider."""

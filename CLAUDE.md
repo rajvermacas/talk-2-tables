@@ -369,3 +369,5 @@ echo $OPENROUTER_API_KEY
 - test using puppeteer mcp tool for UI relate tasks
 
 - Use SSE, Do not use streamable-http
+
+- Use extensive logging. Flood it with logging. So that you can debug it better in future.

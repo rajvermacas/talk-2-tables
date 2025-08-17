@@ -183,6 +183,15 @@ class ChatCompletionHandler:
                 ]
             
             # Create the completion with MCP context
+            logger.info("="*80)
+            logger.info("[LLM_CALL] Preparing to call LLM with MCP context")
+            logger.info(f"[LLM_CALL] MCP context keys being sent: {list(mcp_context.keys())}")
+            if "mcp_resources" in mcp_context:
+                logger.info(f"[LLM_CALL] MCP resources from {len(mcp_context['mcp_resources'])} servers will be included")
+            else:
+                logger.warning("[LLM_CALL] WARNING: No mcp_resources in context!")
+            logger.info("="*80)
+            
             response = await self.llm_client.create_completion_with_mcp_context(
                 messages=request.messages,
                 mcp_context=mcp_context,
@@ -191,6 +200,8 @@ class ChatCompletionHandler:
                 temperature=request.temperature,
                 stream=request.stream
             )
+            
+            logger.info("[LLM_CALL] LLM response received successfully")
             
             # If we have query results, add them to the first choice
             if query_result and response.choices:
