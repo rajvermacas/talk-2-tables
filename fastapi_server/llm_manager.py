@@ -385,8 +385,8 @@ class LLMManager:
                                         context_parts.append("  - Data Content:")
                                         
                                         if isinstance(resource_data, dict):
-                                                # Handle product aliases
-                                                if "product_aliases" in resource_data:
+                                            # Handle product aliases (from get_product_aliases resource)
+                                            if "aliases" in resource_data:
                                                     aliases = resource_data["product_aliases"]
                                                     logger.info(f"[PRODUCT_ALIASES] Found {len(aliases)} product aliases")
                                                     context_parts.append("    Product Aliases (samples):")
