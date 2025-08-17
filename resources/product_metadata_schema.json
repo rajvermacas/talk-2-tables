@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "product_aliases",
+    "column_mappings"
+  ],
+  "properties": {
+    "last_updated": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "product_aliases": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "canonical_id",
+          "canonical_name"
+        ],
+        "properties": {
+          "canonical_id": {
+            "type": "string"
+          },
+          "canonical_name": {
+            "type": "string"
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "database_references": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "column_mappings": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}

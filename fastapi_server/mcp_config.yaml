@@ -1,0 +1,43 @@
+# MCP Orchestrator Configuration
+# This file configures multiple MCP servers and their orchestration settings
+
+mcp_servers:
+  database_mcp:
+    name: "Database MCP Server"
+    url: "http://localhost:8000/sse"
+    priority: 10  # Lower number = higher priority
+    domains:
+      - sales
+      - transactions
+      - orders
+      - customers
+      - database
+      - queries
+    capabilities:
+      - execute_query
+      - list_resources
+    transport: "sse"
+    timeout: 30
+    
+  product_metadata_mcp:
+    name: "Product Metadata MCP"
+    url: "http://localhost:8002/sse"
+    priority: 1  # Higher priority for product information
+    domains:
+      - products
+      - product_aliases
+      - column_mappings
+      - metadata
+    capabilities:
+      - list_resources
+      - get_aliases
+      - get_mappings
+    transport: "sse"
+    timeout: 30
+
+orchestration:
+  resource_cache_ttl: 300  # 5 minutes in seconds
+  fail_fast: false         # Continue if a server is unavailable
+  enable_logging: true
+  log_level: "INFO"
+  max_retries: 3

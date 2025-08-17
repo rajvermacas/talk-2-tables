@@ -1,38 +1,60 @@
 # Talk 2 Tables MCP Server
 
-A Model Context Protocol (MCP) server that provides SQLite database query capabilities with resource discovery. This server enables MCP clients to execute SELECT queries on local SQLite databases and discover available data sources through structured metadata.
+A comprehensive multi-tier system with multiple Model Context Protocol (MCP) servers, enabling natural language database queries through an AI-powered interface. The system features multi-MCP orchestration, allowing multiple specialized servers to work together.
 
 ## Features
 
+### Core Capabilities
 - **SQL Query Tool**: Execute SELECT queries on SQLite databases (read-only for security)
-- **Resource Discovery**: JSON-based metadata describing available databases, tables, and business use cases
-- **Security**: Only allows SELECT statements to prevent data modification
-- **Test-Driven**: Comprehensive unit tests with mock data
-- **Logging**: Robust error handling and logging throughout
+- **Multi-MCP Support**: Orchestrate multiple MCP servers with priority-based routing
+- **Product Metadata Server**: Provides product aliases and column mappings for NLP
+- **Resource Discovery**: JSON-based metadata describing available data sources
+- **AI Integration**: FastAPI backend with multi-LLM support (OpenRouter + Google Gemini)
+- **Modern UI**: React chatbot with glassmorphism design and dark mode
+
+### Multi-MCP Architecture
+- **MCP Orchestrator**: Manages connections to multiple MCP servers
+- **Priority Routing**: Domain-based routing with configurable priorities
+- **Resource Caching**: TTL-based caching for optimized performance
+- **Failover Support**: Automatic failover to backup servers
+- **Concurrent Operations**: Parallel resource gathering from multiple servers
 
 ## Project Structure
 
 ```
 talk-2-tables-mcp/
 ├── src/
-│   └── talk_2_tables_mcp/
-│       ├── __init__.py
-│       ├── server.py          # Main MCP server implementation
-│       ├── database.py        # SQLite database handler
-│       └── config.py          # Configuration management
+│   ├── talk_2_tables_mcp/     # Database MCP server
+│   │   ├── server.py          # Main MCP server implementation
+│   │   ├── database.py        # SQLite database handler
+│   │   └── config.py          # Configuration management
+│   └── product_metadata_mcp/  # Product metadata MCP server
+│       ├── server.py          # Product metadata server
+│       ├── metadata_loader.py # Metadata loading logic
+│       └── resources.py       # Resource handlers
+├── fastapi_server/            # AI Agent Backend
+│   ├── main.py               # FastAPI application
+│   ├── chat_handler.py       # Chat completion handler
+│   ├── mcp_orchestrator.py   # Multi-MCP orchestrator
+│   ├── mcp_registry.py       # Server registry
+│   ├── resource_cache.py     # TTL-based cache
+│   └── mcp_config.yaml       # MCP configuration
+├── react-chatbot/             # Frontend UI
+│   └── src/components/        # React components
 ├── resources/
-│   └── metadata.json          # Resource metadata for discovery
-├── test_data/
-│   └── sample.db              # Sample SQLite database for testing
-├── scripts/
-│   └── setup_test_db.py      # Script to create test database
-├── tests/
-│   └── test_server.py        # Unit tests
-├── pyproject.toml             # Project configuration
+│   ├── metadata.json          # Database metadata
+│   └── product_metadata.json  # Product aliases and mappings
+├── docs/
+│   ├── multi-mcp-setup.md    # Multi-MCP setup guide
+│   └── orchestrator-api.md   # API documentation
+├── tests/                     # Test suites
+├── scripts/                   # Utility scripts
 └── README.md
 ```
 
-## Installation
+## Quick Start
+
+### Installation
 
 ```bash
 # Clone the repository
@@ -43,11 +65,50 @@ cd talk-2-tables-mcp
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies
-pip install -e .
+# Install all dependencies (includes multi-MCP support)
+pip install -e ".[dev,fastapi]"
 
-# Install development dependencies
-pip install -e ".[dev]"
+# Install React dependencies
+cd react-chatbot && npm install && cd ..
+```
+
+### Multi-MCP Setup
+
+```bash
+# 1. Generate test data
+python scripts/setup_test_db.py
+python scripts/generate_product_metadata.py
+
+# 2. Start all MCP servers (in separate terminals)
+
+# Terminal 1: Database MCP Server
+python -m talk_2_tables_mcp.server --transport sse --port 8000
+
+# Terminal 2: Product Metadata MCP Server  
+python -m src.product_metadata_mcp.server --transport sse --port 8002
+
+# Terminal 3: FastAPI Backend with Orchestrator
+cd fastapi_server && python main.py
+
+# Terminal 4: React Frontend (optional)
+./start-chatbot.sh
+```
+
+### Quick Test
+
+```bash
+# Test multi-MCP connectivity
+python scripts/test_multi_mcp.py
+
+# Test via API
+curl -X POST http://localhost:8001/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-3.5-turbo",
+    "messages": [
+      {"role": "user", "content": "Show me sales for abracadabra product"}
+    ]
+  }'
 ```
 
 ## Usage
@@ -81,19 +142,47 @@ python -m talk_2_tables_mcp.server --transport sse --host 0.0.0.0 --port 8000
 python -m talk_2_tables_mcp.remote_server
 ```
 
+### Multi-MCP Configuration
+
+The orchestrator is configured via `fastapi_server/mcp_config.yaml`:
+
+```yaml
+mcp_servers:
+  database_mcp:
+    name: "Database MCP Server"
+    url: "http://localhost:8000/sse"
+    priority: 10  # Lower = higher priority
+    domains: ["database", "queries"]
+    
+  product_metadata_mcp:
+    name: "Product Metadata MCP"
+    url: "http://localhost:8002/sse"
+    priority: 1
+    domains: ["products", "metadata"]
+
+orchestration:
+  resource_cache_ttl: 300  # 5 minutes
+  fail_fast: false
+```
+
 ### Environment Variables
 
-Configure the server using environment variables:
+Configure the servers using environment variables:
 
 ```bash
+# Database MCP
 export DATABASE_PATH="/path/to/your/database.db"
 export METADATA_PATH="/path/to/metadata.json"
-export HOST="0.0.0.0"
 export PORT="8000"
+
+# Product Metadata MCP
+export PRODUCT_MCP_PORT="8002"
+export PRODUCT_MCP_METADATA_PATH="resources/product_metadata.json"
+
+# General settings
+export HOST="0.0.0.0"
 export TRANSPORT="sse"
 export LOG_LEVEL="INFO"
-export STATELESS_HTTP="true"
-export ALLOW_CORS="true"
 ```
 
 ### Setup Test Database
@@ -212,6 +301,12 @@ Configure logging levels for different environments:
 ### Metrics (with monitoring profile)
 Access Prometheus metrics at `http://your-server:9090` when using the monitoring profile.
 
+## Documentation
+
+- [Multi-MCP Setup Guide](docs/multi-mcp-setup.md) - Complete setup and configuration guide
+- [Orchestrator API Reference](docs/orchestrator-api.md) - Detailed API documentation
+- [Phase 01 Foundation](/.dev-resources/context/plan/multi-mcp-support/phases/phase-01-foundation.md) - Architecture details
+
 ## Development
 
 ### Running Tests
@@ -222,6 +317,9 @@ pytest
 
 # Run with coverage
 pytest --cov=talk_2_tables_mcp
+
+# Run multi-MCP integration tests
+pytest tests/test_multi_mcp_integration.py -v
 
 # Run specific test file
 pytest tests/test_server.py

@@ -14,6 +14,7 @@ from .models import (
 )
 from .llm_manager import llm_manager
 from .mcp_client import MCPDatabaseClient, mcp_client
+from .mcp_orchestrator import MCPOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ class ChatCompletionHandler:
         """Initialize the chat completion handler."""
         self.llm_client = llm_manager
         self.mcp_client = mcp_client
+        self.orchestrator = None  # Will be initialized on first use
         
         # SQL query detection patterns
         self.sql_patterns = [
@@ -39,6 +41,12 @@ class ChatCompletionHandler:
             'table', 'database', 'query', 'select', 'data', 'records', 'rows',
             'customers', 'products', 'orders', 'sales', 'analytics', 'report',
             'count', 'sum', 'average', 'maximum', 'minimum', 'filter', 'search'
+        ]
+        
+        # Product-related keywords that might need metadata
+        self.product_keywords = [
+            'product', 'alias', 'abracadabra', 'techgadget', 'supersonic', 
+            'quantum', 'mystic', 'column', 'mapping', 'metadata'
         ]
         
         logger.info("Initialized chat completion handler")
@@ -73,7 +81,25 @@ class ChatCompletionHandler:
             if needs_database:
                 logger.info("Message appears to need database access")
                 
-                # Get database metadata for context
+                # Initialize orchestrator if needed
+                await self._ensure_orchestrator()
+                
+                # Get metadata from all MCP servers
+                if self.orchestrator:
+                    try:
+                        # Gather resources from all servers
+                        all_resources = await self.orchestrator.gather_all_resources()
+                        mcp_context["mcp_resources"] = all_resources
+                        
+                        # Check if we need product metadata specifically
+                        if self._needs_product_metadata(user_message.content):
+                            product_resources = await self.orchestrator.get_resources_for_domain("products")
+                            if product_resources:
+                                mcp_context["product_metadata"] = product_resources
+                    except Exception as e:
+                        logger.warning(f"Failed to get orchestrator resources: {e}")
+                
+                # Get database metadata for context (fallback to direct client)
                 metadata = await self.mcp_client.get_database_metadata()
                 if metadata:
                     mcp_context["database_metadata"] = metadata
@@ -200,6 +226,38 @@ class ChatCompletionHandler:
         if has_question and has_db_context:
             logger.debug("Found question with database context")
             return True
+        
+        return False
+    
+    async def _ensure_orchestrator(self) -> None:
+        """Ensure orchestrator is initialized."""
+        if not self.orchestrator:
+            try:
+                logger.info("Initializing MCP orchestrator")
+                self.orchestrator = MCPOrchestrator()
+                await self.orchestrator.initialize()
+                logger.info("MCP orchestrator initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize orchestrator: {e}")
+                self.orchestrator = None
+    
+    def _needs_product_metadata(self, content: str) -> bool:
+        """
+        Check if the message needs product metadata.
+        
+        Args:
+            content: Message content to analyze
+            
+        Returns:
+            True if product metadata is likely needed
+        """
+        content_lower = content.lower()
+        
+        # Check for product-related keywords
+        for keyword in self.product_keywords:
+            if keyword in content_lower:
+                logger.debug(f"Found product keyword: {keyword}")
+                return True
         
         return False
     
