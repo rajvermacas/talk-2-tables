@@ -104,14 +104,14 @@ class ApiService {
   }
 
   /**
-   * Get MCP server status
+   * Get platform status (Multi-MCP Platform)
    */
-  async getMcpStatus(): Promise<any> {
+  async getPlatformStatus(): Promise<any> {
     try {
-      const response = await this.client.get('/mcp/status');
+      const response = await this.client.get('/platform/status');
       return response.data;
     } catch (error) {
-      console.error('MCP status error:', error);
+      console.error('Platform status error:', error);
       throw error;
     }
   }

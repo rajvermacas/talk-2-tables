@@ -428,16 +428,36 @@ Try asking about:
     
     def _format_database_response(self, query_result: QueryResult) -> str:
         """Format database query results."""
+        # Check for errors first
+        if not query_result.success and query_result.errors:
+            error_summary = "; ".join(query_result.errors)
+            return f"Database query failed: {error_summary}"
+        
         db_result = query_result.combined_result
         
-        if isinstance(db_result, dict) and "rows" in db_result:
-            row_count = db_result.get("row_count", 0)
+        # Handle MCPQueryResult objects
+        if hasattr(db_result, 'success') and not db_result.success:
+            error_msg = getattr(db_result, 'error', 'Unknown database error')
+            return f"Database query failed: {error_msg}"
+        
+        # Handle dict results with data/rows
+        if isinstance(db_result, dict):
+            # Check for error in dict result
+            if "error" in db_result and db_result["error"]:
+                return f"Database query failed: {db_result['error']}"
+            
+            # Check for success flag
+            if "success" in db_result and not db_result["success"]:
+                error_msg = db_result.get("error", "Unknown error")
+                return f"Database query failed: {error_msg}"
+            
+            # Try to get rows/data
+            rows = db_result.get("rows") or db_result.get("data", [])
+            columns = db_result.get("columns", [])
+            row_count = db_result.get("row_count", len(rows) if rows else 0)
             
             if row_count == 0:
                 return "No data found matching your query."
-            
-            rows = db_result.get("rows", [])
-            columns = db_result.get("columns", [])
             
             if rows and columns:
                 # Format as a simple table (limit rows for readability)
@@ -458,7 +478,36 @@ Try asking about:
                 
                 return "\n".join(response_lines)
         
-        return "Database query completed successfully."
+        # Check if db_result has data directly
+        if hasattr(db_result, 'data') and db_result.data:
+            rows = db_result.data
+            columns = db_result.columns if hasattr(db_result, 'columns') else []
+            row_count = len(rows)
+            
+            response_lines = [f"Found {row_count} record(s):\n"]
+            
+            if columns:
+                response_lines.append(" | ".join(columns))
+                response_lines.append("-" * (len(columns) * 10))
+                
+                for row in rows[:5]:
+                    if isinstance(row, dict):
+                        values = [str(row.get(col, "")) for col in columns]
+                        response_lines.append(" | ".join(values))
+                    else:
+                        response_lines.append(str(row))
+                        
+                if row_count > 5:
+                    response_lines.append(f"\n... and {row_count - 5} more records")
+            else:
+                # No column info, just show raw data
+                for row in rows[:5]:
+                    response_lines.append(str(row))
+                    
+            return "\n".join(response_lines)
+        
+        # Last resort fallback - still generic but more helpful
+        return "Database query completed, but result format is unrecognized. Check server logs for details."
     
     def _format_hybrid_response(self, query_result: QueryResult) -> str:
         """Format hybrid query results."""

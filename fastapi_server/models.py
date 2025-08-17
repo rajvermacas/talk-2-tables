@@ -102,6 +102,10 @@ class MCPQueryResult(BaseModel):
         default=None,
         description="Number of rows returned"
     )
+    query: Optional[str] = Field(
+        default=None,
+        description="Original query for debugging"
+    )
 
 
 class MCPResource(BaseModel):

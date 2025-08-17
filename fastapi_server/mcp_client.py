@@ -176,10 +176,19 @@ class MCPDatabaseClient:
             )
             
             if result.isError:
-                logger.error(f"Query execution failed: {result.content}")
+                error_content = str(result.content)
+                logger.error(f"Query execution failed: {error_content}")
+                
+                # Extract more specific error message if available
+                if isinstance(result.content, list) and len(result.content) > 0:
+                    content = result.content[0]
+                    if hasattr(content, 'text'):
+                        error_content = content.text
+                
                 return MCPQueryResult(
                     success=False,
-                    error=str(result.content)
+                    error=error_content,
+                    query=query  # Include original query for debugging
                 )
             
             # Parse the result content
@@ -222,7 +231,8 @@ class MCPDatabaseClient:
             logger.error(f"Error executing query: {str(e)}")
             return MCPQueryResult(
                 success=False,
-                error=f"Query execution error: {str(e)}"
+                error=f"Query execution error: {str(e)}",
+                query=query
             )
     
     async def get_database_metadata(self) -> Optional[Dict[str, Any]]:

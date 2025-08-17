@@ -45,14 +45,19 @@ export const useConnectionStatus = ({
       let mcpError: string | undefined;
 
       try {
-        // Check MCP server status through FastAPI
-        const mcpResponse = await apiService.getMcpStatus();
-        mcpConnected = mcpResponse.connected === true;
-        if (!mcpConnected && mcpResponse.error) {
-          mcpError = mcpResponse.error;
+        // Check platform status through FastAPI
+        const platformResponse = await apiService.getPlatformStatus();
+        const platformInitialized = platformResponse.initialized === true;
+        const serverRegistry = platformResponse.server_registry || {};
+        const healthyServers = serverRegistry.healthy_servers || 0;
+        const enabledServers = serverRegistry.enabled_servers || 0;
+        
+        mcpConnected = platformInitialized && healthyServers > 0;
+        if (!mcpConnected) {
+          mcpError = `Platform: ${healthyServers}/${enabledServers} servers healthy`;
         }
       } catch (mcpErr) {
-        mcpError = mcpErr instanceof Error ? mcpErr.message : 'MCP connection failed';
+        mcpError = mcpErr instanceof Error ? mcpErr.message : 'Platform connection failed';
       }
 
       setStatus({

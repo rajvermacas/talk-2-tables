@@ -323,6 +323,13 @@ class QueryOrchestrator:
             
             # Execute the query
             result = await self.db_client.execute_query(query)
+            
+            # Check if the MCP client returned an error
+            if not result.success:
+                error_msg = result.error or "Database query failed"
+                logger.error(f"Database query failed: {error_msg}")
+                raise QueryExecutionError(f"Database execution failed: {error_msg}")
+                
             return result
         else:
             raise QueryExecutionError(f"Unsupported database operation: {step.operation}")

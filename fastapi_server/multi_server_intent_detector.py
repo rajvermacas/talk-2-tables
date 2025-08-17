@@ -159,7 +159,25 @@ class MultiServerIntentDetector(EnhancedIntentDetector):
     
     def _create_database_plan(self, query: str, plan_id: str) -> QueryPlan:
         """Create a plan for database-only queries."""
-        return create_database_only_plan(query, plan_id)
+        # Check if this is a direct SQL query or natural language
+        if self._is_direct_sql_query(query):
+            # Direct SQL query - pass through
+            return create_database_only_plan(query, plan_id)
+        else:
+            # Natural language that needs SQL generation
+            sql_query = self._convert_natural_language_to_sql(query)
+            if sql_query:
+                return create_database_only_plan(sql_query, plan_id)
+            else:
+                # Can't convert - this might be a different intent type
+                # Re-classify as product search if it mentions products
+                if any(word in query.lower() for word in ['product', 'products', 'show', 'list', 'find']):
+                    logger.info(f"Re-classifying '{query}' as product search")
+                    search_terms = self._extract_search_terms_from_natural_language(query)
+                    return self._create_product_search_plan(search_terms or query, plan_id)
+                
+                # Default fallback
+                return create_database_only_plan(f"SELECT 1 AS message, 'Could not understand query: {query}' AS error", plan_id)
     
     def _create_product_search_plan(self, search_terms: str, plan_id: str) -> QueryPlan:
         """Create a plan for product search operations."""
@@ -330,13 +348,61 @@ Generate appropriate SQL query:
             if sql_query.upper().startswith('SELECT'):
                 return sql_query
             
-            # Fallback to simple sales query
-            return f"SELECT * FROM sales WHERE product_id = '{{{product_name}_id}}'"
+            # Fallback to simple sales query without invalid placeholders
+            # Note: This requires the product lookup to happen first to get the product_id  
+            return "SELECT * FROM sales WHERE product_id = (SELECT id FROM products LIMIT 1)"
             
         except Exception as e:
             logger.error(f"Error generating database query from hybrid intent: {e}")
-            # Fallback to simple sales query
-            return f"SELECT * FROM sales WHERE product_id = '{{{product_name}_id}}'"
+            # Fallback to simple sales query without invalid placeholders
+            # Note: This requires the product lookup to happen first to get the product_id
+            return "SELECT * FROM sales WHERE product_id = (SELECT id FROM products LIMIT 1)"
+    
+    def _is_direct_sql_query(self, query: str) -> bool:
+        """Check if query is a direct SQL statement."""
+        query_upper = query.upper().strip()
+        return query_upper.startswith(('SELECT', 'SHOW', 'DESCRIBE', 'EXPLAIN', 'WITH'))
+    
+    def _convert_natural_language_to_sql(self, query: str) -> Optional[str]:
+        """Convert natural language to SQL query."""
+        query_lower = query.lower().strip()
+        
+        # Simple pattern matching for common queries
+        if any(phrase in query_lower for phrase in ['show all', 'list all', 'get all']):
+            if 'product' in query_lower:
+                # This should actually be handled by product metadata server
+                return None  # Signal that this should be re-routed
+            elif 'sale' in query_lower:
+                return "SELECT * FROM sales ORDER BY sale_date DESC LIMIT 100"
+            elif 'customer' in query_lower:
+                return "SELECT * FROM customers LIMIT 100"
+            elif 'data' in query_lower or 'record' in query_lower:
+                return "SELECT * FROM sales LIMIT 100"
+                
+        elif 'count' in query_lower:
+            if 'sale' in query_lower:
+                return "SELECT COUNT(*) as total_sales FROM sales"
+            elif 'customer' in query_lower:
+                return "SELECT COUNT(*) as total_customers FROM customers"
+            elif 'product' in query_lower:
+                return "SELECT COUNT(*) as total_products FROM products"
+                
+        elif any(phrase in query_lower for phrase in ['total sales', 'sales total', 'revenue']):
+            return "SELECT SUM(amount) as total_revenue FROM sales"
+            
+        # If we can't convert, return None to signal re-routing
+        return None
+    
+    def _extract_search_terms_from_natural_language(self, query: str) -> Optional[str]:
+        """Extract search terms from natural language query."""
+        query_lower = query.lower().strip()
+        
+        # Remove common stop words and extract meaningful terms
+        stop_words = {'show', 'all', 'get', 'find', 'list', 'products', 'product', 'the', 'a', 'an'}
+        words = query_lower.split()
+        search_terms = [word for word in words if word not in stop_words and len(word) > 2]
+        
+        return ' '.join(search_terms) if search_terms else None
     
     async def _enhanced_multi_tier_detection_with_servers(
         self,
