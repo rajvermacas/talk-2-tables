@@ -31,7 +31,7 @@ class ServerConfig(BaseSettings):
         default="0.0.0.0",
         description="Host to bind the server to"
     )
-    port: int = Field(
+    product_server_port: int = Field(
         default=8002,
         description="Port to run the server on"
     )
@@ -83,7 +83,7 @@ class ServerConfig(BaseSettings):
             raise ValueError(f"Invalid log level: {v}. Must be one of {valid_levels}")
         return v_upper
     
-    @field_validator("port")
+    @field_validator("product_server_port")
     @classmethod
     def validate_port(cls, v: int) -> int:
         """Validate port is in valid range."""

@@ -8,6 +8,8 @@ from fastmcp import FastMCP
 
 from .config import get_singleton_config
 from .metadata_store import MetadataStore
+from dotenv import load_dotenv
+load_dotenv()
 
 
 # Configure logging
@@ -92,7 +94,7 @@ async def get_metadata_summary() -> Dict[str, Any]:
 # Add startup and shutdown handlers using FastMCP's on_startup/on_shutdown methods
 async def on_startup():
     """Initialize server on startup."""
-    logger.info(f"Starting {config.name} on {config.host}:{config.port}")
+    logger.info(f"Starting {config.name} on {config.host}:{config.product_server_port}")
     logger.info(f"Metadata path: {config.metadata_path}")
     
     # Validate metadata file on startup
@@ -113,7 +115,7 @@ async def on_shutdown():
 def main():
     """Main entry point - SSE transport ONLY."""
     logger.info(f"Initializing {config.name} with SSE transport")
-    logger.info(f"Server will listen on {config.host}:{config.port}")
+    logger.info(f"Server will listen on {config.host}:{config.product_server_port}")
     
     # SSE transport ONLY - no stdio support
     try:
@@ -121,7 +123,7 @@ def main():
         mcp_server.run(
             transport="sse",
             host=config.host,
-            port=config.port
+            port=config.product_server_port
         )
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
