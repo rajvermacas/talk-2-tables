@@ -16,6 +16,8 @@ from .llm_manager import llm_manager
 from .mcp_client import MCPDatabaseClient, mcp_client
 from .mcp_orchestrator import MCPOrchestrator
 from .query_enhancer import QueryEnhancer
+from .intent_classifier import IntentClassifier
+from .resource_router import ResourceRouter
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,11 @@ class ChatCompletionHandler:
         self.orchestrator = None  # Will be initialized on first use
         self.query_enhancer = QueryEnhancer()  # Initialize query enhancer
         
-        # SQL query detection patterns
+        # Initialize LLM-based intent classifier and router
+        self.intent_classifier = IntentClassifier(llm=self.llm_client.llm)
+        self.resource_router = ResourceRouter(llm=self.llm_client.llm)
+        
+        # SQL query detection patterns (kept for explicit SQL extraction)
         self.sql_patterns = [
             r'\b(?:select|SELECT)\b.*\b(?:from|FROM)\b',
             r'\b(?:show|SHOW)\b.*\b(?:tables|databases|columns)\b',
@@ -38,20 +44,7 @@ class ChatCompletionHandler:
             r'\b(?:explain|EXPLAIN)\b',
         ]
         
-        # Database-related keywords that might indicate a query need
-        self.db_keywords = [
-            'table', 'database', 'query', 'select', 'data', 'records', 'rows',
-            'customers', 'products', 'orders', 'sales', 'analytics', 'report',
-            'count', 'sum', 'average', 'maximum', 'minimum', 'filter', 'search'
-        ]
-        
-        # Product-related keywords that might need metadata
-        self.product_keywords = [
-            'product', 'alias', 'abracadabra', 'techgadget', 'supersonic', 
-            'quantum', 'mystic', 'column', 'mapping', 'metadata'
-        ]
-        
-        logger.info("Initialized chat completion handler")
+        logger.info("Initialized chat completion handler with LLM-based routing")
     
     async def process_chat_completion(
         self,
@@ -74,31 +67,55 @@ class ChatCompletionHandler:
             if not user_message:
                 raise ValueError("No user message found in request")
             
-            # Check if this looks like a database query
-            needs_database = self._needs_database_query(user_message.content)
+            # Initialize orchestrator if needed
+            await self._ensure_orchestrator()
+            
+            # Get available servers info
+            available_servers = {}
+            if self.orchestrator:
+                available_servers = await self.orchestrator.get_servers_info()
+            
+            # Use LLM to classify intent
+            intent = await self.intent_classifier.classify_intent(
+                query=user_message.content,
+                available_servers=available_servers,
+                context={"message_history": request.messages}
+            )
+            
+            logger.info(f"Intent classification: {intent.primary_intent.value} "
+                       f"(confidence: {intent.confidence_score:.2f})")
             
             mcp_context = {}
             query_result = None
             
-            if needs_database:
-                logger.info("Message appears to need database access")
+            # Use intent to determine if we need database/resources
+            if intent.needs_database or intent.needs_product_metadata:
+                logger.info(f"Query needs resources: DB={intent.needs_database}, "
+                          f"Products={intent.needs_product_metadata}")
                 
-                # Initialize orchestrator if needed
-                await self._ensure_orchestrator()
+                # Get routing decision
+                routing = await self.resource_router.route_query(
+                    query=user_message.content,
+                    intent=intent,
+                    available_servers=available_servers
+                )
                 
-                # Get metadata from all MCP servers
+                logger.info(f"Routing to servers: {routing.primary_servers}")
+                
+                # Get resources from routed servers
                 all_resources = {}
-                if self.orchestrator:
+                if self.orchestrator and routing.primary_servers:
                     try:
-                        # Gather resources from all servers
-                        all_resources = await self.orchestrator.gather_all_resources()
+                        # Gather resources from selected servers
+                        all_resources = await self.orchestrator.gather_resources_from_servers(
+                            server_names=routing.primary_servers
+                        )
                         mcp_context["mcp_resources"] = all_resources
-                        
-                        # Check if we need product metadata specifically
-                        if self._needs_product_metadata(user_message.content):
-                            product_resources = await self.orchestrator.get_resources_for_domain("products")
-                            if product_resources:
-                                mcp_context["product_metadata"] = product_resources
+                        mcp_context["routing_decision"] = {
+                            "primary_servers": routing.primary_servers,
+                            "strategy": routing.routing_strategy,
+                            "confidence": routing.confidence
+                        }
                     except Exception as e:
                         logger.warning(f"Failed to get orchestrator resources: {e}")
                 
@@ -226,40 +243,6 @@ class ChatCompletionHandler:
                 return message
         return None
     
-    def _needs_database_query(self, content: str) -> bool:
-        """
-        Determine if a message needs database access.
-        
-        Args:
-            content: Message content to analyze
-            
-        Returns:
-            True if database access is likely needed
-        """
-        content_lower = content.lower()
-        
-        # Check for explicit SQL patterns
-        for pattern in self.sql_patterns:
-            if re.search(pattern, content, re.IGNORECASE):
-                logger.debug(f"Found SQL pattern: {pattern}")
-                return True
-        
-        # Check for database-related keywords
-        keyword_count = sum(1 for keyword in self.db_keywords if keyword in content_lower)
-        if keyword_count >= 2:  # Require at least 2 database keywords
-            logger.debug(f"Found {keyword_count} database keywords")
-            return True
-        
-        # Check for question words with database context
-        question_words = ['what', 'how many', 'show', 'list', 'find', 'get', 'which']
-        has_question = any(word in content_lower for word in question_words)
-        has_db_context = any(keyword in content_lower for keyword in self.db_keywords)
-        
-        if has_question and has_db_context:
-            logger.debug("Found question with database context")
-            return True
-        
-        return False
     
     async def _ensure_orchestrator(self) -> None:
         """Ensure orchestrator is initialized."""
@@ -273,25 +256,6 @@ class ChatCompletionHandler:
                 logger.error(f"Failed to initialize orchestrator: {e}")
                 self.orchestrator = None
     
-    def _needs_product_metadata(self, content: str) -> bool:
-        """
-        Check if the message needs product metadata.
-        
-        Args:
-            content: Message content to analyze
-            
-        Returns:
-            True if product metadata is likely needed
-        """
-        content_lower = content.lower()
-        
-        # Check for product-related keywords
-        for keyword in self.product_keywords:
-            if keyword in content_lower:
-                logger.debug(f"Found product keyword: {keyword}")
-                return True
-        
-        return False
     
     def _extract_sql_query(self, content: str) -> Optional[str]:
         """

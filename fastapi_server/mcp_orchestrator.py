@@ -337,6 +337,87 @@ class MCPOrchestrator:
         
         return {}
     
+    async def get_servers_info(self) -> Dict[str, Any]:
+        """
+        Get information about available MCP servers.
+        
+        Returns:
+            Dictionary with server information for routing
+        """
+        if not self._initialized:
+            await self.initialize()
+        
+        servers_info = {}
+        for server in self.registry.get_all_servers():
+            servers_info[server.name] = {
+                "name": server.name,
+                "connected": server.connected,
+                "priority": server.config.priority,
+                "domains": server.config.domains,
+                "capabilities": server.config.capabilities,
+                "transport": server.config.transport,
+                "resources": {}  # Will be populated if needed
+            }
+        
+        return servers_info
+    
+    async def gather_resources_from_servers(
+        self,
+        server_names: List[str]
+    ) -> Dict[str, Any]:
+        """
+        Gather resources from specific servers.
+        
+        Args:
+            server_names: List of server names to gather resources from
+            
+        Returns:
+            Dictionary of resources from specified servers
+        """
+        if not self._initialized:
+            await self.initialize()
+        
+        all_resources = {}
+        
+        # Get specified servers
+        servers_to_query = []
+        for server_name in server_names:
+            server = self.registry.get_server(server_name)
+            if server and server.connected:
+                servers_to_query.append(server)
+            else:
+                logger.warning(f"Server {server_name} not found or not connected")
+        
+        if not servers_to_query:
+            logger.warning("No valid servers to query")
+            return all_resources
+        
+        # Gather resources in parallel
+        tasks = []
+        for server in servers_to_query:
+            tasks.append(self._get_server_resources(server))
+        
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Process results
+        for server, result in zip(servers_to_query, results):
+            if isinstance(result, Exception):
+                logger.error(f"Failed to get resources from {server.name}: {result}")
+                if self.config and self.config.orchestration.fail_fast:
+                    raise ResourceFetchError(
+                        f"Failed to get resources from {server.name}: {result}"
+                    )
+            else:
+                all_resources[server.name] = {
+                    "priority": server.config.priority,
+                    "domains": server.config.domains,
+                    "capabilities": server.config.capabilities,
+                    "resources": result
+                }
+        
+        logger.info(f"Gathered resources from {len(all_resources)} servers")
+        return all_resources
+    
     async def close(self) -> None:
         """Close all MCP connections"""
         servers = self.registry.get_all_servers()
