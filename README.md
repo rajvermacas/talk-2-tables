@@ -136,6 +136,50 @@ export ALLOW_CORS="true"
 python scripts/setup_test_db.py
 ```
 
+## Multiple MCP Servers
+
+This project now includes multiple MCP servers for different purposes:
+
+### 1. Talk 2 Tables MCP Server (Port 8000)
+The main SQLite database query server with resource discovery.
+
+### 2. Product Metadata MCP Server (Port 8002)
+Provides product aliases and column mappings for natural language query translation.
+
+#### Product Metadata Server Features
+- **Product Aliases**: Maps natural language product names to database IDs
+- **Column Mappings**: Translates user-friendly terms to SQL columns
+- **SSE Transport Only**: Optimized for Server-Sent Events communication
+- **No Caching**: Always returns fresh data from metadata file
+
+#### Starting Product Metadata Server
+```bash
+# Install dependencies
+pip install -e ".[product-mcp]"
+
+# Start the server (SSE only, port 8002)
+python -m src.product_metadata_mcp.server
+
+# Validate metadata file
+python scripts/setup_product_metadata.py --validate
+
+# Generate new sample metadata
+python scripts/setup_product_metadata.py --generate
+```
+
+#### Product Metadata Resources
+- `resource://product_aliases` - Product name mappings and aliases
+- `resource://column_mappings` - User-friendly term to SQL column mappings
+- `resource://metadata_summary` - Overview of available metadata
+
+#### Configuration (Product Metadata Server)
+```bash
+export PRODUCT_MCP_PORT=8002
+export PRODUCT_MCP_HOST="0.0.0.0"
+export PRODUCT_MCP_METADATA_PATH="src/product_metadata_mcp/resources/product_metadata.json"
+export PRODUCT_MCP_LOG_LEVEL="INFO"
+```
+
 ## MCP Tools
 
 ### execute_query
@@ -310,12 +354,17 @@ This project is licensed under the MIT License.
 
 # Execution Steps
 Run these three commands in separate terminals in venv:
-1. Start remote mcp server with sse transport prtocol
+1. Start remote mcp server with sse transport prtocol at port 8000  
 python3 -m talk_2_tables_mcp.server --transport sse
 
-2. Start FastAPI Backend (Terminal 2)  
+2. Start product metadata mcp at port 8002  
+python -m src.product_metadata_mcp.server
+
+3. Start FastAPI Backend (Terminal 2) at port 8001  
 python3 -m fastapi_server.main
 
-3. Start React Frontend (Terminal 3)  
+4. Start React Frontend (Terminal 3) at port 3000  
 ./start-chatbot.sh
+
+
 

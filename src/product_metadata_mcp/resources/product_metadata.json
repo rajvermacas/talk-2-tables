@@ -1,0 +1,197 @@
+{
+  "last_updated": "2024-01-15T10:00:00Z",
+  "product_aliases": {
+    "abracadabra": {
+      "canonical_id": "PROD_123",
+      "canonical_name": "Magic Wand Pro",
+      "aliases": ["abra", "cadabra", "magic_wand", "magic wand pro", "wand pro"],
+      "database_references": {
+        "products.product_name": "Magic Wand Pro",
+        "products.product_id": 123
+      },
+      "categories": ["entertainment", "magic", "toys"]
+    },
+    "laptop_pro": {
+      "canonical_id": "PROD_456",
+      "canonical_name": "UltraBook Pro 15",
+      "aliases": ["ultrabook", "laptop", "notebook", "pro 15", "ultra book"],
+      "database_references": {
+        "products.product_name": "UltraBook Pro 15",
+        "products.product_id": 456
+      },
+      "categories": ["electronics", "computers", "laptops"]
+    },
+    "smart_watch": {
+      "canonical_id": "PROD_789",
+      "canonical_name": "SmartTime X5",
+      "aliases": ["watch", "smart time", "x5 watch", "fitness tracker", "smartwatch"],
+      "database_references": {
+        "products.product_name": "SmartTime X5",
+        "products.product_id": 789
+      },
+      "categories": ["electronics", "wearables", "fitness"]
+    },
+    "wireless_earbuds": {
+      "canonical_id": "PROD_321",
+      "canonical_name": "SoundPods Pro",
+      "aliases": ["earbuds", "soundpods", "wireless headphones", "bluetooth earbuds", "pods"],
+      "database_references": {
+        "products.product_name": "SoundPods Pro",
+        "products.product_id": 321
+      },
+      "categories": ["electronics", "audio", "accessories"]
+    },
+    "gaming_console": {
+      "canonical_id": "PROD_654",
+      "canonical_name": "GameStation 5",
+      "aliases": ["gs5", "game station", "console", "gaming system", "playstation"],
+      "database_references": {
+        "products.product_name": "GameStation 5",
+        "products.product_id": 654
+      },
+      "categories": ["electronics", "gaming", "entertainment"]
+    },
+    "coffee_maker": {
+      "canonical_id": "PROD_987",
+      "canonical_name": "BrewMaster 3000",
+      "aliases": ["brew master", "coffee machine", "espresso maker", "coffee brewer", "bm3000"],
+      "database_references": {
+        "products.product_name": "BrewMaster 3000",
+        "products.product_id": 987
+      },
+      "categories": ["appliances", "kitchen", "coffee"]
+    },
+    "smart_tv": {
+      "canonical_id": "PROD_147",
+      "canonical_name": "VisionMax 65 4K",
+      "aliases": ["vision max", "65 inch tv", "4k tv", "smart television", "tv 65"],
+      "database_references": {
+        "products.product_name": "VisionMax 65 4K",
+        "products.product_id": 147
+      },
+      "categories": ["electronics", "television", "entertainment"]
+    },
+    "tablet": {
+      "canonical_id": "PROD_258",
+      "canonical_name": "TabletPro 11",
+      "aliases": ["tab pro", "11 inch tablet", "ipad", "slate", "tablet computer"],
+      "database_references": {
+        "products.product_name": "TabletPro 11",
+        "products.product_id": 258
+      },
+      "categories": ["electronics", "computers", "mobile"]
+    },
+    "desk_chair": {
+      "canonical_id": "PROD_369",
+      "canonical_name": "ErgoChair Plus",
+      "aliases": ["ergo chair", "office chair", "desk seat", "ergonomic chair", "chair plus"],
+      "database_references": {
+        "products.product_name": "ErgoChair Plus",
+        "products.product_id": 369
+      },
+      "categories": ["furniture", "office", "seating"]
+    },
+    "wireless_mouse": {
+      "canonical_id": "PROD_741",
+      "canonical_name": "ClickMaster Pro",
+      "aliases": ["click master", "mouse", "wireless pointer", "computer mouse", "pro mouse"],
+      "database_references": {
+        "products.product_name": "ClickMaster Pro",
+        "products.product_id": 741
+      },
+      "categories": ["electronics", "accessories", "computer peripherals"]
+    },
+    "smartphone": {
+      "canonical_id": "PROD_852",
+      "canonical_name": "PhoneX Pro Max",
+      "aliases": ["phone x", "pro max", "mobile phone", "cell phone", "smart phone"],
+      "database_references": {
+        "products.product_name": "PhoneX Pro Max",
+        "products.product_id": 852
+      },
+      "categories": ["electronics", "mobile", "phones"]
+    },
+    "keyboard": {
+      "canonical_id": "PROD_963",
+      "canonical_name": "TypeMaster Mechanical",
+      "aliases": ["type master", "mech keyboard", "mechanical kb", "typing keyboard", "keyboard mechanical"],
+      "database_references": {
+        "products.product_name": "TypeMaster Mechanical",
+        "products.product_id": 963
+      },
+      "categories": ["electronics", "accessories", "computer peripherals"]
+    }
+  },
+  "column_mappings": {
+    "user_friendly_terms": {
+      "sales amount": "sales.total_amount",
+      "revenue": "sales.total_amount",
+      "price": "products.price",
+      "cost": "products.cost",
+      "profit": "(sales.total_amount - products.cost)",
+      "customer name": "customers.name",
+      "product name": "products.product_name",
+      "order date": "orders.order_date",
+      "quantity sold": "order_items.quantity",
+      "discount": "order_items.discount",
+      "this month": "DATE_TRUNC('month', order_date) = DATE_TRUNC('month', CURRENT_DATE)",
+      "last month": "DATE_TRUNC('month', order_date) = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')",
+      "this year": "DATE_TRUNC('year', order_date) = DATE_TRUNC('year', CURRENT_DATE)",
+      "last year": "DATE_TRUNC('year', order_date) = DATE_TRUNC('year', CURRENT_DATE - INTERVAL '1 year')",
+      "this quarter": "DATE_TRUNC('quarter', order_date) = DATE_TRUNC('quarter', CURRENT_DATE)",
+      "yesterday": "DATE(order_date) = CURRENT_DATE - 1",
+      "today": "DATE(order_date) = CURRENT_DATE",
+      "last week": "order_date >= CURRENT_DATE - INTERVAL '7 days'"
+    },
+    "aggregation_terms": {
+      "total": "SUM",
+      "sum": "SUM",
+      "average": "AVG",
+      "mean": "AVG",
+      "count": "COUNT",
+      "number of": "COUNT",
+      "maximum": "MAX",
+      "highest": "MAX",
+      "minimum": "MIN",
+      "lowest": "MIN",
+      "distinct": "COUNT(DISTINCT",
+      "unique": "COUNT(DISTINCT"
+    },
+    "date_terms": {
+      "by month": "DATE_TRUNC('month', {date_column})",
+      "by year": "DATE_TRUNC('year', {date_column})",
+      "by quarter": "DATE_TRUNC('quarter', {date_column})",
+      "by week": "DATE_TRUNC('week', {date_column})",
+      "by day": "DATE({date_column})",
+      "monthly": "DATE_TRUNC('month', {date_column})",
+      "yearly": "DATE_TRUNC('year', {date_column})",
+      "quarterly": "DATE_TRUNC('quarter', {date_column})",
+      "weekly": "DATE_TRUNC('week', {date_column})",
+      "daily": "DATE({date_column})"
+    },
+    "comparison_operators": {
+      "greater than": ">",
+      "more than": ">",
+      "above": ">",
+      "less than": "<",
+      "below": "<",
+      "under": "<",
+      "equal to": "=",
+      "equals": "=",
+      "not equal": "!=",
+      "different from": "!=",
+      "between": "BETWEEN",
+      "in": "IN",
+      "not in": "NOT IN",
+      "contains": "LIKE '%{value}%'",
+      "starts with": "LIKE '{value}%'",
+      "ends with": "LIKE '%{value}'"
+    },
+    "table_relationships": {
+      "customers_orders": "customers.customer_id = orders.customer_id",
+      "orders_items": "orders.order_id = order_items.order_id", 
+      "items_products": "order_items.product_id = products.product_id",
+      "sales_orders": "sales.order_id = orders.order_id"
+    }
+  }
+}

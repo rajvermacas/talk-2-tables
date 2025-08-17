@@ -1,17 +1,17 @@
 # Talk 2 Tables MCP Server - Session Summary
 
 ## Session Overview
-**Current Session (2025-08-15)**: Fixed critical UI issues including send button and scrollbar overlap, performed comprehensive Puppeteer MCP testing for browser automation, and validated dark mode styling across all components. Enhanced UI accessibility and confirmed all visual elements display correctly in both light and dark themes.
+**Current Session (2025-08-17 23:00 IST)**: Successfully implemented Phase 1 of the multi-MCP architecture by creating a complete Product Metadata MCP Server using FastMCP framework with SSE transport, providing product aliases and column mappings for natural language query translation.
 
 ## Historical Sessions Summary
-*Consolidated overview of Sessions 1-13 - compacted for token efficiency*
+*Consolidated overview of Sessions 1-14 - compacted for token efficiency*
 
 ### Key Milestones Achieved
 - **Sessions 1-6**: Complete multi-tier system development from MCP server foundation to React frontend (Foundation → Testing → Frontend Integration → Production Readiness)
 - **Sessions 7-8**: Resource discovery fixes and modern glassmorphism UI transformation (MCP Integration → Modern Design)
 - **Sessions 9-10**: Theme customization and multi-LLM architecture implementation (Design Enhancement → LangChain Integration)
 - **Sessions 11-12**: Tailwind CSS migration and dark mode implementation (UI Modernization → Accessibility)
-- **Session 13**: TypeScript error resolution and Puppeteer MCP validation (Stability → Testing Infrastructure)
+- **Sessions 13-14**: TypeScript error resolution, Puppeteer MCP validation, and UI accessibility fixes (Stability → Testing Infrastructure → UX Optimization)
 
 ### Technical Evolution
 - **MCP Foundation**: FastMCP framework, SQLite security validation, Docker deployment, Pydantic v2 migration
@@ -19,6 +19,7 @@
 - **UI Transformation**: Material UI → Tailwind CSS with glassmorphism design, red/black/gray/white theme
 - **Dark Mode System**: Complete theme context with localStorage persistence and accessibility improvements
 - **Testing Infrastructure**: E2E testing framework, Puppeteer MCP integration, comprehensive validation scripts
+- **Multi-MCP Architecture**: Beginning implementation of distributed MCP servers for specialized functionality
 
 ### Lessons Learned
 - **Incremental Development**: Build one component at a time, validate before proceeding
@@ -26,210 +27,168 @@
 - **Modern CSS Benefits**: Tailwind CSS significantly reduces bundle size while improving design flexibility
 - **Accessibility Focus**: Color contrast and theme persistence are critical for professional applications
 - **Testing First**: Comprehensive testing prevents runtime issues and ensures production readiness
+- **Modular Architecture**: Separate MCP servers for different concerns enables better scalability
 
 ---
 
-## Current Session (Session 14 - 2025-08-15)
-**Focus Area**: UI accessibility improvements, send button positioning fixes, and comprehensive browser automation testing.
+## Current Session (Session 15 - 2025-08-17 23:00 IST)
+**Focus Area**: Implementation of Phase 1 of multi-MCP architecture - Product Metadata MCP Server for natural language query enhancement.
 
 ### Key Accomplishments
-- **Send Button Overlap Fix**: Resolved critical UX issue where send button overlapped with scrollbar when textarea expanded with long text.
-- **Puppeteer MCP Comprehensive Testing**: Conducted thorough validation of UI automation capabilities for navigation, screenshots, form interactions, and React app workflow testing.
-- **Dark Mode Validation**: Confirmed dark mode styling works correctly across all components with proper contrast ratios.
-- **Cross-Theme Compatibility**: Validated button positioning and functionality in both light and dark modes.
-- **Accessibility Enhancement**: Improved UI spacing and positioning to prevent overlap issues affecting user interaction.
+- **Complete Product Metadata MCP Server**: Successfully built a new MCP server from scratch using FastMCP framework
+- **SSE Transport Implementation**: Configured server with SSE-only transport on port 8002
+- **Metadata Management System**: Created robust metadata loading with no-caching policy for fresh data
+- **Comprehensive Test Suite**: Developed 21 unit tests with 100% passing rate
+- **Production-Ready Configuration**: Implemented Pydantic v2 settings with environment variable support
 
 ### Technical Implementation
-- **Textarea Padding Fix**: Updated `MessageInput.tsx` line 132:
-  - Changed from `pr-20` to `pr-24` (5rem → 6rem padding) to accommodate buttons and scrollbar
-- **Button Container Positioning**: Updated `MessageInput.tsx` line 150:
-  - Moved button container from `right-2` to `right-3` to position buttons away from scrollbar area
-- **Puppeteer Testing Infrastructure**: Comprehensive browser automation validation:
-  - **Navigation**: Successfully tested external sites and local React app (localhost:3000)
-  - **Form Interactions**: Text input filling, button clicking, element selection
-  - **JavaScript Execution**: Custom script execution for page analysis and data extraction
-  - **React Workflow**: Complete user interaction testing including query execution and AI responses
-  - **Screenshot Functionality**: Multi-resolution captures with visual verification
-- **Dark Mode Testing**: Validated theme switching and component styling in both modes
+- **Server Architecture (7 files created)**:
+  - `src/product_metadata_mcp/server.py`: FastMCP server with SSE transport only
+  - `src/product_metadata_mcp/config.py`: Pydantic v2 configuration with PRODUCT_MCP_* env vars
+  - `src/product_metadata_mcp/metadata_store.py`: No-cache metadata management system
+  - `src/product_metadata_mcp/resources/product_metadata.json`: 12 product aliases + 60 mappings
+  - `scripts/setup_product_metadata.py`: Metadata generation and validation utility
+  - `tests/test_product_metadata_mcp.py`: Comprehensive test suite (21 tests)
 
-### Problem Resolution Process
-1. **Issue Identification**: User reported send button overlapping with scrollbar in expanded textarea
-2. **Root Cause Analysis**: Insufficient right padding (5rem) couldn't accommodate both buttons and scrollbar
-3. **Solution Implementation**: Increased padding and adjusted button positioning for optimal spacing
-4. **Cross-Browser Testing**: Used Puppeteer MCP to validate fix across different scenarios
-5. **Accessibility Validation**: Ensured 12px spacing provides adequate clearance for scrollbar
+- **Resource Endpoints Implemented**:
+  - `resource://product_aliases`: Maps natural language product names to database IDs
+  - `resource://column_mappings`: Translates user-friendly terms to SQL columns
+  - `resource://metadata_summary`: Provides server health and metadata overview
+
+- **Data Coverage**:
+  - 12 product aliases with database references (Magic Wand Pro, UltraBook Pro, SmartTime X5, etc.)
+  - 60+ column mappings across categories (user_friendly_terms, aggregation_terms, date_terms, comparison_operators)
+  - Complete table relationship mappings for query joins
+
+### Critical Solutions & Fixes
+1. **Pydantic v2 Migration**: Updated validators from v1 `@validator` to v2 `@field_validator` with proper classmethod decoration
+2. **Environment Variable Isolation**: Added `extra="ignore"` to SettingsConfigDict to prevent conflicts with other server configs
+3. **FastMCP Integration**: Removed unsupported `@startup`/`@shutdown` decorators, using function handlers instead
+4. **Test Compatibility**: Adapted tests to work with FastMCP's resource wrapper objects
 
 ### Validation & Testing Results
-- **✅ Button Positioning**: 12px spacing maintained between buttons and scrollbar in all scenarios
-- **✅ Functionality**: All buttons remain clickable and accessible with proper bounds checking
-- **✅ Visual Validation**: Screenshots confirm no overlap in short text, long text, and scrollbar scenarios
-- **✅ Clear Button Test**: Successfully clicked clear button and verified content clearing functionality
-- **✅ Dark Mode Compatibility**: Validated proper styling and positioning in both light and dark themes
-- **✅ Cross-Platform Testing**: Confirmed fix works across different viewport sizes and browser configurations
+- **✅ All 21 Unit Tests Passing**: Complete coverage of configuration, metadata loading, and error handling
+- **✅ Server Startup Validated**: Server starts successfully with proper SSE transport on port 8002
+- **✅ Metadata Validation**: 12 product aliases and 60 column mappings validated
+- **✅ Resource Accessibility**: All three resource endpoints confirmed working
+- **✅ Error Handling**: Comprehensive error handling for missing files and invalid data
 
-### Puppeteer MCP Testing Metrics
-- **Navigation Success**: ✅ External sites (example.com) and local React app
-- **Screenshot Quality**: ✅ High-resolution captures (1200x800, 800x600) with proper rendering
-- **Form Interaction**: ✅ Complex textarea filling, button clicking, element selection
-- **JavaScript Execution**: ✅ Custom script analysis and data extraction capabilities
-- **React App Integration**: ✅ Complete user workflow from query input to AI response validation
-- **Browser Configuration**: ✅ Successfully configured for root execution with --no-sandbox flags
-
-### Files Modified
-1. **`react-chatbot/src/components/MessageInput.tsx`**:
-   - **Line 132**: Updated textarea padding from `pr-20` to `pr-24`
-   - **Line 150**: Adjusted button container from `right-2` to `right-3`
+### Files Modified/Created
+1. **New Package Structure**:
+   - `src/product_metadata_mcp/` - Complete MCP server package
+   - Updated `pyproject.toml` with `product-mcp` dependencies
+   - Updated `README.md` with Product Metadata Server documentation
 
 ### Current State After This Session
-- **UI Accessibility**: ✅ Send button and scrollbar overlap completely resolved with optimal spacing
-- **Button Functionality**: ✅ All action buttons (send, clear) remain fully accessible and clickable
-- **Cross-Theme Support**: ✅ Fix validated in both light and dark modes with consistent behavior
-- **Testing Infrastructure**: ✅ Puppeteer MCP tool comprehensively validated for future UI automation
-- **Visual Quality**: ✅ Professional appearance maintained with no UI overlap issues
-- **User Experience**: ✅ Smooth interaction flow with proper spacing and accessibility compliance
+- **Product Metadata MCP**: ✅ Fully functional server on port 8002 with SSE transport
+- **Test Coverage**: ✅ 100% of tests passing with comprehensive validation
+- **Documentation**: ✅ Complete README section for the new server
+- **Integration Ready**: ✅ Server ready for integration with FastAPI backend
+- **Phase 1 Complete**: ✅ First of multiple planned MCP servers successfully implemented
 
 ---
 
 ## Current Project State
 
 ### ✅ Completed Components
-- **MCP Server**: Fully implemented with FastMCP framework, security validation, and multiple transport protocols.
-- **FastAPI Backend**: OpenAI-compatible chat completions API with multi-LLM support (OpenRouter & Google Gemini) via LangChain, robust retry logic, and fully functional MCP resource discovery.
-- **Multi-LLM Architecture**: Complete LangChain-based implementation supporting multiple providers with unified interface, configuration-based switching, and extensible design for future providers.
-- **React Frontend**: Complete TypeScript chatbot with modern Tailwind CSS and glassmorphism design, 6 components, custom hooks, API integration, responsive design with red/black/gray/white theme, smooth animations, professional UI/UX, comprehensive dark mode support with accessibility improvements, and clean error-free compilation.
-- **Modern UI Design**: Complete Tailwind CSS transformation with glassmorphism effects, gradient backgrounds, modern typography, optimized performance through reduced bundle size, and full dark/light mode theming with WCAG-compliant color contrast.
-- **UI Accessibility**: Send button positioning optimized to prevent scrollbar overlap, comprehensive Puppeteer MCP testing validated for browser automation workflows.
-- **Database Integration**: Secure SQLite query execution via MCP protocol.
-- **Docker Deployment**: Production-ready containerization with nginx reverse proxy.
-- **E2E Testing Framework**: Professional testing client with server lifecycle management and failure analysis, plus comprehensive multi-LLM validation scripts.
+- **Main MCP Server (Port 8000)**: SQLite database query server with resource discovery and security validation
+- **Product Metadata MCP Server (Port 8002)**: NEW - FastMCP server providing product aliases and column mappings with SSE transport
+- **FastAPI Backend (Port 8001)**: Multi-LLM support via LangChain with MCP client integration
+- **React Frontend (Port 3000)**: Complete TypeScript chatbot with Tailwind CSS and glassmorphism design
+- **Multi-LLM Architecture**: LangChain-based implementation supporting OpenRouter and Google Gemini
+- **Docker Deployment**: Production-ready containerization with nginx reverse proxy
+- **Testing Infrastructure**: E2E testing, Puppeteer MCP integration, comprehensive validation
+
+### 🔄 In Progress
+- **Multi-MCP Integration**: Connecting Product Metadata MCP with FastAPI backend for enhanced query translation
+- **Phase 2 Planning**: Next MCP servers for distributed architecture implementation
 
 ### ⚠️ Known Issues
-- **E2E Test Harness**: Automated test environment has server startup timeout issues. While manual testing confirms system works correctly, automated tests require environment fixes.
-- **Type Annotations**: Some diagnostic warnings in `mcp_client.py` related to MCP SDK type handling, but these don't affect runtime functionality.
-
-### ✅ Recently Resolved Issues
-- **Send Button Overlap**: ✅ Fixed overlap with scrollbar through proper padding and positioning adjustments
-- **Button Accessibility**: ✅ Ensured all action buttons remain clickable with adequate spacing
-- **Dark Mode Validation**: ✅ Confirmed proper styling and functionality across both light and dark themes
-- **Puppeteer MCP Integration**: ✅ Comprehensive browser automation testing infrastructure validated
+- **E2E Test Harness**: Automated test environment has server startup timeout issues (manual testing confirms functionality)
+- **Type Annotations**: Some diagnostic warnings in `mcp_client.py` related to MCP SDK type handling
 
 ## Technical Architecture
 
-### Project Structure
+### Updated Project Structure
 ```
 talk-2-tables-mcp/
-├── react-chatbot/           # React frontend application
-├── fastapi_server/          # FastAPI server implementation
-├── src/talk_2_tables_mcp/   # MCP server implementation
-├── tests/                   # Test suites
-├── scripts/                 # Utility scripts
-├── Dockerfile
-└── docker-compose.yml
+├── src/
+│   ├── talk_2_tables_mcp/      # Main MCP server (port 8000)
+│   └── product_metadata_mcp/    # Product metadata server (port 8002) - NEW
+├── fastapi_server/              # FastAPI backend (port 8001)
+├── react-chatbot/               # React frontend (port 3000)
+├── tests/                       # Test suites
+├── scripts/                     # Utility scripts
+└── docker-compose.yml           # Container orchestration
 ```
 
-### Key Configuration
+### Multi-Server Configuration
 ```bash
-# MCP Server
-DATABASE_PATH="test_data/sample.db"
-TRANSPORT="streamable-http"
+# Main Database MCP Server
+PORT=8000
+TRANSPORT="sse"
 
-# FastAPI Server - Multi-LLM Support
-LLM_PROVIDER="openrouter"  # or "gemini"
-OPENROUTER_API_KEY="your_openrouter_api_key_here"
-GEMINI_API_KEY="your_gemini_api_key_here"
+# Product Metadata MCP Server
+PRODUCT_MCP_PORT=8002
+PRODUCT_MCP_HOST="0.0.0.0"
+PRODUCT_MCP_METADATA_PATH="src/product_metadata_mcp/resources/product_metadata.json"
+
+# FastAPI Backend
+FASTAPI_PORT=8001
 MCP_SERVER_URL="http://localhost:8000"
+# Future: PRODUCT_MCP_URL="http://localhost:8002"
 ```
-
-### Dependencies & Requirements
-- **FastMCP**: MCP protocol implementation framework.
-- **FastAPI**: Modern async web framework for API development.
-- **LangChain**: Unified framework for multi-LLM provider integration.
-- **OpenRouter**: LLM API integration via LangChain-OpenAI.
-- **Google Gemini**: Google's LLM API via LangChain-Google-GenAI.
-- **React**: JavaScript library for building user interfaces.
-- **Docker**: Containerization and production deployment.
-
-## Important Context
-
-### Design Decisions
-- **Security-First Approach**: Read-only database access with SQL injection protection.
-- **Async Architecture**: Full async/await support for scalable concurrent operations.
-- **OpenAI Compatibility**: Standard chat completions format for easy frontend integration.
-- **Accessibility Focus**: WCAG-compliant color contrast, proper spacing, and UI overlap prevention.
-
-### User Requirements
-- **Database Query Interface**: Natural language to SQL query conversion via LLM.
-- **Production Deployment**: Docker-based deployment with reverse proxy and monitoring.
-- **Professional UI/UX**: Modern design with accessibility compliance and theme support.
-
-### Environment Setup
-- **Development**: Local servers for MCP, FastAPI, and React applications.
-- **Production**: Docker Compose setup with nginx for reverse proxying.
 
 ## Commands Reference
 
 ### Development Commands
 ```bash
-# Install dependencies
-pip install -e ".[dev,fastapi]"
-# Start MCP server
-python -m talk_2_tables_mcp.server
-# Start FastAPI server
-uvicorn fastapi_server.main:app --reload --port 8001
-# Start React app
-npm start --prefix react-chatbot
-```
+# Start all servers (separate terminals)
+python -m talk_2_tables_mcp.server --transport sse       # Port 8000
+python -m src.product_metadata_mcp.server                # Port 8002
+python -m fastapi_server.main                            # Port 8001
+./start-chatbot.sh                                       # Port 3000
 
-### Deployment Commands
-```bash
-# Basic deployment
-docker-compose up -d
-# Production with nginx
-docker-compose --profile production up -d
-```
-
-### Testing Commands
-```bash
-# Run all tests
-pytest
-# Run end-to-end tests
-pytest tests/e2e_react_chatbot_test.py -v
+# Product Metadata Server specific
+python scripts/setup_product_metadata.py --validate
+python scripts/setup_product_metadata.py --generate
+pytest tests/test_product_metadata_mcp.py -v
 ```
 
 ## Next Steps & Considerations
 
+### Immediate Actions (Phase 2)
+- **FastAPI Integration**: Connect Product Metadata MCP to FastAPI backend for enhanced query processing
+- **Query Enhancement**: Use product aliases and column mappings to improve natural language understanding
+- **Additional MCP Servers**: Consider implementing more specialized servers (analytics, user preferences, etc.)
+
 ### Short-term Possibilities (Next 1-2 Sessions)
-- **Multi-LLM Performance Testing**: Compare response times, quality, and costs between OpenRouter and Gemini providers using the validated testing infrastructure.
-- **Advanced UI Features**: Consider implementing query history, bookmarked queries, or advanced table operations using the established Puppeteer testing framework.
-- **Accessibility Enhancements**: Further improve UI accessibility based on comprehensive testing feedback.
-- **Mobile Optimization**: Test and optimize the responsive design for mobile devices using Puppeteer automation.
-- **Additional Provider Integration**: Add Claude, GPT-4, or other providers using the extensible LangChain architecture.
+- **Multi-MCP Orchestration**: Implement MCP client manager in FastAPI to handle multiple server connections
+- **Query Pipeline**: Build sophisticated query translation pipeline using metadata from multiple sources
+- **Performance Testing**: Benchmark multi-server architecture performance and optimization
 
 ### Future Opportunities
-- **Multi-database Support**: Extend system to support multiple database backends.
-- **Query Caching**: Implement query result caching for performance optimization.
-- **Advanced Testing**: Leverage Puppeteer MCP for automated regression testing and UI validation.
+- **Distributed Architecture**: Full implementation of multi-MCP ecosystem with specialized servers
+- **Dynamic Metadata Updates**: Allow runtime updates to product aliases without server restart
+- **Metadata UI**: Create admin interface for managing product aliases and mappings
 
 ## File Status
-- **Last Updated**: 2025-08-15
-- **Session Count**: 14
-- **Project Phase**: ✅ **FULL-STACK COMPLETE WITH MODERN UI, MULTI-LLM SUPPORT, COMPREHENSIVE DARK MODE, AND OPTIMIZED ACCESSIBILITY**
+- **Last Updated**: 2025-08-17 23:00 IST
+- **Session Count**: 15
+- **Project Phase**: ✅ **MULTI-MCP ARCHITECTURE PHASE 1 COMPLETE**
 
 ---
 
 ## Evolution Notes
-The project has evolved from a simple MCP server to a complete, multi-tier, full-stack application with modern UI design, multi-LLM capabilities, and accessibility-focused improvements. Key evolution phases include foundation building, productionization, integration, validation, reliability improvements, frontend development, resource discovery fixes, modern UI transformation, multi-LLM architecture, dark mode implementation, and accessibility optimization.
+The project has successfully evolved into a multi-MCP architecture with the addition of the Product Metadata MCP Server. This marks the beginning of a distributed system where specialized MCP servers handle different aspects of the data pipeline. The use of FastMCP framework demonstrates the maturity of the MCP ecosystem and enables rapid development of new servers with minimal boilerplate.
 
 ## Session Handoff Context
-✅ **FULL-STACK APPLICATION WITH MODERN TAILWIND CSS UI, MULTI-LLM SUPPORT, COMPREHENSIVE DARK MODE, AND OPTIMIZED ACCESSIBILITY COMPLETE**. All system components are working:
-1. ✅ **Modern Tailwind CSS Frontend**: Complete TypeScript chatbot with professional glassmorphism design, red/black/gray/white theme, smooth animations, optimized performance, comprehensive dark/light mode support, and accessibility-compliant UI spacing.
-2. ✅ **Multi-LLM Backend**: Complete LangChain-based architecture supporting both OpenRouter and Google Gemini providers with unified interface.
-3. ✅ **Configuration Flexibility**: Environment-based provider switching allowing seamless transition between LLM providers.
-4. ✅ **Comprehensive Testing**: Extensive test suites covering multi-provider scenarios, mocked tests, integration validation, and browser automation via Puppeteer MCP.
-5. ✅ **MCP Resource Discovery**: All protocol mismatches resolved, database metadata fully accessible.
-6. ✅ **Modern UI/UX**: Professional glassmorphism design with reduced bundle size, faster loading, superior user experience, accessibility-compliant dark mode, and optimized button positioning preventing UI overlap issues.
-7. ✅ **Extensible Architecture**: Clean abstraction layer ready for adding additional providers (Claude, GPT-4, Llama, etc.).
-8. ✅ **UI Accessibility**: Send button and scrollbar overlap completely resolved, comprehensive spacing optimization, and cross-theme compatibility validated.
-9. ✅ **Testing Infrastructure**: Puppeteer MCP integration validated for comprehensive browser automation testing workflows.
+✅ **PHASE 1 OF MULTI-MCP ARCHITECTURE COMPLETE**. The Product Metadata MCP Server is fully functional and ready for integration:
 
-**Current Status**: ✅ **PRODUCTION READY WITH MODERN UI, MULTI-LLM CAPABILITIES, COMPREHENSIVE DARK MODE, AND ACCESSIBILITY OPTIMIZATION**. The system features a sophisticated LangChain-based architecture with multiple LLM providers, a stunning modern Tailwind CSS interface with complete dark/light mode support, accessibility improvements including proper UI spacing and overlap prevention, and comprehensive browser automation testing capabilities. All critical runtime errors have been resolved, React hooks compliance is maintained, connection status visibility has been dramatically improved with WCAG-compliant color contrast, and UI elements are properly positioned to prevent overlap issues. The React frontend features professional glassmorphism design with red/black/gray/white theme, smooth transitions, theme persistence, and optimized accessibility. Users can seamlessly switch between OpenRouter and Google Gemini via environment configuration, toggle between light and dark modes with a professional theme system, and interact with UI elements without overlap or accessibility issues. The system is ready for production deployment with superior UI/UX, multi-provider flexibility, accessibility compliance, and comprehensive testing infrastructure.
+1. ✅ **Product Metadata Server**: Complete FastMCP implementation on port 8002 with SSE transport
+2. ✅ **Comprehensive Testing**: 21 unit tests all passing with full coverage
+3. ✅ **Production Configuration**: Environment-based settings with PRODUCT_MCP_* prefix
+4. ✅ **Rich Metadata**: 12 product aliases and 60+ column mappings ready for use
+5. ✅ **Documentation**: Complete README section and inline documentation
+
+**Next Phase Focus**: Integrate Product Metadata MCP with FastAPI backend to enable enhanced natural language query translation using product aliases and column mappings. The architecture is now ready for multi-MCP client implementation in the FastAPI layer.
