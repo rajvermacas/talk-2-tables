@@ -21,7 +21,6 @@ class MCPServerConfig(BaseModel):
 
 class OrchestrationConfig(BaseModel):
     """Configuration for orchestration behavior"""
-    resource_cache_ttl: int = Field(300, description="Cache TTL in seconds")
     fail_fast: bool = Field(True, description="Fail on first error")
     enable_logging: bool = Field(True, description="Enable detailed logging")
     log_level: str = Field("INFO", description="Logging level")

@@ -15,7 +15,6 @@ from mcp import ClientSession
 from mcp.client.sse import sse_client
 
 from .mcp_registry import MCPRegistry, MCPServerInfo
-from .resource_cache import ResourceCache
 from .orchestrator_exceptions import (
     MCPOrchestratorException,
     MCPConnectionError,
@@ -60,7 +59,9 @@ class MCPClientWrapper:
             raise ResourceFetchError("Not connected to MCP server")
         
         try:
+            logger.debug(f"[MCP_CLIENT] Calling session.list_resources for {self.url}")
             resources = await self.session.list_resources()
+            logger.debug(f"[MCP_CLIENT] Received {len(resources)} resources from {self.url}")
             return [
                 {
                     "uri": r.uri,
@@ -104,7 +105,6 @@ class MCPOrchestrator:
         """
         self.config_path = config_path or Path("fastapi_server/mcp_config.yaml")
         self.registry = MCPRegistry()
-        self.cache: Optional[ResourceCache] = None
         self.config: Optional[MCPConfig] = None
         self._initialized = False
     
@@ -119,11 +119,6 @@ class MCPOrchestrator:
             
             # Parse and validate configuration
             self.config = MCPConfig(**raw_config)
-            
-            # Initialize cache
-            self.cache = ResourceCache(
-                ttl_seconds=self.config.orchestration.resource_cache_ttl
-            )
             
             # Register servers
             for server_id, server_config in self.config.mcp_servers.items():
@@ -273,15 +268,11 @@ class MCPOrchestrator:
         Returns:
             Dictionary of resources
         """
-        # Check cache first
-        cache_key = f"resources:{server.name}"
-        if self.cache and (cached := self.cache.get(cache_key)):
-            logger.debug(f"Using cached resources for {server.name}")
-            return cached
-        
         try:
             # List available resources
+            logger.info(f"[RESOURCE_LIST] Calling list_resources for server: {server.name}")
             resources_list = await server.client.list_resources()
+            logger.info(f"[RESOURCE_LIST] Server {server.name} returned {len(resources_list)} resources")
             
             # Fetch each resource
             resources_data = {}
@@ -289,16 +280,14 @@ class MCPOrchestrator:
                 if isinstance(resource, dict):
                     resource_uri = resource.get("uri", "")
                     resource_name = resource.get("name", resource_uri)
+                    logger.debug(f"[RESOURCE_FETCH] Fetching resource {resource_uri} from {server.name}")
                     try:
                         resource_data = await server.client.get_resource(resource_uri)
                         resources_data[resource_name] = resource_data
                     except Exception as e:
                         logger.warning(f"Failed to fetch resource {resource_uri}: {e}")
             
-            # Cache the results
-            if self.cache:
-                self.cache.set(cache_key, resources_data)
-            
+            logger.info(f"[RESOURCE_LIST] Successfully fetched {len(resources_data)} resources from {server.name}")
             return resources_data
             
         except Exception as e:
@@ -452,8 +441,7 @@ class MCPOrchestrator:
         
         return {
             "initialized": self._initialized,
-            "servers": servers_status,
-            "cache_stats": self.cache.get_stats() if self.cache else None
+            "servers": servers_status
         }
     
     @asynccontextmanager

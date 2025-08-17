@@ -44,7 +44,18 @@ class ProductMetadataMCP:
         # Register resources
         self._register_resources()
         
+        # Override list_resources to add logging
+        self._original_list_resources = self.mcp.list_resources
+        self.mcp.list_resources = self._logged_list_resources
+        
         logger.info(f"Initialized Product Metadata MCP on port {config.port}")
+    
+    async def _logged_list_resources(self):
+        """Wrapper to log list_resources calls."""
+        logger.info("[PRODUCT_MCP] list_resources() called by client")
+        result = await self._original_list_resources()
+        logger.info(f"[PRODUCT_MCP] Returning {len(result) if result else 0} resources to client")
+        return result
     
     def _register_resources(self) -> None:
         """Register MCP resources."""
@@ -56,6 +67,7 @@ class ProductMetadataMCP:
             Returns:
                 JSON string containing product aliases
             """
+            logger.info("[PRODUCT_MCP] Resource requested: product-aliases://list")
             try:
                 data = await self.resource_handler.get_resource("product-aliases://list")
                 return json.dumps(data, indent=2)
@@ -70,6 +82,7 @@ class ProductMetadataMCP:
             Returns:
                 JSON string containing column mappings
             """
+            logger.info("[PRODUCT_MCP] Resource requested: column-mappings://list")
             try:
                 data = await self.resource_handler.get_resource("column-mappings://list")
                 return json.dumps(data, indent=2)
@@ -84,6 +97,7 @@ class ProductMetadataMCP:
             Returns:
                 JSON string containing metadata summary
             """
+            logger.info("[PRODUCT_MCP] Resource requested: metadata-summary://info")
             try:
                 data = await self.resource_handler.get_resource("metadata-summary://info")
                 return json.dumps(data, indent=2)

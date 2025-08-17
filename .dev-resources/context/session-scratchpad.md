@@ -1,7 +1,7 @@
 # Talk 2 Tables MCP Server - Session Summary
 
 ## Session Overview
-**Current Session (2025-08-17, Session 17)**: Replaced all regex/rule/keyword-based routing with LLM-based intelligent routing system. Implemented intent classification and dynamic resource routing to eliminate hardcoded patterns and enable context-aware query routing across multiple MCP servers.
+**Current Session (2025-08-17, Session 18)**: Removed all caching mechanisms from the multi-MCP orchestration system. Eliminated ResourceCache class and all cache-related configurations to ensure direct server queries without intermediate caching layers.
 
 ## Historical Sessions Summary
 *Consolidated overview of Sessions 1-13 - compacted for token efficiency*
@@ -127,7 +127,7 @@
 ### ✅ Completed Components
 - **MCP Server**: Fully implemented with FastMCP framework, security validation, and multiple transport protocols
 - **Product Metadata MCP**: Complete server with product aliases and column mappings
-- **MCP Orchestrator**: Multi-server management with registry, cache, and connection handling
+- **MCP Orchestrator**: Multi-server management with registry and connection handling (cache removed in Session 18)
 - **LLM-Based Routing**: Intelligent intent classification and dynamic server selection
 - **FastAPI Backend**: OpenAI-compatible API with multi-LLM support via LangChain
 - **React Frontend**: Modern Tailwind CSS UI with glassmorphism design and dark mode
@@ -197,9 +197,9 @@ pytest tests/test_resource_router.py -v
 ## Next Steps & Considerations
 
 ### Immediate Actions
-- Test the new routing system with complex multi-intent queries
-- Monitor LLM token usage and optimize prompts if needed
-- Consider adding more sophisticated caching strategies
+- Test the cache-free system performance with high query loads
+- Monitor response times to determine if caching needs to be reimplemented strategically
+- Consider implementing request-level caching at the API layer if needed
 
 ### Short-term Possibilities (Next 1-2 Sessions)
 - **Phase 03 Advanced Features**: Implement cross-MCP query optimization
@@ -214,26 +214,81 @@ pytest tests/test_resource_router.py -v
 - **Routing Analytics**: Dashboard to visualize routing decisions and performance
 
 ## File Status
-- **Last Updated**: 2025-08-17 (Session 17)
-- **Session Count**: 17
-- **Project Phase**: **MULTI-MCP WITH INTELLIGENT LLM-BASED ROUTING**
+- **Last Updated**: 2025-08-17 (Session 18)
+- **Session Count**: 18
+- **Project Phase**: **MULTI-MCP WITH CACHE-FREE ARCHITECTURE**
 
 ---
 
 ## Evolution Notes
-The project has evolved from simple keyword-based routing to sophisticated LLM-driven intent classification and dynamic resource routing. This transformation enables the system to understand context, handle nuanced queries, and automatically adapt to new MCP servers without code changes. The architecture now supports true multi-MCP orchestration with intelligent routing decisions.
+The project has evolved from simple keyword-based routing to sophisticated LLM-driven intent classification and dynamic resource routing. This transformation enables the system to understand context, handle nuanced queries, and automatically adapt to new MCP servers without code changes. In Session 18, the caching layer was completely removed to simplify the architecture and ensure data consistency, trading some performance for reduced complexity and always-fresh data.
 
 ## Session Handoff Context
-✅ **LLM-BASED INTELLIGENT ROUTING COMPLETE**. The system now features:
+✅ **CACHE-FREE MULTI-MCP SYSTEM OPERATIONAL**. Current system state:
 
 1. **Intent Classification**: LLM analyzes queries to determine intent (database query, product lookup, analytics, etc.)
 2. **Dynamic Routing**: Servers selected based on capabilities, not hardcoded rules
 3. **Context Awareness**: Understands conversation history and query nuances
 4. **Graceful Degradation**: Falls back to heuristics if LLM unavailable
-5. **Performance Optimization**: Caching and parallel processing for speed
-6. **Comprehensive Testing**: 19 tests validating all routing scenarios
+5. **Direct Server Queries**: All requests go directly to MCP servers without caching
+6. **Comprehensive Testing**: 19 routing tests + 9 integration tests all passing
 7. **Extensibility**: New servers automatically integrated without code changes
 
-**Critical Information**: All regex patterns, keyword lists, and domain-based routing have been removed from `chat_handler.py`. The system now relies entirely on the `IntentClassifier` and `ResourceRouter` classes for routing decisions. The `query_enhancer.py` still contains some keyword detection but is functional with the new system.
+**Session 18 Changes**: Completely removed ResourceCache class and all caching mechanisms. The system now operates without any intermediate caching layer, ensuring data consistency at the cost of potential performance impact on repeated queries.
+
+**Critical Information**: 
+- All caching has been removed from `mcp_orchestrator.py`
+- Configuration no longer includes `resource_cache_ttl` settings
+- Tests have been updated to remove cache-related validations
+- System relies entirely on direct MCP server queries for all resource fetches
 
 **Next Session Focus**: Consider implementing Phase 03 Advanced Features or upgrading the query enhancer to use LLM-based entity extraction. The routing infrastructure is now in place to support sophisticated multi-MCP interactions.
+
+---
+
+## Session 18 (2025-08-17)
+**Focus Area**: Cache Removal - Eliminated all caching mechanisms from the multi-MCP orchestration system
+
+### Key Accomplishments
+- **Complete Cache Removal**: Deleted ResourceCache class and all associated caching logic
+- **Configuration Cleanup**: Removed cache TTL settings from orchestrator configuration  
+- **Test Updates**: Removed cache-related test functions and validations
+- **System Validation**: Verified all tests pass without caching infrastructure
+
+### Technical Implementation
+
+#### Components Removed
+1. **`fastapi_server/resource_cache.py`** (144 lines):
+   - Complete deletion of TTL-based cache implementation
+   - Removed thread-safe cache with statistics tracking
+   
+2. **Configuration Changes**:
+   - Removed `resource_cache_ttl` field from `OrchestrationConfig`
+   - Deleted cache TTL setting from `mcp_config.yaml`
+
+3. **Code Cleanup in `mcp_orchestrator.py`**:
+   - Removed ResourceCache import
+   - Deleted `self.cache` attribute initialization
+   - Removed cache checking logic (lines 278-280)
+   - Removed cache setting logic (lines 299-300)
+   - Deleted cache stats from status reporting
+
+4. **Test Updates**:
+   - Removed `test_resource_cache()` function
+   - Removed `test_cache_invalidation()` function
+   - Updated orchestrator configuration test
+
+### Impact Analysis
+- **Performance**: All resource fetches now go directly to MCP servers
+- **Latency**: Potential increase in response times for repeated queries
+- **Network**: Higher network traffic due to no intermediate caching
+- **Simplicity**: Reduced system complexity and maintenance burden
+- **Consistency**: Always returns fresh data from source servers
+
+### Current State After This Session
+- **Cache-Free Operation**: ✅ System operates without any caching layer
+- **Direct Server Queries**: ✅ All requests go straight to MCP servers
+- **Test Coverage**: ✅ All 9 multi-MCP integration tests passing
+- **Code Reduction**: ✅ Removed ~200 lines of caching-related code
+
+---

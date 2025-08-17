@@ -90,7 +90,7 @@ class ChatCompletionHandler:
             
             # Use intent to determine if we need database/resources
             if intent.needs_database or intent.needs_product_metadata:
-                logger.info(f"Query needs resources: DB={intent.needs_database}, "
+                logger.info(f"[CHAT_FLOW] Query needs resources: DB={intent.needs_database}, "
                           f"Products={intent.needs_product_metadata}")
                 
                 # Get routing decision
@@ -100,16 +100,18 @@ class ChatCompletionHandler:
                     available_servers=available_servers
                 )
                 
-                logger.info(f"Routing to servers: {routing.primary_servers}")
+                logger.info(f"[CHAT_FLOW] Routing to servers: {routing.primary_servers}")
                 
                 # Get resources from routed servers
                 all_resources = {}
                 if self.orchestrator and routing.primary_servers:
                     try:
+                        logger.info(f"[CHAT_FLOW] Gathering resources from servers: {routing.primary_servers}")
                         # Gather resources from selected servers
                         all_resources = await self.orchestrator.gather_resources_from_servers(
                             server_names=routing.primary_servers
                         )
+                        logger.info(f"[CHAT_FLOW] Gathered {len(all_resources)} server resource sets")
                         mcp_context["mcp_resources"] = all_resources
                         mcp_context["routing_decision"] = {
                             "primary_servers": routing.primary_servers,

@@ -14,7 +14,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fastapi_server.mcp_orchestrator import MCPOrchestrator
 from fastapi_server.mcp_registry import MCPRegistry
-from fastapi_server.resource_cache import ResourceCache
 from fastapi_server.orchestrator_config import MCPServerConfig
 
 
@@ -69,56 +68,6 @@ def test_registry_registration(test_config):
     assert all_servers[1].config.priority == 10  # Database has lower priority
 
 
-def test_resource_cache():
-    """Test resource cache functionality."""
-    cache = ResourceCache(ttl_seconds=2)
-    
-    # Test set and get
-    test_data = {"key": "value"}
-    cache.set("test_key", test_data)
-    
-    cached = cache.get("test_key")
-    assert cached == test_data
-    
-    # Test cache miss
-    assert cache.get("nonexistent") is None
-    
-    # Test cache expiration
-    import time
-    time.sleep(3)  # Wait for TTL to expire
-    assert cache.get("test_key") is None
-    
-    # Test stats
-    stats = cache.get_stats()
-    assert stats["hits"] == 1
-    assert stats["misses"] == 2  # nonexistent + expired
-    assert stats["evictions"] == 1
-
-
-def test_cache_invalidation():
-    """Test cache invalidation."""
-    cache = ResourceCache(ttl_seconds=60)
-    
-    # Add multiple items
-    cache.set("key1", {"data": 1})
-    cache.set("key2", {"data": 2})
-    cache.set("key3", {"data": 3})
-    
-    # Verify all exist
-    assert cache.get("key1") is not None
-    assert cache.get("key2") is not None
-    assert cache.get("key3") is not None
-    
-    # Invalidate specific key
-    cache.invalidate("key2")
-    assert cache.get("key1") is not None
-    assert cache.get("key2") is None
-    assert cache.get("key3") is not None
-    
-    # Invalidate all
-    cache.invalidate()
-    assert cache.get("key1") is None
-    assert cache.get("key3") is None
 
 
 @pytest.mark.asyncio
@@ -132,10 +81,6 @@ async def test_orchestrator_configuration():
     # Verify configuration loaded
     assert orchestrator.config is not None
     assert len(orchestrator.config.mcp_servers) > 0
-    
-    # Verify cache initialized
-    assert orchestrator.cache is not None
-    assert orchestrator.cache.ttl_seconds == orchestrator.config.orchestration.resource_cache_ttl
     
     # Verify registry populated
     servers = orchestrator.registry.get_all_servers()
