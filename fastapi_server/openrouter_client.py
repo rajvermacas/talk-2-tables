@@ -337,25 +337,29 @@ class OpenRouterClient:
                     context_parts.append(f"\n### MCP Server: {server_name}")
                     
                     if isinstance(server_data, dict):
-                        # Process resources list
+                        # Process resources dictionary
                         if "resources" in server_data:
-                            resources_list = server_data["resources"]
-                            logger.info(f"[MCP_RESOURCE_DETAIL] Server {server_name} has {len(resources_list)} resources")
+                            resources_dict = server_data["resources"]
+                            logger.info(f"[MCP_RESOURCE_DETAIL] Server {server_name} has {len(resources_dict)} resources")
                             
-                            for resource in resources_list:
-                                if isinstance(resource, dict):
-                                    res_name = resource.get("name", "Unknown")
-                                    res_desc = resource.get("description", "No description")
-                                    res_uri = resource.get("uri", "")
+                            # Resources are returned as a dictionary with resource names as keys
+                            for res_name, resource in resources_dict.items():
+                                logger.info(f"[MCP_RESOURCE_ITEM] Resource: {res_name}")
+                                
+                                context_parts.append(f"\n**Resource: {res_name}**")
+                                
+                                # Include resource data if available
+                                if isinstance(resource, dict) and "data" in resource:
+                                    logger.info(f"[MCP_RESOURCE_DATA] Resource {res_name} has data")
+                                    resource_data_str = resource["data"]
                                     
-                                    context_parts.append(f"\n**Resource: {res_name}**")
-                                    context_parts.append(f"  - URI: {res_uri}")
-                                    context_parts.append(f"  - Description: {res_desc}")
-                                    
-                                    # Include resource data if available
-                                    if "data" in resource:
-                                        logger.info(f"[MCP_RESOURCE_DATA] Resource {res_name} has data")
-                                        self._format_resource_data(resource["data"], res_uri, context_parts)
+                                    # Parse the JSON string data
+                                    try:
+                                        import json
+                                        resource_data = json.loads(resource_data_str) if isinstance(resource_data_str, str) else resource_data_str
+                                        self._format_resource_data(resource_data, res_name, context_parts)
+                                    except json.JSONDecodeError:
+                                        logger.warning(f"Failed to parse resource data as JSON for {res_name}")
                 
                 context_parts.append("\n" + "="*60)
         else:
@@ -366,46 +370,98 @@ class OpenRouterClient:
         
         return final_context
     
-    def _format_resource_data(self, resource_data: Any, res_uri: str, context_parts: List[str]) -> None:
+    def _format_resource_data(self, resource_data: Any, res_name: str, context_parts: List[str]) -> None:
         """Helper to format resource data content."""
         if isinstance(resource_data, dict):
-            # Handle product metadata
-            if "product-aliases" in res_uri or "column-mappings" in res_uri or "metadata-summary" in res_uri:
-                context_parts.append("  - Data Content:")
+            logger.info(f"[RESOURCE_DATA_FORMAT] Formatting data for {res_name}, keys: {list(resource_data.keys())}")
+            context_parts.append("  - Data Content:")
+            
+            # Handle product aliases (from get_product_aliases resource)
+            if "aliases" in resource_data:
+                aliases = resource_data["aliases"]
+                logger.info(f"[PRODUCT_ALIASES] Found {len(aliases)} product aliases")
+                context_parts.append("    Product Aliases:")
+                for alias, product_id in list(aliases.items())[:5]:
+                    context_parts.append(f"      • '{alias}' → Product ID: {product_id}")
+                if len(aliases) > 5:
+                    context_parts.append(f"      ... and {len(aliases) - 5} more aliases")
+            
+            # Handle column mappings (from get_column_mappings resource)
+            if "mappings" in resource_data:
+                mappings = resource_data["mappings"]
+                logger.info(f"[COLUMN_MAPPINGS] Found {len(mappings)} column mappings")
+                context_parts.append("    Column Mappings:")
+                for term, sql_expr in list(mappings.items())[:5]:
+                    context_parts.append(f"      • '{term}' → SQL: {sql_expr}")
+                if len(mappings) > 5:
+                    context_parts.append(f"      ... and {len(mappings) - 5} more mappings")
+            
+            # Handle metadata summary
+            if "total_products" in resource_data and "total_mappings" in resource_data:
+                logger.info(f"[METADATA_SUMMARY] Processing metadata summary")
+                context_parts.append("    Metadata Summary:")
+                context_parts.append(f"      • Total Products: {resource_data.get('total_products')}")
+                context_parts.append(f"      • Total Mappings: {resource_data.get('total_mappings')}")
+            
+            # Handle warranty and sustainability data
+            if "warranty_and_sustainability" in resource_data:
+                warranty_data = resource_data["warranty_and_sustainability"]
+                logger.info(f"[WARRANTY_SUSTAINABILITY] Processing warranty and sustainability data")
+                context_parts.append("    Warranty & Sustainability Information:")
                 
-                # Handle product aliases
-                if "product_aliases" in resource_data:
-                    aliases = resource_data["product_aliases"]
-                    context_parts.append("    Product Aliases (samples):")
-                    for alias, info in list(aliases.items())[:5]:
-                        context_parts.append(f"      • '{alias}' → {info.get('canonical_name', 'Unknown')}")
+                if "warranty_periods" in warranty_data:
+                    periods = warranty_data["warranty_periods"]
+                    logger.info(f"[WARRANTY_DATA] Found warranty data for {len(periods)} products")
+                    context_parts.append("      • Product Warranties:")
+                    
+                    eco_count = 0
+                    for product_id, info in list(periods.items())[:5]:  # Show first 5
+                        name = info.get('product_name', product_id)
+                        warranty = info.get('warranty_months', 'Unknown')
+                        is_eco = info.get('is_eco_friendly', False)
+                        eco_rating = info.get('eco_rating', 'N/A')
+                        
+                        if is_eco:
+                            eco_count += 1
+                        
+                        eco_text = f"(Eco: {eco_rating})" if is_eco else "(Not eco-friendly)"
+                        context_parts.append(f"        - {name}: {warranty} months {eco_text}")
+                    
+                    if len(periods) > 5:
+                        context_parts.append(f"        ... and {len(periods) - 5} more products")
+                    
+                    logger.info(f"[ECO_FRIENDLY_COUNT] Found {eco_count} eco-friendly products")
+                    context_parts.append(f"      • Eco-friendly products: {eco_count}/{len(periods)}")
                 
-                # Handle column mappings
-                if "column_mappings" in resource_data:
-                    mappings = resource_data["column_mappings"]
-                    context_parts.append("    Column Mappings:")
-                    for term, sql_expr in list(mappings.items())[:5]:
-                        context_parts.append(f"      • '{term}' → SQL: {sql_expr}")
+                if "warranty_policies" in warranty_data:
+                    policies = warranty_data["warranty_policies"]
+                    context_parts.append("      • Warranty Types:")
+                    for policy_type, description in policies.items():
+                        context_parts.append(f"        - {policy_type.title()}: {description}")
+            
+            # Handle database metadata
+            if "tables" in resource_data and "database_path" in resource_data:
+                logger.info(f"[DATABASE_METADATA] Processing database metadata")
+                context_parts.append("    Database Information:")
+                context_parts.append(f"      • Database: {resource_data.get('database_path')}")
+                tables = resource_data.get('tables', {})
+                context_parts.append(f"      • Tables: {', '.join(tables.keys())}")
                 
-                # Handle metadata summary
-                if "metadata_summary" in resource_data:
-                    summary = resource_data["metadata_summary"]
-                    context_parts.append("    Metadata Summary:")
-                    
-                    if "warranty_table" in summary:
-                        warranty = summary["warranty_table"]
-                        context_parts.append(f"      • Warranty Table: {warranty.get('table_name')}")
-                        context_parts.append(f"        - Column: {warranty.get('column_name')}")
-                    
-                    if "eco_friendly_table" in summary:
-                        eco = summary["eco_friendly_table"]
-                        context_parts.append(f"      • Eco-Friendly Table: {eco.get('table_name')}")
-                        context_parts.append(f"        - Column: {eco.get('column_name')}")
-                    
-                    if "specifications_table" in summary:
-                        specs = summary["specifications_table"]
-                        context_parts.append(f"      • Specifications Table: {specs.get('table_name')}")
-                        context_parts.append(f"        - Column: {specs.get('column_name')}")
+                # Check for product_metadata table
+                if 'product_metadata' in tables:
+                    pm_table = tables['product_metadata']
+                    if 'columns' in pm_table:
+                        columns = pm_table['columns']
+                        logger.info(f"[PRODUCT_METADATA_TABLE] Found product_metadata table with columns: {list(columns.keys())}")
+                        context_parts.append("      • Product Metadata Table:")
+                        
+                        if 'warranty_months' in columns:
+                            logger.info(f"[WARRANTY_TABLE] Found warranty_months column")
+                            context_parts.append("        - Warranty column: warranty_months (INTEGER)")
+                        
+                        if 'is_eco_friendly' in columns:
+                            logger.info(f"[ECO_TABLE] Found is_eco_friendly column")
+                            context_parts.append("        - Eco-friendly column: is_eco_friendly (BOOLEAN)")
     
     async def test_connection(self) -> bool:
         """Test the connection to OpenRouter API with retry logic."""

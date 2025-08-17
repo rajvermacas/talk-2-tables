@@ -379,81 +379,111 @@ class LLMManager:
                                     except json.JSONDecodeError:
                                         resource_data = resource_data_str
                                     
-                                    # Handle product metadata specifically
-                                    if "product" in res_name.lower() or "alias" in res_name.lower() or "column" in res_name.lower() or "metadata" in res_name.lower():
-                                        logger.info(f"[PRODUCT_METADATA] Processing product metadata from {res_name}")
-                                        context_parts.append("  - Data Content:")
+                                    # Handle different types of resources based on their content
+                                    if isinstance(resource_data, dict):
+                                        logger.info(f"[PRODUCT_METADATA] Processing resource data from {res_name}")
+                                        logger.info(f"[PRODUCT_METADATA] Resource data keys: {list(resource_data.keys())}")
                                         
-                                        if isinstance(resource_data, dict):
-                                            # Handle product aliases (from get_product_aliases resource)
-                                            if "aliases" in resource_data:
-                                                    aliases = resource_data["product_aliases"]
-                                                    logger.info(f"[PRODUCT_ALIASES] Found {len(aliases)} product aliases")
-                                                    context_parts.append("    Product Aliases (samples):")
-                                                    for alias, info in list(aliases.items())[:5]:
-                                                        context_parts.append(f"      • '{alias}' → {info.get('canonical_name', 'Unknown')}")
-                                                
-                                                # Handle column mappings
-                                                if "column_mappings" in resource_data:
-                                                    mappings = resource_data["column_mappings"]
-                                                    logger.info(f"[COLUMN_MAPPINGS] Found {len(mappings)} column mappings")
-                                                    context_parts.append("    Column Mappings:")
-                                                    for term, sql_expr in list(mappings.items())[:5]:
-                                                        context_parts.append(f"      • '{term}' → SQL: {sql_expr}")
-                                                
-                                                # Handle metadata summary
-                                                if "metadata_summary" in resource_data:
-                                                    summary = resource_data["metadata_summary"]
-                                                    logger.info(f"[METADATA_SUMMARY] Processing metadata summary")
-                                                    context_parts.append("    Metadata Summary:")
-                                                    
-                                                    if "warranty_table" in summary:
-                                                        warranty = summary["warranty_table"]
-                                                        logger.info(f"[WARRANTY_TABLE] Found warranty table: {warranty.get('table_name')}")
-                                                        context_parts.append(f"      • Warranty Table: {warranty.get('table_name')}")
-                                                        context_parts.append(f"        - Column: {warranty.get('column_name')}")
-                                                        context_parts.append(f"        - Type: {warranty.get('data_type')}")
-                                                    
-                                                    if "eco_friendly_table" in summary:
-                                                        eco = summary["eco_friendly_table"]
-                                                        logger.info(f"[ECO_TABLE] Found eco-friendly table: {eco.get('table_name')}")
-                                                        context_parts.append(f"      • Eco-Friendly Table: {eco.get('table_name')}")
-                                                        context_parts.append(f"        - Column: {eco.get('column_name')}")
-                                                        context_parts.append(f"        - Type: {eco.get('data_type')}")
-                                                    
-                                                    if "specifications_table" in summary:
-                                                        specs = summary["specifications_table"]
-                                                        logger.info(f"[SPECS_TABLE] Found specifications table: {specs.get('table_name')}")
-                                                        context_parts.append(f"      • Specifications Table: {specs.get('table_name')}")
-                                                        context_parts.append(f"        - Column: {specs.get('column_name')}")
-                                                        context_parts.append(f"        - Type: {specs.get('data_type')}")
-                                                    
-                                                    if "available_categories" in summary:
-                                                        categories = summary["available_categories"]
-                                                        logger.info(f"[CATEGORIES] Found {len(categories)} product categories")
-                                                        context_parts.append(f"      • Available Categories: {', '.join(categories[:5])}...")
-                                                
-                                                # Log any other keys for debugging
-                                                other_keys = [k for k in resource_data.keys() 
-                                                            if k not in ["product_aliases", "column_mappings", "metadata_summary"]]
-                                                if other_keys:
-                                                    logger.info(f"[OTHER_DATA] Resource has additional data keys: {other_keys}")
+                                        # Handle product aliases (from get_product_aliases resource)
+                                        if "aliases" in resource_data:
+                                            aliases = resource_data["aliases"]
+                                            logger.info(f"[PRODUCT_ALIASES] Found {len(aliases)} product aliases")
+                                            context_parts.append("    Product Aliases:")
+                                            for alias, product_id in list(aliases.items())[:5]:
+                                                context_parts.append(f"      • '{alias}' → Product ID: {product_id}")
+                                            if len(aliases) > 5:
+                                                context_parts.append(f"      ... and {len(aliases) - 5} more aliases")
                                         
-                                        # Handle database metadata
-                                        elif "database" in res_name.lower() or "table" in res_uri.lower():
-                                            logger.info(f"[DATABASE_METADATA] Processing database metadata from {res_name}")
-                                            if isinstance(resource_data, dict) and "tables" in resource_data:
-                                                tables = resource_data["tables"]
-                                                logger.info(f"[DATABASE_TABLES] Found {len(tables)} tables")
-                                                context_parts.append(f"  - Database Tables ({len(tables)} total):")
-                                                for table_name, table_info in tables.items():
-                                                    context_parts.append(f"    • Table: {table_name}")
-                                                    if "columns" in table_info:
-                                                        cols = table_info["columns"]
-                                                        col_names = list(cols.keys()) if isinstance(cols, dict) else cols
-                                                        context_parts.append(f"      Columns: {', '.join(col_names[:10])}")
-                                                    if "row_count" in table_info:
-                                                        context_parts.append(f"      Rows: {table_info['row_count']}")
+                                        # Handle column mappings (from get_column_mappings resource)
+                                        if "mappings" in resource_data:
+                                            mappings = resource_data["mappings"]
+                                            logger.info(f"[COLUMN_MAPPINGS] Found {len(mappings)} column mappings")
+                                            context_parts.append("    Column Mappings:")
+                                            for term, sql_expr in list(mappings.items())[:5]:
+                                                context_parts.append(f"      • '{term}' → SQL: {sql_expr}")
+                                            if len(mappings) > 5:
+                                                context_parts.append(f"      ... and {len(mappings) - 5} more mappings")
+                                        
+                                        # Handle metadata summary (from get_metadata_summary resource)
+                                        if "total_products" in resource_data and "total_mappings" in resource_data:
+                                            logger.info(f"[METADATA_SUMMARY] Processing metadata summary")
+                                            context_parts.append("    Metadata Summary:")
+                                            context_parts.append(f"      • Total Products: {resource_data.get('total_products')}")
+                                            context_parts.append(f"      • Total Mappings: {resource_data.get('total_mappings')}")
+                                            context_parts.append(f"      • Version: {resource_data.get('version')}")
+                                            context_parts.append(f"      • Last Updated: {resource_data.get('last_updated')}")
+                                        
+                                        # Handle warranty and sustainability data
+                                        if "warranty_and_sustainability" in resource_data:
+                                            warranty_data = resource_data["warranty_and_sustainability"]
+                                            logger.info(f"[WARRANTY_SUSTAINABILITY] Processing warranty and sustainability data")
+                                            context_parts.append("    Warranty & Sustainability Information:")
+                                            
+                                            if "warranty_periods" in warranty_data:
+                                                periods = warranty_data["warranty_periods"]
+                                                logger.info(f"[WARRANTY_DATA] Found warranty data for {len(periods)} products")
+                                                context_parts.append("      • Product Warranties:")
+                                                
+                                                eco_count = 0
+                                                for product_id, info in list(periods.items())[:5]:  # Show first 5
+                                                    name = info.get('product_name', product_id)
+                                                    warranty = info.get('warranty_months', 'Unknown')
+                                                    is_eco = info.get('is_eco_friendly', False)
+                                                    eco_rating = info.get('eco_rating', 'N/A')
+                                                    
+                                                    if is_eco:
+                                                        eco_count += 1
+                                                    
+                                                    eco_text = f"(Eco: {eco_rating})" if is_eco else "(Not eco-friendly)"
+                                                    context_parts.append(f"        - {name}: {warranty} months {eco_text}")
+                                                
+                                                if len(periods) > 5:
+                                                    context_parts.append(f"        ... and {len(periods) - 5} more products")
+                                                
+                                                logger.info(f"[ECO_FRIENDLY_COUNT] Found {eco_count} eco-friendly products")
+                                                context_parts.append(f"      • Eco-friendly products: {eco_count}/{len(periods)}")
+                                            
+                                            if "warranty_policies" in warranty_data:
+                                                policies = warranty_data["warranty_policies"]
+                                                context_parts.append("      • Warranty Types:")
+                                                for policy_type, description in policies.items():
+                                                    context_parts.append(f"        - {policy_type.title()}: {description}")
+                                        
+                                        # Handle database metadata (from get_database_metadata resource)
+                                        if "tables" in resource_data and "database_path" in resource_data:
+                                            logger.info(f"[DATABASE_METADATA] Processing database metadata")
+                                            context_parts.append("    Database Information:")
+                                            context_parts.append(f"      • Database: {resource_data.get('database_path')}")
+                                            tables = resource_data.get('tables', {})
+                                            context_parts.append(f"      • Tables: {', '.join(tables.keys())}")
+                                            
+                                            # Check for product_metadata table with warranty and eco-friendly columns
+                                            if 'product_metadata' in tables:
+                                                pm_table = tables['product_metadata']
+                                                if 'columns' in pm_table:
+                                                    columns = pm_table['columns']
+                                                    logger.info(f"[PRODUCT_METADATA_TABLE] Found product_metadata table with columns: {list(columns.keys())}")
+                                                    context_parts.append("      • Product Metadata Table:")
+                                                    
+                                                    if 'warranty_months' in columns:
+                                                        logger.info(f"[WARRANTY_TABLE] Found warranty_months column")
+                                                        context_parts.append("        - Warranty column: warranty_months (INTEGER)")
+                                                    
+                                                    if 'is_eco_friendly' in columns:
+                                                        logger.info(f"[ECO_TABLE] Found is_eco_friendly column")
+                                                        context_parts.append("        - Eco-friendly column: is_eco_friendly (BOOLEAN)")
+                                                    
+                                                    if 'specifications' in columns:
+                                                        logger.info(f"[SPECS_TABLE] Found specifications column")
+                                                        context_parts.append("        - Specifications column: specifications (TEXT/JSON)")
+                                        
+                                        # Log any other keys for debugging
+                                        other_keys = [k for k in resource_data.keys() 
+                                                    if k not in ["aliases", "mappings", "total_products", "total_mappings", 
+                                                               "tables", "database_path", "description", "version", "last_updated",
+                                                               "warranty_and_sustainability"]]
+                                        if other_keys:
+                                            logger.info(f"[OTHER_DATA] Resource has additional data keys: {other_keys}")
                         
                         # Process tools if available
                         if "tools" in server_data:
