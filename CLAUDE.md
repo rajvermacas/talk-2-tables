@@ -89,47 +89,19 @@ pip install -e ".[dev,fastapi]"
 cd react-chatbot && npm install && cd ..
 ```
 
-### Local Development - Full Stack
+#### Execution Steps
+Run these four commands in separate terminals in venv:
+1. Start remote mcp server with sse transport prtocol at port 8000
+python3 -m talk_2_tables_mcp.server --transport sse
 
-The system requires three components running simultaneously. Use these commands in **separate terminals**:
+2. Start product metadata mcp server at port 8002
+python -m product_metadata_mcp.server --transport sse --host 0.0.0.0 --port 8002
 
-```bash
-# Terminal 1: MCP Server (database interface)
-python -m talk_2_tables_mcp.remote_server
+3. Start FastAPI Backend (Terminal 2)  at port 8001
+python3 -m fastapi_server.main
 
-# Terminal 2: FastAPI Backend (AI agent with multi-LLM support)
-cd fastapi_server && python main.py
-
-# Terminal 3: React Frontend (user interface)
+4. Start React Frontend (Terminal 3)  at port 3000
 ./start-chatbot.sh
-```
-
-### Component-Specific Development
-
-```bash
-# === MCP Server Only ===
-# Start local server (stdio transport for MCP clients)
-python -m talk_2_tables_mcp.server
-
-# Start remote server (HTTP transport for network access)
-python -m talk_2_tables_mcp.remote_server
-# OR with specific options:
-python -m talk_2_tables_mcp.server --transport sse --host 0.0.0.0 --port 8000
-
-# === FastAPI Server Only ===
-cd fastapi_server
-python main.py
-# OR with hot reload:
-uvicorn main:app --reload --port 8001
-
-# === React App Only ===
-cd react-chatbot && npm start
-
-# === Quick Testing ===
-python scripts/test_fastapi_server.py
-python scripts/test_remote_server.py
-python scripts/test_multi_llm.py
-```
 
 ### Testing
 
