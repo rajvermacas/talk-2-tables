@@ -356,34 +356,35 @@ class LLMManager:
                     context_parts.append(f"\n### MCP Server: {server_name}")
                     
                     if isinstance(server_data, dict):
-                        # Process resources list
+                        # Process resources dictionary
                         if "resources" in server_data:
-                            resources_list = server_data["resources"]
-                            logger.info(f"[MCP_RESOURCE_DETAIL] Server {server_name} has {len(resources_list)} resources")
+                            resources_dict = server_data["resources"]
+                            logger.info(f"[MCP_RESOURCE_DETAIL] Server {server_name} has {len(resources_dict)} resources")
                             
-                            for resource in resources_list:
-                                if isinstance(resource, dict):
-                                    res_name = resource.get("name", "Unknown")
-                                    res_desc = resource.get("description", "No description")
-                                    res_uri = resource.get("uri", "")
+                            # Resources are returned as a dictionary with resource names as keys
+                            for res_name, resource in resources_dict.items():
+                                logger.info(f"[MCP_RESOURCE_ITEM] Resource: {res_name}")
+                                
+                                context_parts.append(f"\n**Resource: {res_name}**")
+                                
+                                # Resource data is in the 'data' field
+                                if isinstance(resource, dict) and "data" in resource:
+                                    logger.info(f"[MCP_RESOURCE_DATA] Resource {res_name} has data field")
+                                    resource_data_str = resource["data"]
                                     
-                                    logger.info(f"[MCP_RESOURCE_ITEM] Resource: {res_name} (URI: {res_uri})")
+                                    # Parse the JSON string data
+                                    try:
+                                        import json
+                                        resource_data = json.loads(resource_data_str) if isinstance(resource_data_str, str) else resource_data_str
+                                    except json.JSONDecodeError:
+                                        resource_data = resource_data_str
                                     
-                                    context_parts.append(f"\n**Resource: {res_name}**")
-                                    context_parts.append(f"  - URI: {res_uri}")
-                                    context_parts.append(f"  - Description: {res_desc}")
-                                    
-                                    # If resource has data, include it
-                                    if "data" in resource:
-                                        logger.info(f"[MCP_RESOURCE_DATA] Resource {res_name} has data field")
-                                        resource_data = resource["data"]
+                                    # Handle product metadata specifically
+                                    if "product" in res_name.lower() or "alias" in res_name.lower() or "column" in res_name.lower() or "metadata" in res_name.lower():
+                                        logger.info(f"[PRODUCT_METADATA] Processing product metadata from {res_name}")
+                                        context_parts.append("  - Data Content:")
                                         
-                                        # Handle product metadata specifically
-                                        if "product-aliases" in res_uri or "column-mappings" in res_uri or "metadata-summary" in res_uri:
-                                            logger.info(f"[PRODUCT_METADATA] Processing product metadata from {res_name}")
-                                            context_parts.append("  - Data Content:")
-                                            
-                                            if isinstance(resource_data, dict):
+                                        if isinstance(resource_data, dict):
                                                 # Handle product aliases
                                                 if "product_aliases" in resource_data:
                                                     aliases = resource_data["product_aliases"]
