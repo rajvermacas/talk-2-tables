@@ -5,15 +5,16 @@ Chat completion handler that orchestrates OpenRouter LLM and MCP database querie
 import logging
 import re
 import time
-from typing import List, Dict, Any, Optional
+import json
+from typing import List, Dict, Any, Optional, Tuple
 from uuid import uuid4
 
 from .models import (
     ChatMessage, ChatCompletionRequest, ChatCompletionResponse, 
-    MCPQueryResult, MessageRole
+    MessageRole
 )
 from .llm_manager import llm_manager
-from .mcp_client import MCPDatabaseClient, mcp_client
+from .mcp_client import mcp_client
 
 logger = logging.getLogger(__name__)
 
@@ -26,22 +27,7 @@ class ChatCompletionHandler:
         self.llm_client = llm_manager
         self.mcp_client = mcp_client
         
-        # SQL query detection patterns
-        self.sql_patterns = [
-            r'\b(?:select|SELECT)\b.*\b(?:from|FROM)\b',
-            r'\b(?:show|SHOW)\b.*\b(?:tables|databases|columns)\b',
-            r'\b(?:describe|DESCRIBE|desc|DESC)\b',
-            r'\b(?:explain|EXPLAIN)\b',
-        ]
-        
-        # Database-related keywords that might indicate a query need
-        self.db_keywords = [
-            'table', 'database', 'query', 'select', 'data', 'records', 'rows',
-            'customers', 'products', 'orders', 'sales', 'analytics', 'report',
-            'count', 'sum', 'average', 'maximum', 'minimum', 'filter', 'search'
-        ]
-        
-        logger.info("Initialized chat completion handler")
+        logger.info("Initialized chat completion handler with LLM-based decision system")
     
     async def process_chat_completion(
         self,
@@ -168,9 +154,164 @@ class ChatCompletionHandler:
                 return message
         return None
     
-    def _needs_database_query(self, content: str) -> bool:
+    async def _get_mcp_resources(self) -> Dict[str, Any]:
         """
-        Determine if a message needs database access.
+        Get MCP resources fresh on every call (no caching).
+        
+        Returns:
+            Dictionary containing database metadata and available resources
+        """
+        try:
+            logger.info("Fetching fresh MCP resources (no caching)")
+            
+            # Fetch fresh resources
+            resources = {}
+            
+            # Get database metadata
+            try:
+                logger.debug("Fetching database metadata...")
+                metadata = await self.mcp_client.get_database_metadata()
+                if metadata:
+                    resources["database_metadata"] = metadata
+                    logger.info(f"Successfully fetched database metadata with {len(metadata.get('tables', {}))} tables")
+                    logger.debug(f"Tables found: {list(metadata.get('tables', {}).keys())}")
+            except Exception as e:
+                logger.error(f"Failed to fetch database metadata: {str(e)}")
+                resources["database_metadata"] = {}
+            
+            # Get available resources list
+            try:
+                logger.debug("Fetching available resources...")
+                resource_list = await self.mcp_client.list_resources()
+                resources["available_resources"] = [
+                    {"name": res.name, "description": res.description, "uri": res.uri}
+                    for res in resource_list
+                ]
+                logger.info(f"Successfully fetched {len(resource_list)} available resources")
+                for res in resources["available_resources"]:
+                    logger.debug(f"Resource: {res['name']} - {res['description'][:50]}...")
+            except Exception as e:
+                logger.error(f"Failed to fetch resource list: {str(e)}")
+                resources["available_resources"] = []
+            
+            # Get available tools
+            try:
+                logger.debug("Fetching available tools...")
+                tools = await self.mcp_client.list_tools()
+                resources["available_tools"] = [
+                    {"name": tool.name, "description": tool.description}
+                    for tool in tools
+                ]
+                logger.info(f"Successfully fetched {len(tools)} available tools")
+                for tool in resources["available_tools"]:
+                    logger.debug(f"Tool: {tool['name']} - {tool['description'][:50]}...")
+            except Exception as e:
+                logger.error(f"Failed to fetch tool list: {str(e)}")
+                resources["available_tools"] = []
+            
+            logger.info(f"Completed fetching MCP resources: {len(resources)} resource types")
+            
+            return resources
+            
+        except Exception as e:
+            logger.error(f"Critical error fetching MCP resources: {str(e)}")
+            # Return empty resources on error
+            return {
+                "database_metadata": {},
+                "available_resources": [],
+                "available_tools": []
+            }
+    
+    async def _needs_database_query_llm(self, content: str, resources: Dict[str, Any]) -> Tuple[bool, str]:
+        """
+        Use LLM to determine if a message needs database access.
+        
+        Args:
+            content: Message content to analyze
+            resources: MCP resources for context
+            
+        Returns:
+            Tuple of (needs_database, reasoning)
+        """
+        try:
+            logger.info("Using LLM to determine database query need")
+            
+            # Prepare the decision prompt
+            system_prompt = """You are a database query decision system. Analyze the user's query and the available database resources to determine if database access is needed.
+
+Available Database Resources:
+{}
+
+Tables and Columns:
+{}
+
+Your task:
+1. Analyze if the user's query requires database access
+2. Consider the available tables and data
+3. Return a JSON response with your decision
+
+Response format:
+{{
+    "needs_database": true/false,
+    "reasoning": "Brief explanation of your decision",
+    "confidence": "high/medium/low"
+}}""".format(
+                json.dumps(resources.get("available_resources", []), indent=2),
+                json.dumps(resources.get("database_metadata", {}).get("tables", {}), indent=2)
+            )
+            
+            user_prompt = f"User Query: {content}\n\nDoes this query require database access?"
+            
+            # Create messages for LLM
+            messages = [
+                ChatMessage(role=MessageRole.SYSTEM, content=system_prompt),
+                ChatMessage(role=MessageRole.USER, content=user_prompt)
+            ]
+            
+            logger.debug("Sending decision request to LLM")
+            
+            # Call LLM for decision
+            response = await self.llm_client.create_chat_completion(
+                messages=messages,
+                model=None,  # Use default model
+                max_tokens=200,
+                temperature=0.1  # Low temperature for consistent decisions
+            )
+            
+            # Parse response
+            if response.choices and response.choices[0].message:
+                response_content = response.choices[0].message.content
+                logger.debug(f"LLM decision response: {response_content}")
+                
+                try:
+                    # Try to parse as JSON
+                    decision_data = json.loads(response_content)
+                    needs_database = decision_data.get("needs_database", False)
+                    reasoning = decision_data.get("reasoning", "No reasoning provided")
+                    confidence = decision_data.get("confidence", "unknown")
+                    
+                    logger.info(f"LLM decision: needs_database={needs_database}, confidence={confidence}")
+                    logger.debug(f"LLM reasoning: {reasoning}")
+                    
+                    return needs_database, reasoning
+                    
+                except json.JSONDecodeError:
+                    # Fallback: Look for yes/no in response
+                    logger.warning("Could not parse LLM response as JSON, using text analysis")
+                    response_lower = response_content.lower()
+                    needs_database = "yes" in response_lower or "true" in response_lower
+                    return needs_database, response_content
+            
+            logger.warning("No valid response from LLM")
+            return False, "No response from LLM"
+            
+        except Exception as e:
+            logger.error(f"Error in LLM decision making: {str(e)}")
+            return False, f"Error: {str(e)}"
+    
+    async def _needs_database_query(self, content: str) -> bool:
+        """
+        Determine if a message needs database access using LLM.
         
         Args:
             content: Message content to analyze
@@ -178,34 +319,39 @@ class ChatCompletionHandler:
         Returns:
             True if database access is likely needed
         """
-        content_lower = content.lower()
+        logger.info(f"Analyzing if database query is needed for: {content[:100]}...")
         
-        # Check for explicit SQL patterns
-        for pattern in self.sql_patterns:
-            if re.search(pattern, content, re.IGNORECASE):
-                logger.debug(f"Found SQL pattern: {pattern}")
+        try:
+            # First, get MCP resources for context
+            logger.debug("Fetching MCP resources for decision context")
+            resources = await self._get_mcp_resources()
+            
+            # Use LLM-based decision
+            logger.info("Using LLM to determine database query need")
+            needs_db, reasoning = await self._needs_database_query_llm(content, resources)
+            
+            # Log the decision
+            logger.info(f"LLM decision: needs_database={needs_db}")
+            logger.debug(f"LLM reasoning: {reasoning}")
+            
+            # If LLM says no but there's an explicit SQL query, override
+            if not needs_db and self._extract_sql_query(content):
+                logger.info("Override: Found explicit SQL query despite LLM decision")
                 return True
-        
-        # Check for database-related keywords
-        keyword_count = sum(1 for keyword in self.db_keywords if keyword in content_lower)
-        if keyword_count >= 2:  # Require at least 2 database keywords
-            logger.debug(f"Found {keyword_count} database keywords")
-            return True
-        
-        # Check for question words with database context
-        question_words = ['what', 'how many', 'show', 'list', 'find', 'get', 'which']
-        has_question = any(word in content_lower for word in question_words)
-        has_db_context = any(keyword in content_lower for keyword in self.db_keywords)
-        
-        if has_question and has_db_context:
-            logger.debug("Found question with database context")
-            return True
-        
-        return False
+            
+            return needs_db
+            
+        except Exception as e:
+            logger.error(f"LLM decision failed with error: {str(e)}")
+            logger.warning("Defaulting to no database access due to LLM failure")
+            
+            # Default to no database access if LLM fails
+            return False
     
     def _extract_sql_query(self, content: str) -> Optional[str]:
         """
         Extract explicit SQL query from message content.
+        Only looks for SQL in code blocks or when explicitly marked.
         
         Args:
             content: Message content
@@ -213,35 +359,34 @@ class ChatCompletionHandler:
         Returns:
             SQL query if found, None otherwise
         """
-        # Look for SQL code blocks
-        sql_block_patterns = [
-            r'```sql\s*(.*?)\s*```',
-            r'```\s*((?:SELECT|select).*?)\s*```',
-            r'`([^`]*(?:SELECT|select)[^`]*)`'
-        ]
+        logger.debug("Checking for explicit SQL queries in code blocks")
         
-        for pattern in sql_block_patterns:
-            match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
-            if match:
-                query = match.group(1).strip()
-                if query:
-                    logger.debug(f"Extracted SQL from code block: {query}")
-                    return query
+        # Look for SQL in markdown code blocks
+        # Pattern 1: ```sql ... ```
+        sql_block_match = re.search(r'```sql\s*(.*?)\s*```', content, re.DOTALL | re.IGNORECASE)
+        if sql_block_match:
+            query = sql_block_match.group(1).strip()
+            if query:
+                logger.info(f"Found SQL in code block: {query[:50]}...")
+                return query
         
-        # Look for standalone SQL statements
-        for pattern in self.sql_patterns:
-            match = re.search(pattern, content, re.IGNORECASE)
-            if match:
-                # Try to extract the full statement
-                lines = content.split('\n')
-                for line in lines:
-                    if re.search(pattern, line, re.IGNORECASE):
-                        query = line.strip()
-                        if query.endswith(';'):
-                            query = query[:-1]
-                        logger.debug(f"Extracted SQL statement: {query}")
-                        return query
+        # Pattern 2: ``` SELECT ... ```  
+        select_block_match = re.search(r'```\s*(SELECT.*?)\s*```', content, re.DOTALL | re.IGNORECASE)
+        if select_block_match:
+            query = select_block_match.group(1).strip()
+            if query:
+                logger.info(f"Found SELECT query in code block: {query[:50]}...")
+                return query
         
+        # Pattern 3: Inline code with SQL
+        inline_sql_match = re.search(r'`(SELECT[^`]+)`', content, re.IGNORECASE)
+        if inline_sql_match:
+            query = inline_sql_match.group(1).strip()
+            if query:
+                logger.info(f"Found inline SQL query: {query[:50]}...")
+                return query
+        
+        logger.debug("No explicit SQL queries found in code blocks")
         return None
     
     async def _suggest_sql_query(
