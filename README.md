@@ -309,6 +309,12 @@ This project is licensed under the MIT License.
 
 
 # Execution Steps
+## Linux
+. venv/bin/activate
+
+## Windows - git bash
+. venv-win/Scripts/activate
+
 Run these three commands in separate terminals in venv:
 1. Start remote mcp server with sse transport prtocol
 python3 -m talk_2_tables_mcp.server --transport sse
