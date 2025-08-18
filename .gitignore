@@ -76,3 +76,6 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+.dev-resources/context/compact/
+logs/

@@ -72,13 +72,6 @@ Read the instructions at `/root/.claude/commands/persist-session.md` to get an u
 
 **Important**: Always read and update the session scratchpad when working on this project to maintain context continuity across different Claude Code sessions.
 
-### Incremental Development Approach
-**Build one task at a time** - this project follows an incremental development strategy:
-- Focus on **single, well-defined tasks** rather than attempting massive changes at once
-- Complete and test each component thoroughly before moving to the next
-- Update the session scratchpad after each task completion to maintain progress tracking
-- **Current Status**: Full multi-tier system implemented (MCP ↔ FastAPI ↔ React) - future tasks focus on enhancements, additional data sources, and production optimizations
-
 ## Development Commands
 
 ### Prerequisites
@@ -111,32 +104,16 @@ cd fastapi_server && python main.py
 ./start-chatbot.sh
 ```
 
-### Component-Specific Development
+# Execution Steps
+Run these three commands in separate terminals in venv:
+1. Start remote mcp server with sse transport prtocol at port 8000  
+python3 -m talk_2_tables_mcp.server --transport sse
 
-```bash
-# === MCP Server Only ===
-# Start local server (stdio transport for MCP clients)
-python -m talk_2_tables_mcp.server
+2. Start FastAPI Backend (Terminal 2) at port 8001  
+python3 -m fastapi_server.main
 
-# Start remote server (HTTP transport for network access)
-python -m talk_2_tables_mcp.remote_server
-# OR with specific options:
-python -m talk_2_tables_mcp.server --transport streamable-http --host 0.0.0.0 --port 8000
-
-# === FastAPI Server Only ===
-cd fastapi_server
-python main.py
-# OR with hot reload:
-uvicorn main:app --reload --port 8001
-
-# === React App Only ===
-cd react-chatbot && npm start
-
-# === Quick Testing ===
-python scripts/test_fastapi_server.py
-python scripts/test_remote_server.py
-python scripts/test_multi_llm.py
-```
+3. Start React Frontend (Terminal 3) at port 3000  
+./start-chatbot.sh
 
 ### Testing
 
@@ -206,7 +183,7 @@ DATABASE_PATH="test_data/sample.db"      # SQLite database location
 METADATA_PATH="resources/metadata.json"  # Resource discovery metadata
 HOST="0.0.0.0"                          # Server bind address
 PORT="8000"                             # Server port
-TRANSPORT="streamable-http"              # Transport protocol
+TRANSPORT="sse"              # Transport protocol
 LOG_LEVEL="INFO"                         # Logging verbosity
 STATELESS_HTTP="false"                   # HTTP session mode
 ALLOW_CORS="true"                        # CORS headers
@@ -371,8 +348,8 @@ cd fastapi_server && python main.py        # Terminal 2
 # Test MCP server directly
 python scripts/test_remote_server.py
 
-# Check transport protocol match (FastAPI uses streamablehttp)
-python -m talk_2_tables_mcp.server --transport streamable-http --port 8000
+# Check transport protocol match (FastAPI uses sse)
+python -m talk_2_tables_mcp.server --transport sse --port 8000
 ```
 
 **React Build Failures:**
@@ -401,4 +378,8 @@ echo $OPENROUTER_API_KEY
 - **Configuration**: `pyproject.toml` (Python), `react-chatbot/package.json` (React)
 
 ## Memorize
-- test using puppeteer mcp tool for UI relate tasks
+- test using puppeteer mcp tool for UI related tasks
+
+- Use SSE, Do not use streamable-http
+
+- Use extensive logging. Flood it with logging. So that you can debug it better in future.
