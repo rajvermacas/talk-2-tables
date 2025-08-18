@@ -317,7 +317,7 @@ This project is licensed under the MIT License.
 
 Run these three commands in separate terminals in venv:
 1. Start remote mcp server with sse transport prtocol
-python3 -m talk_2_tables_mcp.server --transport sse
+python -m talk_2_tables_mcp.server --transport sse
 
 2. Start FastAPI Backend (Terminal 2)  
 python3 -m fastapi_server.main
