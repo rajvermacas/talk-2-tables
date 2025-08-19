@@ -9,6 +9,17 @@
       "mcp__puppeteer__puppeteer_hover"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run .claude/hooks/pre_compact.py"
+          }
+        ]
+      }
+    ]
   }
 }
