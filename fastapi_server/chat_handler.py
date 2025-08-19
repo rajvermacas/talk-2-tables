@@ -51,7 +51,7 @@ class ChatCompletionHandler:
                 raise ValueError("No user message found in request")
             
             # Check if this looks like a database query
-            needs_database = self._needs_database_query(user_message.content)
+            needs_database = await self._needs_database_query(user_message.content)
             
             mcp_context = {}
             query_result = None
