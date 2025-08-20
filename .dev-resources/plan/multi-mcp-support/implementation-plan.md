@@ -20,6 +20,111 @@ This plan outlines the implementation of multi-MCP server support through JSON c
 4. **MCP Aggregator** - Unified interface for all servers
 5. **FastAPI Integration** - Updates to existing backend
 
+### Multi-Server Flow Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Agent as Agent<br/>(MCP Host)
+    participant LLM
+    participant Agg as MCP Aggregator
+    participant C1 as MCP Client 1<br/>(Database)
+    participant C2 as MCP Client 2<br/>(GitHub)
+    participant S1 as MCP Server 1<br/>(SSE)
+    participant S2 as MCP Server 2<br/>(stdio)
+    
+    Note over User,S2: === SESSION INITIALIZATION (Once per session) ===
+    
+    User->>Agent: Start Conversation
+    
+    Agent->>Agg: Initialize with config.json
+    
+    par Initialize Server 1 (Database)
+        Agg->>C1: Create SSE Client
+        C1->>S1: Connect via SSE<br/>POST /sse/connect
+        S1-->>C1: SSE Stream Established
+        C1->>S1: initialize
+        S1-->>C1: {name: "database-server"}
+        C1->>S1: tools/list
+        S1-->>C1: [execute_query, analyze_data]
+        C1->>S1: resources/list
+        S1-->>C1: [database_schema, metadata]
+        
+        Note over C1,S1: Fetch all resource contents
+        C1->>S1: resources/read (ALL)
+        S1-->>C1: All resource contents
+    and Initialize Server 2 (GitHub)
+        Agg->>C2: Create stdio Client
+        C2->>S2: Start process<br/>npx @mcp/server-github
+        S2-->>C2: Process started
+        C2->>S2: initialize
+        S2-->>C2: {name: "github-server"}
+        C2->>S2: tools/list
+        S2-->>C2: [create_issue, search_code]
+        C2->>S2: resources/list
+        S2-->>C2: [repo_metadata]
+        
+        Note over C2,S2: Fetch all resource contents
+        C2->>S2: resources/read (ALL)
+        S2-->>C2: All resource contents
+    end
+    
+    Agg->>Agg: Aggregate tools & resources<br/>Handle namespacing
+    
+    Agent->>Agent: Store aggregated tools<br/>& resources in memory
+    
+    Agent->>LLM: Initialize with ALL tools<br/>from ALL servers
+    
+    Note over User,S2: === EVERY USER MESSAGE ===
+    
+    User->>Agent: "Search for database queries in GitHub"
+    
+    Note right of Agent: Use aggregated tools & resources<br/>from memory (no fetching)
+    
+    Agent->>LLM: {<br/>  message: "Search for database queries...",<br/>  resources: [ALL_AGGREGATED_RESOURCES],<br/>  tools: [ALL_AGGREGATED_TOOLS]<br/>}
+    
+    Note right of LLM: Tools include:<br/>- database-server.execute_query<br/>- github-server.search_code
+    
+    LLM->>LLM: Decide which tools to use
+    
+    LLM-->>Agent: Tool Call: github-server.search_code<br/>{query: "SELECT", language: "sql"}
+    
+    Agent->>Agg: Route tool call
+    
+    Agg->>C2: tools/call (search_code)
+    C2->>S2: Execute search_code
+    S2-->>C2: Search results
+    C2-->>Agg: Tool response
+    Agg-->>Agent: Results
+    
+    Agent->>LLM: Tool Results
+    
+    LLM-->>Agent: Tool Call: database-server.execute_query<br/>{query: "SELECT COUNT(*)..."}
+    
+    Agent->>Agg: Route tool call
+    
+    Agg->>C1: tools/call (execute_query)
+    C1->>S1: Execute via SSE
+    S1-->>C1: Query results
+    C1-->>Agg: Tool response
+    Agg-->>Agent: Results
+    
+    Agent->>LLM: Tool Results
+    
+    LLM->>LLM: Combine results
+    
+    LLM-->>Agent: Final Answer
+    
+    Agent->>User: "Found 15 SQL queries in GitHub.<br/>Database has 1,234 records..."
+```
+
+This diagram illustrates:
+- **Session initialization**: Parallel server connections and resource fetching
+- **Tool/resource aggregation**: Combining capabilities from all servers
+- **Message processing**: Using aggregated tools without re-fetching
+- **Tool routing**: Directing calls to appropriate servers
+- **Response combination**: Merging results from multiple servers
+
 ## Files to be Created/Modified
 
 ### New Files
