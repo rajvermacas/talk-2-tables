@@ -16,7 +16,7 @@ from .namespace_manager import NamespaceManager
 from .cache import ResourceCache, CacheConfig
 from .router import ToolRouter
 from .clients.base_client import ConnectionState, ToolResult
-from .models.aggregated import (
+from .aggregated_models.aggregated import (
     AggregatedTool,
     AggregatedResource,
     ResolutionStrategy,

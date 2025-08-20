@@ -10,7 +10,7 @@ from .clients.base_client import AbstractMCPClient
 from .clients.sse_client import SSEMCPClient
 from .clients.stdio_client import StdioMCPClient
 from .clients.http_client import HTTPMCPClient
-from ..mcp.models import ServerConfig
+from .models import ServerConfig
 
 logger = logging.getLogger(__name__)
 

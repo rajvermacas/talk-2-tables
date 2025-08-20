@@ -12,6 +12,14 @@ from .aggregated import (
     AggregationMetadata,
 )
 
+# Import ServerConfig from parent models.py file
+try:
+    from ..models import ServerConfig, TransportType
+except ImportError:
+    # For backward compatibility
+    ServerConfig = None
+    TransportType = None
+
 __all__ = [
     "AggregatedTool",
     "AggregatedResource",
@@ -20,4 +28,6 @@ __all__ = [
     "ResolutionStrategy",
     "CacheEntry",
     "AggregationMetadata",
+    "ServerConfig",
+    "TransportType",
 ]

@@ -46,6 +46,10 @@ class FastAPIServerConfig(BaseSettings):
         default="sse",
         description="Transport protocol for MCP connection (stdio or http)"
     )
+    mcp_config_path: str = Field(
+        default="config/mcp-servers.json",
+        description="Path to multi-MCP server configuration file"
+    )
     
     # FastAPI Server Configuration
     fastapi_port: int = Field(

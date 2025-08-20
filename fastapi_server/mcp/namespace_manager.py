@@ -10,7 +10,7 @@ import re
 from typing import Dict, List, Optional, Tuple, Set
 from dataclasses import dataclass, field
 
-from .models.aggregated import (
+from .aggregated_models.aggregated import (
     ResolutionStrategy,
     NamespaceConflict,
     ConflictDetail,
