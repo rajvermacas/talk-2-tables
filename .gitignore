@@ -78,5 +78,6 @@ Thumbs.db
 tmp/
 temp/
 
-.dev-resources/context/compact/
 logs/
+
+.dev-resources/context/messages_backup
