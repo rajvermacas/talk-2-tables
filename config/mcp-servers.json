@@ -10,8 +10,8 @@
     "retry_attempts": 3,
     "retry_delay": 1000
   },
-  "servers": {
-    "database-server": {
+  "servers": [
+    {
       "name": "database-server",
       "enabled": true,
       "description": "SQLite database MCP server",
@@ -23,5 +23,5 @@
         "headers": {}
       }
     }
-  }
+  ]
 }

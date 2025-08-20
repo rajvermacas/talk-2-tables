@@ -1,0 +1,51 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "description": "Test configuration with multiple MCP servers",
+    "created": "2025-01-20T10:00:00Z",
+    "author": "test@talk2tables.com"
+  },
+  "defaults": {
+    "timeout": 5000,
+    "retry_attempts": 2,
+    "retry_delay": 500
+  },
+  "servers": [
+    {
+      "name": "database-server",
+      "enabled": true,
+      "description": "Primary SQLite database MCP server",
+      "transport": "sse",
+      "priority": 100,
+      "critical": false,
+      "config": {
+        "url": "http://localhost:8000/sse",
+        "headers": {}
+      }
+    },
+    {
+      "name": "mock-server-1",
+      "enabled": true,
+      "description": "Mock MCP server for testing",
+      "transport": "sse",
+      "priority": 50,
+      "critical": false,
+      "config": {
+        "url": "http://localhost:8002/sse",
+        "headers": {}
+      }
+    },
+    {
+      "name": "mock-server-2",
+      "enabled": true,
+      "description": "Second mock MCP server for testing",
+      "transport": "sse",
+      "priority": 30,
+      "critical": false,
+      "config": {
+        "url": "http://localhost:8003/sse",
+        "headers": {}
+      }
+    }
+  ]
+}

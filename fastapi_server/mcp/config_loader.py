@@ -173,9 +173,31 @@ class ConfigurationLoader:
                     'type': error['type'],
                     'input': error.get('input')
                 }
-                error_messages.append(f"{field_path}: {error['msg']}")
+                
+                # Create user-friendly error messages
+                if error['type'] == 'missing':
+                    error_messages.append(f"❌ Missing required field: {field_path}")
+                elif error['type'] == 'string_type':
+                    error_messages.append(f"❌ {field_path}: Expected string, got {type(error.get('input', 'unknown')).__name__}")
+                elif error['type'] == 'list_type':
+                    error_messages.append(f"❌ {field_path}: Expected list/array, got {type(error.get('input', 'unknown')).__name__}")
+                elif error['type'] == 'dict_type':
+                    error_messages.append(f"❌ {field_path}: Expected object/dict, got {type(error.get('input', 'unknown')).__name__}")
+                elif 'servers' in field_path and 'dict' in str(error.get('input', '')):
+                    error_messages.append(f"❌ {field_path}: Servers must be an array of server objects, not a dictionary. Example: \"servers\": [{{'name': 'server1', ...}}]")
+                elif 'version' in field_path and 'semantic' in error['msg']:
+                    error_messages.append(f"❌ {field_path}: Version must follow semantic versioning (X.Y.Z), e.g., '1.0.0'")
+                elif 'name' in field_path and 'kebab' in error['msg']:
+                    error_messages.append(f"❌ {field_path}: Server name must be kebab-case (lowercase with hyphens), e.g., 'my-server'")
+                elif 'priority' in field_path:
+                    error_messages.append(f"❌ {field_path}: Priority must be between 1 and 100")
+                elif 'transport' in field_path:
+                    error_messages.append(f"❌ {field_path}: Transport must be one of: 'sse', 'stdio', or 'http'")
+                else:
+                    error_messages.append(f"❌ {field_path}: {error['msg']}")
             
-            detailed_message = "Configuration validation failed:\n" + "\n".join(error_messages)
+            detailed_message = "Configuration validation failed:\n\n" + "\n".join(error_messages)
+            detailed_message += "\n\n💡 Tip: Check the configuration schema documentation for correct format."
             raise ValidationError(detailed_message, field_errors=field_errors)
     
     def substitute_env_vars(

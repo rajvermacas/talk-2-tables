@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "description": "Configuration with real MCP servers using stdio transport",
+    "created": "2025-01-20T10:00:00Z",
+    "author": "test@talk2tables.com"
+  },
+  "defaults": {
+    "timeout": 30000,
+    "retry_attempts": 3,
+    "retry_delay": 1000
+  },
+  "servers": [
+    {
+      "name": "sqlite-server",
+      "enabled": true,
+      "description": "SQLite database MCP server",
+      "transport": "stdio",
+      "priority": 100,
+      "critical": false,
+      "config": {
+        "command": "mcp-server-sqlite",
+        "args": ["--db-path", "test_data/sample.db"],
+        "env": {}
+      }
+    },
+    {
+      "name": "filesystem-server",
+      "enabled": true,
+      "description": "Filesystem MCP server for file operations",
+      "transport": "stdio",
+      "priority": 80,
+      "critical": false,
+      "config": {
+        "command": "python",
+        "args": ["scripts/filesystem_mcp_server.py", "/tmp"],
+        "env": {}
+      }
+    },
+    {
+      "name": "weather-server",
+      "enabled": true,
+      "description": "Weather data MCP server",
+      "transport": "stdio",
+      "priority": 60,
+      "critical": false,
+      "config": {
+        "command": "python",
+        "args": ["scripts/weather_mcp_server.py"],
+        "env": {}
+      }
+    }
+  ]
+}

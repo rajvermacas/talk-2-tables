@@ -185,11 +185,12 @@ class MCPAdapter:
         # Create and connect clients for each server
         client_factory = MCPClientFactory()
         
-        for server_name, server_config in config.servers.items():
+        for server_config in config.servers:
+            server_name = server_config.name
             logger.info(f"Creating client for server: {server_name}")
-            client = client_factory.create_client(server_config)
+            client = client_factory.create(server_config)
             await client.connect()
-            registry.register_server(server_name, client, server_config)
+            await registry.register(server_name, client, server_config)
             
         # Create aggregator
         self.backend = MCPAggregator(registry)

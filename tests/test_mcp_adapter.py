@@ -479,26 +479,86 @@ class TestMCPAdapter:
 class TestAdapterIntegration:
     """Test adapter integration scenarios"""
     
+    @pytest.fixture
+    def mock_aggregator(self):
+        """Create mock aggregator for multi-server mode"""
+        mock = AsyncMock()
+        mock.list_tools = AsyncMock(return_value=[
+            {"name": "database.execute_query", "description": "Execute SQL query"},
+            {"name": "github.search_code", "description": "Search GitHub code"}
+        ])
+        mock.list_resources = AsyncMock(return_value=[
+            {"uri": "database://schema", "name": "Database Schema"}
+        ])
+        mock.execute_tool = AsyncMock(return_value={"result": "success"})
+        mock.get_resource = AsyncMock(return_value={"data": "resource_content"})
+        mock.get_statistics = AsyncMock(return_value={
+            "servers": 2,
+            "tools": 5,
+            "resources": 3
+        })
+        mock.health_check = AsyncMock(return_value={"healthy": True})
+        mock.shutdown = AsyncMock()
+        mock.initialize = AsyncMock()
+        mock.get_performance_metrics = AsyncMock(return_value={
+            "total_requests": 100,
+            "total_errors": 2,
+            "average_latency": 35.5,
+            "cache_hits": 85,
+            "cache_misses": 15
+        })
+        mock.clear_cache = AsyncMock()
+        mock.reload_configuration = AsyncMock()
+        return mock
+    
+    @pytest.fixture
+    def config_file(self, tmp_path):
+        """Create temporary config file for testing"""
+        config_path = tmp_path / "mcp-servers.json"
+        config_data = {
+            "version": "1.0.0",
+            "servers": [
+                {
+                    "name": "test-server",
+                    "enabled": True,
+                    "transport": "sse",
+                    "priority": 100,
+                    "config": {"url": "http://localhost:8000/sse"}
+                }
+            ]
+        }
+        config_path.write_text(json.dumps(config_data))
+        return config_path
+    
     @pytest.mark.asyncio
     async def test_adapter_with_multiple_servers(self, tmp_path):
         """Test adapter with multiple server configuration"""
         config_path = tmp_path / "multi-servers.json"
         config_data = {
-            "version": "1.0",
-            "servers": {
-                "database": {
+            "version": "1.0.0",
+            "servers": [
+                {
+                    "name": "database",
+                    "enabled": True,
                     "transport": "sse",
+                    "priority": 100,
                     "config": {"url": "http://localhost:8000/sse"}
                 },
-                "github": {
+                {
+                    "name": "github",
+                    "enabled": True,
                     "transport": "stdio",
+                    "priority": 80,
                     "config": {"command": "npx", "args": ["@modelcontextprotocol/server-github"]}
                 },
-                "filesystem": {
+                {
+                    "name": "filesystem",
+                    "enabled": True,
                     "transport": "http",
-                    "config": {"url": "http://localhost:8002/mcp"}
+                    "priority": 60,
+                    "config": {"base_url": "http://localhost:8002/mcp"}
                 }
-            }
+            ]
         }
         config_path.write_text(json.dumps(config_data))
         

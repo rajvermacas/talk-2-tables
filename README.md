@@ -213,6 +213,135 @@ The FastAPI backend now supports connecting to multiple MCP servers through JSON
 
 See `config/README.md` for detailed configuration documentation.
 
+## Multi-Server MCP Configuration
+
+The system supports running multiple MCP servers simultaneously with automatic aggregation and namespacing.
+
+### Configuration Example
+
+Create a `config/mcp-servers.json` file:
+
+```json
+{
+  "version": "1.0.0",
+  "metadata": {
+    "description": "Multi-MCP server configuration",
+    "created": "2025-01-20T10:00:00Z"
+  },
+  "defaults": {
+    "timeout": 30000,
+    "retry_attempts": 3,
+    "retry_delay": 1000
+  },
+  "servers": [
+    {
+      "name": "database-server",
+      "enabled": true,
+      "description": "SQLite database MCP server",
+      "transport": "sse",
+      "priority": 100,
+      "critical": false,
+      "config": {
+        "url": "http://localhost:8000/sse"
+      }
+    },
+    {
+      "name": "filesystem-server",
+      "enabled": true,
+      "description": "Filesystem operations",
+      "transport": "stdio",
+      "priority": 80,
+      "critical": false,
+      "config": {
+        "command": "python",
+        "args": ["scripts/filesystem_mcp_server.py", "/path/to/base"],
+        "env": {}
+      }
+    }
+  ]
+}
+```
+
+### Server Configuration Fields
+
+- **name**: Unique identifier for the server (kebab-case)
+- **enabled**: Whether the server should be activated
+- **transport**: Protocol type (`sse`, `stdio`, or `http`)
+- **priority**: Server priority (1-100, higher = more important)
+- **critical**: If true, system fails if this server fails
+- **config**: Transport-specific configuration
+
+### Transport-Specific Configuration
+
+#### SSE Transport
+```json
+{
+  "url": "http://localhost:8000/sse",
+  "headers": {},
+  "timeout": 30000
+}
+```
+
+#### STDIO Transport
+```json
+{
+  "command": "mcp-server-sqlite",
+  "args": ["--db-path", "database.db"],
+  "env": {"LOG_LEVEL": "INFO"},
+  "cwd": "/path/to/working/dir"
+}
+```
+
+#### HTTP Transport
+```json
+{
+  "base_url": "https://api.example.com/mcp",
+  "api_key": "${API_KEY}",
+  "headers": {"X-Custom": "value"},
+  "timeout": 20000
+}
+```
+
+### Running Multi-Server Mode
+
+1. **Create configuration file**: Set up `config/mcp-servers.json`
+2. **Start FastAPI with multi-server support**:
+   ```bash
+   python -m fastapi_server.main_updated
+   ```
+3. **The system will**:
+   - Load and validate configuration
+   - Connect to all enabled servers
+   - Aggregate tools and resources
+   - Apply namespacing (e.g., `server-name.tool-name`)
+   - Handle failures gracefully
+
+### Tool Namespacing
+
+In multi-server mode, tools are namespaced to avoid conflicts:
+- Single server tool: `execute_query`
+- Multi-server tool: `database-server.execute_query`
+
+### Fallback Behavior
+
+If multi-server initialization fails, the system can fall back to single-server mode:
+- Set `fallback_enabled=True` in adapter configuration
+- Non-critical servers can fail without affecting the system
+- Critical servers must be available or the system fails
+
+### Health Monitoring
+
+Check multi-server health status:
+```bash
+curl http://localhost:8001/api/mcp/health
+```
+
+Response includes:
+- Overall health status
+- Individual server states
+- Connection statistics
+- Error details if any
+
 ## Client Connectivity
 
 ### Connecting to Remote Server
