@@ -347,19 +347,190 @@ This project is licensed under the MIT License.
 
 
 # Execution Steps
-## Linux
-. venv/bin/activate
 
-## Windows - git bash
-. venv-win/Scripts/activate
+## Prerequisites
+```bash
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-Run these three commands in separate terminals in venv:
-1. Start remote mcp server with sse transport prtocol
-python -m talk_2_tables_mcp.server --transport sse
+# Install all dependencies
+pip install -e ".[dev,fastapi]"
 
-2. Start FastAPI Backend (Terminal 2)  
-python3 -m fastapi_server.main
+# Install React dependencies
+cd react-chatbot && npm install && cd ..
+```
 
-3. Start React Frontend (Terminal 3)  
+## Quick Start (Single-Server Mode)
+
+Run these three commands in separate terminals:
+
+### Terminal 1: Start MCP Server
+```bash
+source venv/bin/activate
+python -m talk_2_tables_mcp.server --transport sse --port 8000
+```
+
+### Terminal 2: Start FastAPI Backend  
+```bash
+source venv/bin/activate
+python -m fastapi_server.main_updated  # Or main.py for legacy version
+```
+
+### Terminal 3: Start React Frontend
+```bash
 ./start-chatbot.sh
+```
+
+Then open http://localhost:3000 in your browser.
+
+## Multi-Server Mode (Phase 4 Feature)
+
+### 1. Configure Multiple MCP Servers
+Create `config/mcp-servers.json`:
+```json
+{
+  "version": "1.0.0",
+  "servers": {
+    "database-server": {
+      "name": "database-server",
+      "enabled": true,
+      "transport": "sse",
+      "priority": 100,
+      "config": {
+        "url": "http://localhost:8000/sse"
+      }
+    }
+  }
+}
+```
+
+### 2. Set Environment Variables
+```bash
+export MCP_MODE="MULTI_SERVER"  # Or let it auto-detect
+export MCP_CONFIG_PATH="config/mcp-servers.json"
+export OPENROUTER_API_KEY="your-key-here"  # For LLM
+```
+
+### 3. Run the System
+Same as single-server mode, but the FastAPI backend will automatically detect and use multi-server configuration.
+
+## Available Endpoints
+
+### Frontend
+- http://localhost:3000 - React Chat Interface
+
+### Backend API
+- http://localhost:8001/docs - Swagger UI Documentation
+- http://localhost:8001/health - Health Check
+
+### MCP Management (New in Phase 4)
+- GET `/api/mcp/mode` - Current operation mode
+- GET `/api/mcp/servers` - List connected servers  
+- GET `/api/mcp/stats` - Runtime statistics
+- GET `/api/mcp/health` - Detailed health status
+- GET `/api/mcp/tools` - List available tools
+- GET `/api/mcp/resources` - List available resources
+- POST `/api/mcp/reload` - Reload configuration
+- DELETE `/api/mcp/cache` - Clear cache
+
+## Testing the API
+
+```bash
+# Test health
+curl http://localhost:8001/health
+
+# Test chat completion
+curl -X POST http://localhost:8001/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-3.5-turbo",
+    "messages": [
+      {"role": "user", "content": "How many customers are in the database?"}
+    ]
+  }'
+
+# Test MCP mode (Phase 4)
+curl http://localhost:8001/api/mcp/mode
+```
+
+## Environment Variables
+
+```bash
+# Core Configuration
+DATABASE_PATH="test_data/sample.db"      # SQLite database location
+MCP_SERVER_URL="http://localhost:8000"   # MCP server endpoint
+FASTAPI_PORT="8001"                      # FastAPI port
+FASTAPI_HOST="0.0.0.0"                   # FastAPI host
+
+# Multi-MCP Support (Phase 4)
+MCP_MODE="AUTO"                          # AUTO, SINGLE_SERVER, or MULTI_SERVER
+MCP_CONFIG_PATH="config/mcp-servers.json" # Multi-server config file
+
+# LLM Configuration
+LLM_PROVIDER="openrouter"                # openrouter or gemini
+OPENROUTER_API_KEY="your-key"           # OpenRouter API key
+OPENROUTER_MODEL="meta-llama/llama-3.1-8b-instruct:free"
+GEMINI_API_KEY="your-key"               # Google Gemini API key
+GEMINI_MODEL="gemini-pro"
+```
+
+## Troubleshooting
+
+### MCP Server Connection Issues
+```bash
+# Check if MCP server is running
+curl http://localhost:8000/health
+
+# Test with stdio transport instead
+python -m talk_2_tables_mcp.server --transport stdio
+```
+
+### FastAPI Server Issues  
+```bash
+# Check logs for initialization messages
+# Look for: "MCP adapter initialized in SINGLE_SERVER mode"
+
+# Verify environment variables
+echo $OPENROUTER_API_KEY
+echo $MCP_CONFIG_PATH
+```
+
+### Multi-Server Mode Issues
+- Ensure config file exists at specified path
+- Verify all configured MCP servers are running
+- Check server URLs and ports in config match running servers
+- System will auto-fallback to single-server mode if issues occur
+
+### React Frontend Issues
+```bash
+# Rebuild if needed
+cd react-chatbot
+npm install
+npm run build
+npm start
+```
+
+## Docker Deployment
+
+```bash
+# Build and run with Docker Compose
+docker-compose up --build
+
+# Or run individual services
+docker-compose up mcp-server
+docker-compose up fastapi-server  
+docker-compose up react-frontend
+```
+
+## Development Mode
+
+For development with hot-reload:
+```bash
+# FastAPI with auto-reload
+uvicorn fastapi_server.main_updated:app --reload --host 0.0.0.0 --port 8001
+
+# React with hot-reload
+cd react-chatbot && npm start
+```
 

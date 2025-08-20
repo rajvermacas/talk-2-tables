@@ -254,6 +254,136 @@ async def create_chat_completion(
 
 
 # ============================================================================
+# Legacy endpoints for backward compatibility with React frontend
+# ============================================================================
+
+@app.get("/")
+async def root():
+    """Root endpoint with API information."""
+    return {
+        "name": "Talk2Tables FastAPI Server",
+        "version": "0.2.0",
+        "description": "Chat completions API with multi-MCP server support",
+        "endpoints": {
+            "chat_completions": "/chat/completions",
+            "health": "/health",
+            "models": "/models",
+            "mcp_status": "/mcp/status",
+            "mcp_management": "/api/mcp/*",
+            "integration_test": "/test/integration"
+        },
+        "documentation": "/docs"
+    }
+
+
+@app.get("/mcp/status")
+async def mcp_status_legacy(mcp: Optional[MCPAdapter] = Depends(get_mcp_adapter)):
+    """Legacy MCP status endpoint for backward compatibility with React frontend."""
+    if not mcp:
+        return {
+            "connected": False,
+            "error": "MCP adapter not initialized"
+        }
+    
+    try:
+        health = await mcp.health_check()
+        stats = await mcp.get_stats()
+        tools = await mcp.list_tools()
+        resources = await mcp.list_resources()
+        
+        # Map to legacy format expected by React frontend
+        return {
+            "connected": health.healthy,
+            "mode": mcp.get_mode().value,
+            "servers": stats.active_servers,
+            "tools_count": len(tools),
+            "resources_count": len(resources),
+            "tools": tools[:5],  # Limit to first 5 for legacy compatibility
+            "resources": resources[:5],  # Limit to first 5 for legacy compatibility
+            "metadata": {
+                "cache_hit_ratio": stats.cache_hit_ratio,
+                "average_latency": stats.average_latency
+            },
+            "error": health.errors[0] if health.errors else None
+        }
+    except Exception as e:
+        logger.error(f"Error getting MCP status: {str(e)}")
+        return {
+            "connected": False,
+            "error": str(e)
+        }
+
+
+@app.get("/models")
+async def list_models():
+    """List available models - legacy endpoint for React frontend."""
+    return {
+        "object": "list",
+        "data": [
+            {
+                "id": "gpt-3.5-turbo",
+                "object": "model",
+                "created": 1677610602,
+                "owned_by": "openai"
+            },
+            {
+                "id": config.openrouter_model,
+                "object": "model",
+                "created": 1677610602,
+                "owned_by": "openrouter"
+            },
+            {
+                "id": config.gemini_model,
+                "object": "model",
+                "created": 1677610602,
+                "owned_by": "google"
+            }
+        ]
+    }
+
+
+@app.get("/test/integration")
+async def test_integration(mcp: Optional[MCPAdapter] = Depends(get_mcp_adapter)):
+    """Test integration endpoint for debugging."""
+    try:
+        # Test FastAPI
+        fastapi_status = "connected"
+        
+        # Test MCP
+        mcp_status = "disconnected"
+        mcp_mode = None
+        if mcp:
+            health = await mcp.health_check()
+            mcp_status = "connected" if health.healthy else "error"
+            mcp_mode = mcp.get_mode().value
+        
+        # Test LLM (if needed)
+        llm_status = "connected"
+        try:
+            llm_connected = await chat_handler.llm_client.test_connection()
+            llm_status = "connected" if llm_connected else "error"
+        except:
+            llm_status = "error"
+        
+        return {
+            "status": "ok",
+            "fastapi": fastapi_status,
+            "mcp": mcp_status,
+            "mcp_mode": mcp_mode,
+            "llm": llm_status,
+            "llm_provider": config.llm_provider,
+            "timestamp": int(time.time())
+        }
+    except Exception as e:
+        logger.error(f"Integration test error: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": int(time.time())
+        }
+
+
+# ============================================================================
 # New MCP management endpoints
 # ============================================================================
 
@@ -426,8 +556,8 @@ if __name__ == "__main__":
     
     uvicorn.run(
         "fastapi_server.main_updated:app",
-        host=config.host,
-        port=config.port,
-        reload=config.reload,
+        host=config.fastapi_host,
+        port=config.fastapi_port,
+        reload=False,
         log_level=config.log_level.lower()
     )
