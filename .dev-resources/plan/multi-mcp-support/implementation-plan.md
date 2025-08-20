@@ -2,25 +2,23 @@
 
 ## Executive Summary
 
-This implementation adds configuration-based multi-MCP server support to the existing FastAPI/React chatbot system. The solution enables dynamic loading of multiple MCP servers through JSON configuration files, eliminating code changes when adding/removing servers.
+This plan outlines the implementation of multi-MCP server support through JSON configuration, enabling dynamic server management without code changes. The system will aggregate tools and resources from multiple MCP servers using different transport protocols (SSE, stdio, HTTP).
 
 ## Architecture Overview
 
-### System Flow
-```
-User → React UI → FastAPI Agent → MCP Aggregator → Multiple MCP Servers
-                                        ↓
-                               [Config-driven discovery]
-                                        ↓
-                            Dynamic tool/resource aggregation
-```
+### Core Design Principles
+- **Plugin-based architecture** with JSON configuration
+- **Zero code changes** for adding/removing servers
+- **Namespace isolation** to prevent conflicts
+- **Graceful degradation** on server failures
+- **In-memory resource caching** for performance
 
-### Key Components
-- **Configuration System**: JSON-based server definitions with environment variable support
-- **Client Factory**: Multi-transport (SSE, stdio, HTTP) client creation
-- **Server Registry**: Active connection management and lifecycle tracking
-- **MCP Aggregator**: Unified interface with namespace isolation
-- **FastAPI Integration**: Seamless agent updates for multi-server support
+### System Components
+1. **Configuration Loader** - JSON parsing with environment variable substitution
+2. **MCP Client Factory** - Creates transport-specific clients
+3. **Server Registry** - Manages active server connections
+4. **MCP Aggregator** - Unified interface for all servers
+5. **FastAPI Integration** - Updates to existing backend
 
 ## Files to be Created/Modified
 
@@ -29,218 +27,219 @@ User → React UI → FastAPI Agent → MCP Aggregator → Multiple MCP Servers
 fastapi_server/
 ├── mcp/
 │   ├── __init__.py
-│   ├── config_loader.py         # Configuration parsing and validation
-│   ├── client_factory.py        # Transport-specific client creation
-│   ├── server_registry.py       # Server connection management
-│   ├── aggregator.py           # Tool/resource aggregation
-│   └── clients/
-│       ├── base_client.py      # Abstract MCP client interface
-│       ├── sse_client.py       # SSE transport implementation
-│       ├── stdio_client.py     # Stdio transport implementation
-│       └── http_client.py      # HTTP transport implementation
+│   ├── config_loader.py         # Configuration management
+│   ├── client_factory.py        # MCP client creation
+│   ├── server_registry.py       # Server lifecycle management
+│   ├── aggregator.py            # Tool/resource aggregation
+│   ├── clients/
+│   │   ├── __init__.py
+│   │   ├── base_client.py      # Abstract base class
+│   │   ├── sse_client.py       # SSE transport implementation
+│   │   ├── stdio_client.py     # Stdio transport implementation
+│   │   └── http_client.py      # HTTP transport implementation
+│   └── models.py                # Pydantic models for configuration
 
 config/
-├── mcp-servers.json            # Production configuration
-└── mcp-servers.example.json    # Example configuration template
+├── mcp-servers.json            # Main configuration file
+└── mcp-servers.example.json    # Example with all options
 
 tests/
 ├── test_mcp_config_loader.py
 ├── test_mcp_client_factory.py
 ├── test_mcp_aggregator.py
-└── test_mcp_integration.py
+├── test_mcp_integration.py
+└── test_multi_server_e2e.py
 ```
 
 ### Modified Files
 ```
 fastapi_server/
-├── main.py                     # Initialize aggregator instead of single client
-├── chat_handler.py            # Use aggregated tools/resources
-└── config.py                  # Add multi-server configuration path
+├── main.py                      # Update initialization
+├── chat_handler.py             # Use aggregator instead of single client
+├── config.py                   # Add multi-server configuration path
+└── requirements.txt            # Add new dependencies
 
-.env                           # Add server-specific environment variables
+.env.example                    # Document new environment variables
+README.md                       # Update documentation
 ```
 
 ## Development Phases
 
-### Phase 1: Configuration System & Loader (Day 1-2)
-- JSON schema definition and validation
+### Phase 1: Configuration System & Core Infrastructure
+**Duration**: 2-3 days
+**Focus**: Configuration loading, validation, environment substitution
+**Deliverables**: 
+- JSON configuration schema and loader
 - Environment variable substitution
-- Configuration loading and parsing
-- Unit tests for configuration system
+- Pydantic v2 models
+- Unit tests for configuration
 
-### Phase 2: Multi-Transport Client Factory (Day 3-4)
-- Abstract base client interface
-- SSE, stdio, and HTTP client implementations
-- Connection management and error handling
-- Unit tests for each transport type
+### Phase 2: MCP Client Implementation & Registry
+**Duration**: 3-4 days  
+**Focus**: Transport-specific clients and server registry
+**Deliverables**:
+- Base client interface
+- SSE, stdio, HTTP client implementations
+- Server registry with lifecycle management
+- Unit tests for clients and registry
 
-### Phase 3: Server Registry & Aggregation (Day 5-6)
-- Server registry implementation
-- Tool and resource aggregation algorithms
-- Namespace conflict resolution
-- Routing and execution logic
+### Phase 3: Aggregation Layer & Routing
+**Duration**: 2-3 days
+**Focus**: Tool/resource aggregation and namespacing
+**Deliverables**:
+- Tool aggregation with conflict resolution
+- Resource aggregation and caching
+- Tool execution routing
+- Integration tests for aggregation
 
-### Phase 4: FastAPI Integration & Agent Updates (Day 7-8)
-- Integrate aggregator with existing FastAPI server
-- Update chat handler for multi-server support
-- Maintain backward compatibility
-- Integration testing
-
-### Phase 5: End-to-End Testing & Validation (Day 9-10)
-- Multi-server scenario testing
-- Failure recovery testing
-- Performance validation
+### Phase 4: FastAPI Integration & End-to-End Testing
+**Duration**: 2-3 days
+**Focus**: Integration with existing backend
+**Deliverables**:
+- FastAPI backend updates
+- Multi-server E2E tests
 - Documentation updates
-
-## Testing Strategy
-
-### Test Coverage Requirements
-- **Unit Tests**: Each component independently (>90% coverage)
-- **Integration Tests**: Multi-server communication flows
-- **E2E Tests**: Full stack validation with React UI
-- **Failure Tests**: Graceful degradation scenarios
-
-### Test Data Setup
-```python
-# Example multi-server test configuration
-{
-    "servers": [
-        {"name": "db-server", "transport": "sse", "endpoint": "http://localhost:8000"},
-        {"name": "github-server", "transport": "stdio", "command": "npx @mcp/server-github"},
-        {"name": "test-server", "transport": "http", "endpoint": "http://localhost:8002"}
-    ]
-}
-```
+- Performance validation
 
 ## Cross-Phase Integration Points
 
-### Phase Dependencies
-```
-Phase 1 (Config) → Phase 2 (Clients) → Phase 3 (Aggregation) → Phase 4 (Integration)
-                                                                           ↓
-                                                              Phase 5 (Testing)
-```
+### Configuration → Client Factory
+- Configuration provides server specs
+- Factory consumes transport type and settings
+- Validation errors propagate for clear debugging
 
-### Critical Integration Points
-1. **Config → Factory**: Server definitions drive client creation
-2. **Factory → Registry**: Created clients registered for management
-3. **Registry → Aggregator**: Active servers provide tools/resources
-4. **Aggregator → Agent**: Unified interface maintains existing API
+### Client Factory → Registry
+- Factory creates client instances
+- Registry manages client lifecycle
+- Connection state tracked centrally
 
-## Success Criteria
+### Registry → Aggregator
+- Registry provides active servers
+- Aggregator fetches and combines capabilities
+- Updates on server availability changes
 
-### Functional Requirements
-- ✅ Support 3+ MCP servers simultaneously
-- ✅ Zero code changes for server additions
-- ✅ All transport types functional (SSE, stdio, HTTP)
-- ✅ Namespace isolation prevents conflicts
-- ✅ Graceful degradation on server failure
+### Aggregator → FastAPI
+- Aggregator replaces single MCP client
+- Minimal changes to existing chat handler
+- Backward compatibility maintained
 
-### Performance Requirements
-- Server initialization < 5 seconds total
-- Tool routing overhead < 50ms
-- Memory usage scales linearly with servers
-- No degradation in existing single-server performance
+## Testing Strategy
 
-### Quality Requirements
-- Comprehensive logging at all levels
-- Clear error messages for debugging
-- >85% test coverage overall
-- Zero breaking changes to existing API
+### Unit Testing
+- Each component tested in isolation
+- Mock external dependencies
+- 90%+ code coverage target
+
+### Integration Testing
+- Multi-server scenarios
+- Transport protocol variations
+- Failure recovery paths
+
+### End-to-End Testing
+- Full stack validation
+- Performance benchmarks
+- Stress testing with multiple servers
+
+### Test Data
+- Sample configuration files
+- Mock MCP server responses
+- Simulated failure scenarios
+
+## Documentation Requirements
+
+### Code Documentation
+- Docstrings for all public methods
+- Inline comments for complex algorithms
+- Type hints throughout
+
+### User Documentation
+- Configuration guide with examples
+- Migration guide from single server
+- Troubleshooting guide
+
+### Developer Documentation
+- Architecture diagrams
+- Sequence diagrams for key flows
+- API reference for new components
 
 ## Risk Mitigation
 
 ### Technical Risks
-1. **Transport Compatibility**: Test each transport early and independently
-2. **Memory Usage**: Implement resource content caching strategy
-3. **Namespace Conflicts**: Clear documentation and validation
-4. **Performance Impact**: Profile and optimize aggregation algorithms
+1. **Transport protocol incompatibilities**
+   - Mitigation: Extensive protocol testing
+   - Fallback: Limit initial support to SSE
 
-### Implementation Risks
-1. **Backward Compatibility**: Maintain existing single-server mode
-2. **Configuration Complexity**: Provide clear examples and validation
-3. **Error Handling**: Implement circuit breakers and retry logic
-4. **Testing Coverage**: Automated test suite from day one
+2. **Performance degradation**
+   - Mitigation: Resource caching, connection pooling
+   - Monitoring: Add performance metrics
 
-## Configuration Example
+3. **Configuration complexity**
+   - Mitigation: Clear examples, validation messages
+   - Tool: Configuration validator utility
 
-```json
-{
-  "version": "1.0",
-  "defaults": {
-    "timeout": 30000,
-    "retry_attempts": 3
-  },
-  "servers": [
-    {
-      "name": "database-server",
-      "enabled": true,
-      "transport": "sse",
-      "priority": 1,
-      "config": {
-        "endpoint": "http://localhost:8000/mcp",
-        "headers": {"Authorization": "Bearer ${DB_TOKEN}"}
-      }
-    },
-    {
-      "name": "github-server",
-      "enabled": true,
-      "transport": "stdio",
-      "priority": 2,
-      "config": {
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-github"],
-        "env": {"GITHUB_TOKEN": "${GITHUB_TOKEN}"}
-      }
-    }
-  ]
-}
-```
+### Operational Risks
+1. **Server connection failures**
+   - Mitigation: Graceful degradation
+   - Recovery: Automatic reconnection logic
 
-## Deliverables Checklist
+2. **Tool name conflicts**
+   - Mitigation: Namespace enforcement
+   - UI: Clear conflict warnings
 
-### Code Deliverables
-- [ ] Configuration loader with validation
-- [ ] Multi-transport client factory
-- [ ] Server registry implementation
-- [ ] MCP aggregator with namespacing
-- [ ] Updated FastAPI integration
-- [ ] Comprehensive test suite
+## Success Criteria
 
-### Documentation Deliverables
-- [ ] Configuration schema documentation
-- [ ] Server setup guide
-- [ ] API migration guide
-- [ ] Troubleshooting guide
+### Functional Requirements
+- [ ] Support 3+ MCP servers simultaneously
+- [ ] All transport protocols functional
+- [ ] Zero code changes for server addition
+- [ ] Tool/resource aggregation working
+- [ ] Graceful degradation on failures
 
-### Validation Deliverables
-- [ ] Unit test results (>90% coverage)
-- [ ] Integration test results
-- [ ] E2E test results with React UI
-- [ ] Performance benchmarks
-- [ ] Multi-server demo scenario
+### Performance Requirements
+- [ ] < 2 second initialization for 5 servers
+- [ ] < 100ms tool routing overhead
+- [ ] < 500MB memory for 10 servers
+- [ ] No performance regression in single-server mode
 
-## Implementation Notes
-
-### Key Design Decisions
-1. **JSON Configuration**: Simple, widely understood format
-2. **Namespace Prefixing**: `server-name.tool-name` pattern
-3. **Priority-based Resolution**: Higher priority servers win conflicts
-4. **In-memory Resources**: Fetch once at initialization
-5. **Graceful Degradation**: Continue with available servers
-
-### Extension Points
-- Plugin architecture for custom transports
-- Configuration hot-reload capability
-- Dynamic server discovery hooks
-- Custom aggregation strategies
-- Monitoring and metrics integration
+### Quality Requirements
+- [ ] 90%+ test coverage
+- [ ] All critical paths tested
+- [ ] Documentation complete
+- [ ] No breaking changes to existing API
 
 ## Timeline Summary
 
-**Total Duration**: 10 working days
+**Total Duration**: 10-13 days
 
-- **Week 1**: Core infrastructure (Config, Clients, Registry)
-- **Week 2**: Integration and testing (Agent updates, E2E validation)
+- Phase 1: Days 1-3 (Configuration System)
+- Phase 2: Days 4-7 (Clients & Registry)
+- Phase 3: Days 8-10 (Aggregation)
+- Phase 4: Days 11-13 (Integration & Testing)
 
-Each phase includes development, testing, and documentation as integrated activities.
+## Dependencies
+
+### External Libraries
+- `pydantic>=2.0` - Configuration validation
+- `httpx` - HTTP/SSE client
+- `pytest-asyncio` - Async testing
+- Existing MCP SDK
+
+### Environment Variables
+- Server-specific tokens (GITHUB_TOKEN, etc.)
+- API endpoints
+- Authentication credentials
+
+## Next Steps
+
+1. Review and approve plan
+2. Set up development environment
+3. Begin Phase 1 implementation
+4. Daily progress updates
+5. Phase reviews before proceeding
+
+## Notes
+
+- Maintain backward compatibility
+- Focus on MVP features first
+- Defer advanced features (hot-reload, UI)
+- Keep configuration simple and intuitive
