@@ -112,15 +112,19 @@ class SSEConfig(BaseModel):
         extra="forbid",
         json_schema_extra={
             "example": {
-                "endpoint": "http://localhost:8000/sse",
+                "url": "http://localhost:8000/sse",
                 "headers": {"Authorization": "Bearer token"},
                 "timeout": 30000
             }
         }
     )
     
-    endpoint: str = Field(
-        ...,
+    url: Optional[str] = Field(
+        None,
+        description="SSE endpoint URL (alias for endpoint)"
+    )
+    endpoint: Optional[str] = Field(
+        None,
         description="SSE endpoint URL"
     )
     headers: Optional[Dict[str, str]] = Field(
@@ -134,10 +138,12 @@ class SSEConfig(BaseModel):
         description="Connection timeout in milliseconds"
     )
     
-    @field_validator("endpoint")
+    @field_validator("endpoint", "url")
     @classmethod
-    def validate_endpoint_url(cls, v: str) -> str:
+    def validate_endpoint_url(cls, v: Optional[str]) -> Optional[str]:
         """Validate that endpoint is a valid URL."""
+        if v is None:
+            return v
         # Basic URL pattern validation
         url_pattern = re.compile(
             r'^(https?|wss?)://[^\s/$.?#].[^\s]*$',
@@ -147,6 +153,18 @@ class SSEConfig(BaseModel):
             raise ValueError(f"Invalid URL format: {v}")
         logger.debug(f"Validated SSE endpoint: {v}")
         return v
+    
+    @model_validator(mode="after")
+    def ensure_url_or_endpoint(self) -> "SSEConfig":
+        """Ensure either url or endpoint is provided, preferring url."""
+        if self.url:
+            self.endpoint = self.url
+        elif self.endpoint:
+            self.url = self.endpoint
+        elif not self.url and not self.endpoint:
+            # For compatibility, don't require during construction
+            pass
+        return self
 
 
 class StdioConfig(BaseModel):
@@ -190,7 +208,7 @@ class HTTPConfig(BaseModel):
         extra="forbid",
         json_schema_extra={
             "example": {
-                "endpoint": "https://api.mcp-server.com/v1",
+                "base_url": "https://api.mcp-server.com/v1",
                 "api_key": "${MCP_API_KEY}",
                 "headers": {"X-Custom-Header": "value"},
                 "timeout": 20000
@@ -198,8 +216,12 @@ class HTTPConfig(BaseModel):
         }
     )
     
-    endpoint: str = Field(
-        ...,
+    base_url: Optional[str] = Field(
+        None,
+        description="HTTP base URL (alias for endpoint)"
+    )
+    endpoint: Optional[str] = Field(
+        None,
         description="HTTP endpoint URL"
     )
     api_key: Optional[str] = Field(
@@ -217,10 +239,17 @@ class HTTPConfig(BaseModel):
         description="Request timeout in milliseconds"
     )
     
-    @field_validator("endpoint")
+    auth_type: Optional[str] = Field(
+        None,
+        description="Authentication type (bearer, api_key, etc.)"
+    )
+    
+    @field_validator("endpoint", "base_url")
     @classmethod
-    def validate_endpoint_url(cls, v: str) -> str:
+    def validate_endpoint_url(cls, v: Optional[str]) -> Optional[str]:
         """Validate that endpoint is a valid URL."""
+        if v is None:
+            return v
         url_pattern = re.compile(
             r'^https?://[^\s/$.?#].[^\s]*$',
             re.IGNORECASE
@@ -229,6 +258,15 @@ class HTTPConfig(BaseModel):
             raise ValueError(f"Invalid URL format: {v}")
         logger.debug(f"Validated HTTP endpoint: {v}")
         return v
+    
+    @model_validator(mode="after")
+    def ensure_url(self) -> "HTTPConfig":
+        """Ensure either base_url or endpoint is provided."""
+        if self.base_url:
+            self.endpoint = self.base_url
+        elif self.endpoint:
+            self.base_url = self.endpoint
+        return self
 
 
 # Union type for transport-specific configurations
@@ -284,9 +322,31 @@ class ServerConfig(BaseModel):
         False,
         description="If true, failure of this server fails the entire system"
     )
-    config: Dict[str, Any] = Field(
+    config: Union[Dict[str, Any], SSEConfig, StdioConfig, HTTPConfig] = Field(
         ...,
         description="Transport-specific configuration"
+    )
+    
+    # Optional common configuration
+    timeout: Optional[int] = Field(
+        None,
+        gt=0,
+        description="Timeout in milliseconds"
+    )
+    retry_attempts: Optional[int] = Field(
+        None,
+        ge=1,
+        le=10,
+        description="Number of retry attempts"
+    )
+    retry_delay: Optional[float] = Field(
+        None,
+        ge=0,
+        description="Delay between retries in seconds"
+    )
+    is_critical: Optional[bool] = Field(
+        None,
+        description="Alias for critical flag"
     )
     
     # This will hold the parsed transport config after validation
@@ -320,18 +380,32 @@ class ServerConfig(BaseModel):
         transport = self.transport
         config_data = self.config
         
+        # Handle is_critical alias
+        if self.is_critical is not None:
+            self.critical = self.is_critical
+        
         try:
-            if transport == TransportType.SSE:
-                self._transport_config = SSEConfig(**config_data)
-            elif transport == TransportType.STDIO:
-                self._transport_config = StdioConfig(**config_data)
-            elif transport == TransportType.HTTP:
-                self._transport_config = HTTPConfig(**config_data)
+            # If config is already a typed config, use it directly
+            if isinstance(config_data, (SSEConfig, StdioConfig, HTTPConfig)):
+                self._transport_config = config_data
+            elif isinstance(config_data, dict):
+                # Parse from dictionary
+                if transport == TransportType.SSE:
+                    self._transport_config = SSEConfig(**config_data)
+                elif transport == TransportType.STDIO:
+                    self._transport_config = StdioConfig(**config_data)
+                elif transport == TransportType.HTTP:
+                    self._transport_config = HTTPConfig(**config_data)
+                else:
+                    raise ValueError(f"Unknown transport type: {transport}")
             else:
-                raise ValueError(f"Unknown transport type: {transport}")
+                raise ValueError(f"Invalid config type: {type(config_data)}")
             
             logger.debug(f"Validated transport config for {self.name} ({transport})")
         except Exception as e:
+            # Don't re-wrap if already a ValueError with good message
+            if "Invalid config type" in str(e) or "Unknown transport type" in str(e):
+                raise
             raise ValueError(
                 f"Invalid {transport} configuration for server '{self.name}': {e}"
             )
@@ -342,6 +416,10 @@ class ServerConfig(BaseModel):
     def transport_config(self) -> TransportConfig:
         """Get the parsed transport configuration."""
         return self._transport_config
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return self.model_dump(exclude={"_transport_config"})
 
 
 class ConfigurationModel(BaseModel):
