@@ -1,0 +1,64 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "description": "Example multi-MCP server configuration",
+    "created": "2024-01-15T10:00:00Z",
+    "author": "admin@example.com"
+  },
+  "defaults": {
+    "timeout": 30000,
+    "retry_attempts": 3,
+    "retry_delay": 1000
+  },
+  "servers": [
+    {
+      "name": "database-server",
+      "enabled": true,
+      "description": "SQLite database MCP server for customer data",
+      "transport": "sse",
+      "priority": 90,
+      "critical": true,
+      "config": {
+        "endpoint": "${DB_SERVER_URL:-http://localhost:8000/sse}",
+        "headers": {
+          "Authorization": "Bearer ${DB_ACCESS_TOKEN:-dev-token}"
+        },
+        "timeout": 45000
+      }
+    },
+    {
+      "name": "github-server",
+      "enabled": true,
+      "description": "GitHub MCP server for repository operations",
+      "transport": "stdio",
+      "priority": 70,
+      "critical": false,
+      "config": {
+        "command": "npx",
+        "args": ["@modelcontextprotocol/server-github"],
+        "env": {
+          "GITHUB_TOKEN": "${GITHUB_TOKEN}",
+          "GITHUB_ORG": "${GITHUB_ORG:-my-org}"
+        },
+        "cwd": "${WORKSPACE_DIR:-/workspace}"
+      }
+    },
+    {
+      "name": "api-gateway",
+      "enabled": false,
+      "description": "External API gateway MCP server",
+      "transport": "http",
+      "priority": 50,
+      "critical": false,
+      "config": {
+        "endpoint": "${API_GATEWAY_URL:-https://api.example.com/mcp}",
+        "api_key": "${API_KEY}",
+        "headers": {
+          "X-Client-ID": "${CLIENT_ID:-default-client}",
+          "X-Environment": "${ENV_NAME:-development}"
+        },
+        "timeout": 20000
+      }
+    }
+  ]
+}

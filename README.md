@@ -6,6 +6,9 @@ A Model Context Protocol (MCP) server that provides SQLite database query capabi
 
 - **SQL Query Tool**: Execute SELECT queries on SQLite databases (read-only for security)
 - **Resource Discovery**: JSON-based metadata describing available databases, tables, and business use cases
+- **Multi-MCP Server Support** (Phase 1): Connect to multiple MCP servers via JSON configuration
+- **Environment Variable Substitution**: Secure configuration with environment variables and defaults
+- **Transport Protocol Support**: SSE, stdio, and HTTP transports for different server types
 - **Security**: Only allows SELECT statements to prevent data modification
 - **Test-Driven**: Comprehensive unit tests with mock data
 - **Logging**: Robust error handling and logging throughout
@@ -169,11 +172,46 @@ Provides metadata about the available database including:
 
 ## Configuration
 
+### Single Server Configuration
+
 The server can be configured through environment variables:
 
 - `DATABASE_PATH`: Path to the SQLite database file (default: `test_data/sample.db`)
 - `METADATA_PATH`: Path to the metadata JSON file (default: `resources/metadata.json`)
 - `LOG_LEVEL`: Logging level (default: `INFO`)
+
+### Multi-MCP Server Configuration (Phase 1)
+
+The FastAPI backend now supports connecting to multiple MCP servers through JSON configuration:
+
+#### Quick Start
+1. Copy the example configuration:
+   ```bash
+   cp config/mcp-servers.example.json config/mcp-servers.json
+   ```
+
+2. Set required environment variables:
+   ```bash
+   export GITHUB_TOKEN=ghp_your_token_here
+   export DB_SERVER_URL=http://localhost:8000/sse
+   ```
+
+3. Load configuration in FastAPI:
+   ```python
+   from fastapi_server.mcp.config_loader import ConfigurationLoader
+   
+   loader = ConfigurationLoader()
+   config = loader.load("config/mcp-servers.json")
+   ```
+
+#### Configuration Features
+- **Multiple Transport Protocols**: SSE, stdio, HTTP
+- **Environment Variables**: Use `${VAR_NAME}` syntax with optional defaults
+- **Server Priorities**: Control server importance (1-100)
+- **Critical Servers**: Mark servers that must be available
+- **Validation**: Automatic validation with clear error messages
+
+See `config/README.md` for detailed configuration documentation.
 
 ## Client Connectivity
 

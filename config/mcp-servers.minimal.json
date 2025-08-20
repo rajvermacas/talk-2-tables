@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "servers": [
+    {
+      "name": "local-database",
+      "transport": "sse",
+      "config": {
+        "endpoint": "http://localhost:8000/sse"
+      }
+    }
+  ]
+}
