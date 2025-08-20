@@ -383,3 +383,5 @@ echo $OPENROUTER_API_KEY
 - Use SSE, Do not use streamable-http
 
 - Use extensive logging. Flood it with logging. So that you can debug it better in future.
+
+- No rules or regex or keyword or pattern matching. Follow instructions carefully.
