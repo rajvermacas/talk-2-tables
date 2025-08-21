@@ -217,26 +217,51 @@ async def mcp_status():
         
         # Get server capabilities from aggregator
         tools = chat_handler.mcp_aggregator.list_tools()
-        resources = chat_handler.mcp_aggregator.list_resources()
+        resource_uris = chat_handler.mcp_aggregator.list_resources()
         servers = list(chat_handler.mcp_aggregator.sessions.keys())
         
-        # Get database metadata if available
+        # Dynamically fetch all resources
+        all_resources_data = {}
         metadata = {}
+        
         try:
-            result = await chat_handler.mcp_aggregator.read_resource("database://metadata")
-            if result and hasattr(result, 'contents'):
-                metadata_text = result.contents[0].text if result.contents else None
-                if metadata_text:
-                    import json
-                    metadata = json.loads(metadata_text)
+            logger.debug("Fetching all resources for status endpoint...")
+            all_resources = await chat_handler.mcp_aggregator.read_all_resources()
+            
+            # Process resources
+            for resource_uri, content in all_resources.items():
+                # Store all resources
+                all_resources_data[resource_uri] = content
+                
+                # Extract metadata specifically if found
+                if "metadata" in resource_uri.lower() and isinstance(content, dict):
+                    metadata = content
+                    logger.debug(f"Found metadata in resource: {resource_uri}")
+            
+            logger.info(f"Status endpoint fetched {len(all_resources)} resources")
+            
         except Exception as e:
-            logger.debug(f"Could not get metadata: {e}")
+            logger.error(f"Could not fetch resources: {e}")
+        
+        # Build detailed resource information
+        resources_info = []
+        for resource_uri in resource_uris:
+            resource_detail = chat_handler.mcp_aggregator.get_resource_info(resource_uri)
+            if resource_detail:
+                resources_info.append({
+                    "uri": resource_uri,
+                    "server": resource_detail.get('server', 'unknown'),
+                    "name": resource_detail.get('name', resource_uri),
+                    "description": resource_detail.get('description', ''),
+                    "has_data": resource_uri in all_resources_data
+                })
         
         return {
             "connected": True,
             "servers": servers,
             "tools": tools,
-            "resources": resources,
+            "resources": resources_info,
+            "resources_data": all_resources_data,
             "database_metadata": metadata
         }
         
@@ -288,6 +313,6 @@ if __name__ == "__main__":
         "fastapi_server.main:app",
         host=config.fastapi_host,
         port=config.fastapi_port,
-        reload=True,
+        reload=False,
         log_level=config.log_level.lower()
     )

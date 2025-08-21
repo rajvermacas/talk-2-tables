@@ -164,27 +164,45 @@ class ChatCompletionHandler:
             if needs_database:
                 logger.info("Message appears to need database access")
                 
-                # Get database metadata for context using the database server
+                # Dynamically get all resources for context
                 metadata = None
                 try:
-                    # Try to read the database metadata resource
-                    result = await self.mcp_aggregator.read_resource("database://metadata")
-                    if result and hasattr(result, 'contents'):
-                        metadata_text = result.contents[0].text if result.contents else None
-                        if metadata_text:
-                            import json
-                            metadata = json.loads(metadata_text)
-                            mcp_context["database_metadata"] = metadata
-                            logger.debug("Successfully retrieved database metadata via resource")
-                    else:
-                        # Fallback: use basic table info if available
-                        logger.debug("Could not get metadata from resource, using fallback")
-                        metadata = {"tables": {"customers": {}, "products": {}, "orders": {}}}
+                    logger.debug("Dynamically fetching all resources for context...")
+                    all_resources = await self.mcp_aggregator.read_all_resources()
+                    
+                    # Add all resources to context
+                    if all_resources:
+                        mcp_context["available_resources"] = {}
+                        
+                        # Process each resource
+                        for resource_uri, content in all_resources.items():
+                            # Store in context with clean key
+                            clean_key = resource_uri
+                            for server in self.mcp_aggregator.sessions.keys():
+                                if resource_uri.startswith(f"{server}."):
+                                    clean_key = resource_uri[len(f"{server}."):]
+                                    break
+                            
+                            mcp_context["available_resources"][clean_key] = content
+                            
+                            # Check if this is a metadata resource
+                            if "metadata" in resource_uri.lower() and isinstance(content, dict):
+                                metadata = content
+                                mcp_context["database_metadata"] = metadata
+                                logger.debug(f"Found metadata resource: {resource_uri}")
+                        
+                        logger.info(f"Added {len(all_resources)} resources to context")
+                    
+                    # Ensure we have at least empty metadata
+                    if not metadata:
+                        logger.debug("No metadata resource found, using empty metadata")
+                        metadata = {"tables": {}}
                         mcp_context["database_metadata"] = metadata
+                        
                 except Exception as e:
-                    logger.warning(f"Could not get database metadata: {e}")
+                    logger.warning(f"Could not fetch resources dynamically: {e}")
                     # Fallback metadata
-                    metadata = {"tables": {"customers": {}, "products": {}, "orders": {}}}
+                    metadata = {"tables": {}}
                     mcp_context["database_metadata"] = metadata
                 
                 # Check if there's an explicit SQL query in the message
@@ -334,46 +352,64 @@ class ChatCompletionHandler:
             # Fetch fresh resources
             resources = {}
             
-            # Get database metadata
+            # Dynamically read all available resources
             try:
-                logger.debug("Fetching database metadata...")
-                # Try to read the database metadata resource
-                result = await self.mcp_aggregator.read_resource("database://metadata")
-                if result and hasattr(result, 'contents'):
-                    metadata_text = result.contents[0].text if result.contents else None
-                    if metadata_text:
-                        import json
-                        metadata = json.loads(metadata_text)
-                        resources["database_metadata"] = metadata
-                        logger.info(f"Successfully fetched database metadata with {len(metadata.get('tables', {}))} tables")
-                        logger.debug(f"Tables found: {list(metadata.get('tables', {}).keys())}")
-                else:
-                    # Fallback metadata
-                    logger.debug("Could not get metadata from resource, using fallback")
-                    resources["database_metadata"] = {"tables": {"customers": {}, "products": {}, "orders": {}}}
+                logger.debug("Fetching all available resources dynamically...")
+                all_resources = await self.mcp_aggregator.read_all_resources()
+                
+                # Process and categorize resources
+                for resource_uri, content in all_resources.items():
+                    logger.debug(f"Processing resource: {resource_uri}")
+                    
+                    # Check for metadata resources
+                    if "metadata" in resource_uri.lower():
+                        resources["database_metadata"] = content
+                        if isinstance(content, dict):
+                            table_count = len(content.get('tables', {}))
+                            logger.info(f"Found metadata resource with {table_count} tables")
+                            logger.debug(f"Tables: {list(content.get('tables', {}).keys())}")
+                    
+                    # Store all resources for context
+                    # Remove server prefix for cleaner keys
+                    clean_uri = resource_uri
+                    for server_name in self.mcp_aggregator.sessions.keys():
+                        if resource_uri.startswith(f"{server_name}."):
+                            clean_uri = resource_uri[len(f"{server_name}."):]
+                            break
+                    
+                    resources[f"resource_{clean_uri}"] = content
+                
+                # Ensure we have at least empty metadata if none found
+                if "database_metadata" not in resources:
+                    logger.warning("No metadata resource found in any server")
+                    resources["database_metadata"] = {"tables": {}}
+                    
+                logger.info(f"Successfully fetched {len(all_resources)} resources from all servers")
+                
             except Exception as e:
-                logger.debug(f"Could not fetch database metadata: {str(e)}")
-                resources["database_metadata"] = {"tables": {"customers": {}, "products": {}, "orders": {}}}
+                logger.error(f"Error fetching resources dynamically: {str(e)}")
+                # Fallback to empty resources
+                resources["database_metadata"] = {"tables": {}}
             
-            # Get available resources list (if database server supports list_resources)
+            # Get available resources list
             try:
-                logger.debug("Fetching available resources...")
-                # Check if list_resources tool exists
-                if "database.list_resources" in self.mcp_aggregator.list_tools():
-                    result = await self.mcp_aggregator.call_tool("database.list_resources", {})
-                    if result and hasattr(result, 'resources'):
-                        resources["available_resources"] = [
-                            {"name": res.name, "description": res.description, "uri": res.uri}
-                            for res in result.resources
-                        ]
-                        logger.info(f"Successfully fetched {len(result.resources)} available resources")
-                    else:
-                        resources["available_resources"] = []
-                else:
-                    logger.debug("list_resources not available")
-                    resources["available_resources"] = []
+                logger.debug("Getting list of available resources...")
+                resource_list = self.mcp_aggregator.list_resources()
+                resources["available_resources"] = []
+                
+                for resource_uri in resource_list:
+                    resource_info = self.mcp_aggregator.get_resource_info(resource_uri)
+                    if resource_info:
+                        resources["available_resources"].append({
+                            "uri": resource_uri,
+                            "name": resource_info.get('name', resource_uri),
+                            "description": resource_info.get('description', ''),
+                            "server": resource_info.get('server', 'unknown')
+                        })
+                
+                logger.info(f"Listed {len(resources['available_resources'])} available resources")
             except Exception as e:
-                logger.debug(f"Could not fetch resource list: {str(e)}")
+                logger.debug(f"Could not list resources: {str(e)}")
                 resources["available_resources"] = []
             
             # Get available tools from aggregator

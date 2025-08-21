@@ -157,9 +157,12 @@ export const useChat = ({
     try {
       // Simulate typing delay
       setIsTyping(true);
-      await new Promise(resolve => setTimeout(resolve, 
-        parseInt(process.env.REACT_APP_TYPING_DELAY || '1000')
-      ));
+      const typingDelay = parseInt(
+        import.meta.env?.VITE_TYPING_DELAY || 
+        process.env.REACT_APP_TYPING_DELAY || 
+        '1000'
+      );
+      await new Promise(resolve => setTimeout(resolve, typingDelay));
       setIsTyping(false);
 
       // Prepare messages for API (include recent context)

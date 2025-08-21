@@ -15,7 +15,10 @@ class ApiService {
   private baseURL: string;
 
   constructor() {
-    this.baseURL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8001';
+    // Support both Vite and CRA environment variables
+    this.baseURL = import.meta.env?.VITE_API_BASE_URL || 
+                   process.env.REACT_APP_API_BASE_URL || 
+                   'http://localhost:8001';
     
     this.client = axios.create({
       baseURL: this.baseURL,
@@ -29,7 +32,9 @@ class ApiService {
     // Request interceptor for logging
     this.client.interceptors.request.use(
       (config) => {
-        if (process.env.REACT_APP_DEBUG === 'true') {
+        const debug = import.meta.env?.VITE_DEBUG === 'true' || 
+                      process.env.REACT_APP_DEBUG === 'true';
+        if (debug) {
           console.log('API Request:', config.method?.toUpperCase(), config.url);
         }
         return config;
@@ -43,7 +48,9 @@ class ApiService {
     // Response interceptor for error handling
     this.client.interceptors.response.use(
       (response) => {
-        if (process.env.REACT_APP_DEBUG === 'true') {
+        const debug = import.meta.env?.VITE_DEBUG === 'true' || 
+                      process.env.REACT_APP_DEBUG === 'true';
+        if (debug) {
           console.log('API Response:', response.status, response.config.url);
         }
         return response;

@@ -240,6 +240,55 @@ class MCPAggregator:
         """Get information about a specific resource."""
         return self.resources.get(resource_uri)
     
+    async def read_all_resources(self) -> Dict[str, Any]:
+        """
+        Read all available resources from all servers.
+        
+        Returns:
+            Dictionary mapping resource URIs to their content
+        """
+        logger.info(f"Reading all {len(self.resources)} available resources")
+        all_resources_data = {}
+        
+        for resource_uri in self.resources.keys():
+            try:
+                logger.debug(f"Attempting to read resource: {resource_uri}")
+                result = await self.read_resource(resource_uri)
+                
+                if result and hasattr(result, 'contents'):
+                    # Extract content based on type
+                    content = None
+                    if result.contents:
+                        # Handle text content
+                        if hasattr(result.contents[0], 'text'):
+                            content_text = result.contents[0].text
+                            # Try to parse as JSON
+                            try:
+                                import json
+                                content = json.loads(content_text)
+                                logger.debug(f"Successfully parsed JSON content for {resource_uri}")
+                            except json.JSONDecodeError:
+                                # Keep as text if not JSON
+                                content = content_text
+                                logger.debug(f"Kept text content for {resource_uri}")
+                        # Handle other content types if needed
+                        else:
+                            content = str(result.contents[0])
+                            logger.debug(f"Converted content to string for {resource_uri}")
+                    
+                    if content:
+                        all_resources_data[resource_uri] = content
+                        logger.info(f"Successfully read resource: {resource_uri}")
+                else:
+                    logger.warning(f"Resource {resource_uri} returned empty or invalid result")
+                    
+            except Exception as e:
+                logger.debug(f"Could not read resource {resource_uri}: {e}")
+                # Continue with other resources
+                
+        logger.info(f"Successfully read {len(all_resources_data)} out of {len(self.resources)} resources")
+        return all_resources_data
+    
     async def disconnect_all(self):
         """Disconnect from all MCP servers."""
         logger.info("Disconnecting from all MCP servers")

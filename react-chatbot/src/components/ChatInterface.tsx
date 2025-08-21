@@ -70,7 +70,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) => {
               <span className="text-white font-bold text-sm">T2T</span>
             </div>
             <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              {process.env.REACT_APP_CHAT_TITLE || 'Talk2Tables'}
+              {import.meta.env?.VITE_CHAT_TITLE || process.env.REACT_APP_CHAT_TITLE || 'Talk2Tables'}
             </h1>
           </div>
           
@@ -176,7 +176,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) => {
                   ? "Connecting to server..." 
                   : "Ask about your database or type SQL..."
               }
-              maxLength={parseInt(process.env.REACT_APP_MAX_MESSAGE_LENGTH || '5000')}
+              maxLength={parseInt(import.meta.env?.VITE_MAX_MESSAGE_LENGTH || process.env.REACT_APP_MAX_MESSAGE_LENGTH || '5000')}
             />
           </div>
         </div>
