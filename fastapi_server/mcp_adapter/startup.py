@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from fastapi_server.mcp.adapter import (
+from fastapi_server.mcp_adapter.adapter import (
     MCPAdapter,
     MCPMode,
     StartupConfig,

@@ -218,23 +218,28 @@ class SSEMCPClient(AbstractMCPClient):
         if not self._response:
             raise MCPConnectionError("No active SSE connection")
         
+        # Debug: No pdb in async, use logging instead
+        
         try:
+            line_count = 0
             async for line in self._response.aiter_lines():
-                # Skip empty lines and comments
-                if not line or line.startswith(':'):
-                    if line.startswith(':'):
-                        logger.debug(f"Received comment/heartbeat: {line}")
-                    # Check if we have a complete message in buffer
-                    if self._message_buffer and '\n\n' in self._message_buffer:
-                        await self._handle_complete_message()
+                line_count += 1
+                logger.warning(f"DEBUG: SSE Line {line_count}: {line[:200]}")
+                
+                # Handle comments
+                if line.startswith(':'):
+                    logger.debug(f"Received comment/heartbeat: {line}")
                     continue
                 
                 # Add line to buffer
                 self._message_buffer += line + '\n'
+                logger.warning(f"DEBUG: Buffer now: {self._message_buffer[:300]}")
                 
-                # Check for complete message (double newline)
-                if '\n\n' in self._message_buffer:
-                    await self._handle_complete_message()
+                # Check for complete message (empty line means message is complete)
+                if line == '':  # Empty line signals end of message
+                    # Buffer should now have a complete message ending with \n\n
+                    if self._message_buffer.strip():  # Only process if buffer has content
+                        await self._handle_complete_message()
                     
         except asyncio.CancelledError:
             logger.info(f"Stream processing cancelled for '{self.name}'")
@@ -247,12 +252,20 @@ class SSEMCPClient(AbstractMCPClient):
     async def _handle_complete_message(self) -> None:
         """Handle a complete SSE message from the buffer."""
         try:
-            # Extract complete message
-            message, remainder = self._message_buffer.split('\n\n', 1)
-            self._message_buffer = remainder
+            # The buffer contains the full message ending with \n\n
+            # Extract and clear the buffer
+            message = self._message_buffer.rstrip('\n')  # Remove trailing newlines
+            self._message_buffer = ''  # Clear buffer for next message
             
-            # Parse SSE message
+            # Debug: Log raw message
+            logger.warning(f"DEBUG: Raw SSE message received: {message[:200]}")
+            
+            # Parse SSE message (add back double newline for parser)
             msg = SSEMessage.parse(message + '\n\n')
+            
+            # Debug: Log parsed message
+            logger.warning(f"DEBUG: Parsed SSE - Event: {msg.event}, Data: {str(msg.data)[:100]}")
+            self._received_events.append(msg)
             
             # Handle different event types
             if msg.event == "endpoint":
@@ -304,9 +317,15 @@ class SSEMCPClient(AbstractMCPClient):
         if not self._http_client:
             raise MCPConnectionError("HTTP client not initialized")
         
+        # Debug: Check endpoint status
+        logger.warning(f"DEBUG: Current messages_endpoint: {self._messages_endpoint}")
+        logger.warning(f"DEBUG: Session ID: {self._session_id}")
+        logger.warning(f"DEBUG: Received events: {[e.event for e in self._received_events]}")
+        
         # Wait for messages endpoint if not yet received
         retries = 0
         while not self._messages_endpoint and retries < 10:
+            logger.warning(f"DEBUG: Waiting for endpoint, retry {retries}/10, buffer: {self._message_buffer[:100]}")
             await asyncio.sleep(0.5)
             retries += 1
         

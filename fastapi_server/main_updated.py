@@ -22,8 +22,8 @@ from .models import (
 from .chat_handler import chat_handler
 
 # Import MCP adapter components
-from .mcp.adapter import MCPAdapter, MCPMode, RuntimeStats, HealthStatus
-from .mcp.startup import initialize_mcp, shutdown_mcp
+from .mcp_adapter.adapter import MCPAdapter, MCPMode, RuntimeStats, HealthStatus
+from .mcp_adapter.startup import initialize_mcp, shutdown_mcp
 
 # Configure logging
 logging.basicConfig(

@@ -16,7 +16,7 @@ from .models import (
 )
 from .llm_manager import llm_manager
 from .mcp_client import mcp_client as legacy_mcp_client
-from .mcp.adapter import MCPAdapter, MCPMode
+from .mcp_adapter.adapter import MCPAdapter, MCPMode
 
 logger = logging.getLogger(__name__)
 

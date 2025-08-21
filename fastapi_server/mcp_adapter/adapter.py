@@ -11,10 +11,10 @@ from dataclasses import dataclass, field
 import asyncio
 import json
 
-from fastapi_server.mcp.aggregator import MCPAggregator
-from fastapi_server.mcp.config_loader import ConfigurationLoader
-from fastapi_server.mcp.server_registry import MCPServerRegistry
-from fastapi_server.mcp.client_factory import MCPClientFactory
+from fastapi_server.mcp_adapter.aggregator import MCPAggregator
+from fastapi_server.mcp_adapter.config_loader import ConfigurationLoader
+from fastapi_server.mcp_adapter.server_registry import MCPServerRegistry
+from fastapi_server.mcp_adapter.client_factory import MCPClientFactory
 
 # Fallback for single-server mode - import existing client
 try:
@@ -189,8 +189,28 @@ class MCPAdapter:
             server_name = server_config.name
             logger.info(f"Creating client for server: {server_name}")
             client = client_factory.create(server_config)
+            
+            # Connect to the server
             await client.connect()
+            logger.info(f"Connected to server: {server_name}")
+            
+            # Initialize MCP protocol session
+            init_result = await client.initialize()
+            logger.info(f"Initialized MCP session for {server_name}: protocol={init_result.protocolVersion}")
+            
+            # Fetch initial tools and resources
+            tools = await client.list_tools()
+            resources = await client.list_resources()
+            logger.info(f"Server {server_name}: {len(tools)} tools, {len(resources)} resources")
+            
+            # Register with tools and resources
             await registry.register(server_name, client, server_config)
+            
+            # Store tools and resources in the server instance
+            server_instance = registry.get_server(server_name)
+            if server_instance:
+                server_instance.tools = tools
+                server_instance.resources = resources
             
         # Create aggregator
         self.backend = MCPAggregator(registry)
