@@ -56,12 +56,20 @@ async def initialize_mcp(
     
     # Determine mode
     if mode is None:
-        env_mode = os.getenv("MCP_MODE", "AUTO").upper()
+        # Try to get from FastAPI config first (which loads from .env)
+        from fastapi_server.config import config as fastapi_config
+        env_mode = fastapi_config.mcp_mode.upper()
+        
+        # Fallback to direct env var if not in config
+        if not env_mode:
+            env_mode = os.getenv("MCP_MODE", "AUTO").upper()
+            
+        # breakpoint()  # DEBUG 1: Check env_mode value
         try:
             mode = MCPMode[env_mode] if env_mode != "AUTO" else MCPMode.AUTO
-            logger.info(f"Using mode from environment: {mode}")
+            logger.info(f"Using mode from config/environment: {mode}")
         except KeyError:
-            logger.warning(f"Invalid MCP_MODE in environment: {env_mode}, using AUTO")
+            logger.warning(f"Invalid MCP_MODE: {env_mode}, using AUTO")
             mode = MCPMode.AUTO
     
     # Create startup configuration
@@ -72,6 +80,7 @@ async def initialize_mcp(
         health_check_interval=health_check_interval
     )
     
+    # breakpoint()  # DEBUG 2: Check startup_config values
     logger.info(f"Startup configuration: {startup_config}")
     
     # Create adapter

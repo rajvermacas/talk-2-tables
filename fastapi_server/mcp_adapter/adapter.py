@@ -172,6 +172,7 @@ class MCPAdapter:
         """
         logger.info(f"Auto-detecting mode with config path: {self.config_path}")
         
+        # breakpoint()  # DEBUG 3: Check config_path and existence
         # Check if configuration file exists and is valid
         if self.config_path.exists():
             try:
@@ -181,6 +182,7 @@ class MCPAdapter:
                     
                 # Check if it has servers configured
                 if "servers" in config_data and len(config_data["servers"]) > 0:
+                    # breakpoint()  # DEBUG 4: Check config_data content
                     logger.info("Valid multi-server configuration found")
                     return MCPMode.MULTI_SERVER
                     
@@ -196,6 +198,7 @@ class MCPAdapter:
         """
         logger.info("Initializing multi-server backend")
         
+        # breakpoint()  # DEBUG 5: Multi-server initialization entry
         # Load configuration
         config_loader = ConfigurationLoader()
         config = config_loader.load(str(self.config_path))
@@ -206,13 +209,73 @@ class MCPAdapter:
         # Create and connect clients for each server
         client_factory = MCPClientFactory()
         
+        # Separate servers by transport type to avoid async context conflicts
+        sse_servers = []
+        stdio_servers = []
+        other_servers = []
+        
         for server_config in config.servers:
-            server_name = server_config.name
-            logger.info(f"Creating client for server: {server_name}")
+            if server_config.transport == "sse":
+                sse_servers.append(server_config)
+            elif server_config.transport == "stdio":
+                stdio_servers.append(server_config)
+            else:
+                other_servers.append(server_config)
+        
+        logger.info(f"Server types: {len(sse_servers)} SSE, {len(stdio_servers)} stdio, {len(other_servers)} other")
+        
+        # Initialize SSE servers first (they need special async handling)
+        for server_config in sse_servers:
+            await self._initialize_single_server_client(
+                server_config, client_factory, registry
+            )
+        
+        # Initialize stdio servers separately
+        for server_config in stdio_servers:
+            await self._initialize_single_server_client(
+                server_config, client_factory, registry
+            )
+        
+        # Initialize any other transport types
+        for server_config in other_servers:
+            await self._initialize_single_server_client(
+                server_config, client_factory, registry
+            )
+        
+        # Create aggregator
+        self.backend = MCPAggregator(registry)
+        await self.backend.initialize()
+        
+        logger.info(f"Multi-server backend initialized with {len(config.servers)} servers")
+    
+    async def _initialize_single_server_client(
+        self, 
+        server_config,
+        client_factory: 'MCPClientFactory',
+        registry: 'MCPServerRegistry'
+    ) -> None:
+        """Initialize a single server client with proper async isolation."""
+        server_name = server_config.name
+        logger.info(f"Creating client for server: {server_name} (transport: {server_config.transport})")
+        
+        # breakpoint()  # DEBUG 6: Before client creation
+        
+        try:
+            # Create client
             client = client_factory.create(server_config)
             
-            # Connect to the server
-            await client.connect()
+            # breakpoint()  # DEBUG 7: Before connecting to server
+            
+            # Connect with proper async isolation
+            if server_config.transport == "sse":
+                # SSE clients need special handling to avoid async context issues
+                # Create a new task to isolate the async context
+                connect_task = asyncio.create_task(client.connect())
+                await connect_task
+            else:
+                # Other transports can connect directly
+                await client.connect()
+            
             logger.info(f"Connected to server: {server_name}")
             
             # Initialize MCP protocol session
@@ -232,12 +295,13 @@ class MCPAdapter:
             if server_instance:
                 server_instance.tools = tools
                 server_instance.resources = resources
-            
-        # Create aggregator
-        self.backend = MCPAggregator(registry)
-        await self.backend.initialize()
-        
-        logger.info(f"Multi-server backend initialized with {len(config.servers)} servers")
+                
+        except Exception as e:
+            logger.error(f"Failed to initialize server {server_name}: {e}")
+            if server_config.critical:
+                raise
+            else:
+                logger.warning(f"Continuing without non-critical server {server_name}")
     
     async def _initialize_single_server(self) -> None:
         """

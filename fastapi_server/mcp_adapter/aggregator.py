@@ -89,7 +89,8 @@ class MCPAggregator:
         logger.info("Initializing aggregator")
         
         # Subscribe to registry events
-        self.registry.subscribe(self._handle_server_event)
+        # TODO: Implement subscribe method in registry if needed
+        # self.registry.subscribe(self._handle_server_event)
         
         # Initial aggregation
         await self.refresh_all()
@@ -237,6 +238,15 @@ class MCPAggregator:
     def get_all_resources(self) -> List[AggregatedResource]:
         """Get all aggregated resources."""
         return self._resources
+    
+    # Alias methods for compatibility with the adapter interface
+    async def list_tools(self) -> List[AggregatedTool]:
+        """List all tools (async wrapper for compatibility)."""
+        return self.get_all_tools()
+    
+    async def list_resources(self) -> List[AggregatedResource]:
+        """List all resources (async wrapper for compatibility)."""
+        return self.get_all_resources()
     
     async def get_resource(self, uri: str) -> Optional[str]:
         """Get resource content, using cache if available."""

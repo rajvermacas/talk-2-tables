@@ -87,7 +87,9 @@ class SSEMCPClient(AbstractMCPClient):
     
     def __init__(self, name: str, config: Dict[str, Any]):
         """Initialize SSE client."""
-        logger.info(f"Initializing SSE client '{name}' with config: {config}")
+        import uuid
+        self._instance_id = str(uuid.uuid4())[:8]
+        logger.info(f"Initializing SSE client '{name}' (instance {self._instance_id}) with config: {config}")
         
         # Validate SSE-specific config
         if "url" not in config:
@@ -222,24 +224,40 @@ class SSEMCPClient(AbstractMCPClient):
         
         try:
             line_count = 0
+            consecutive_empty = 0
+            
             async for line in self._response.aiter_lines():
                 line_count += 1
-                logger.warning(f"DEBUG: SSE Line {line_count}: {line[:200]}")
+                logger.warning(f"DEBUG: SSE Line {line_count}: '{line[:200]}'")
                 
-                # Handle comments
+                # Handle comments/heartbeats
                 if line.startswith(':'):
                     logger.debug(f"Received comment/heartbeat: {line}")
+                    # Reset empty line counter for comments
+                    consecutive_empty = 0
                     continue
                 
-                # Add line to buffer
-                self._message_buffer += line + '\n'
-                logger.warning(f"DEBUG: Buffer now: {self._message_buffer[:300]}")
-                
-                # Check for complete message (empty line means message is complete)
-                if line == '':  # Empty line signals end of message
-                    # Buffer should now have a complete message ending with \n\n
-                    if self._message_buffer.strip():  # Only process if buffer has content
+                # Check for empty line (SSE message boundary)
+                if not line or line == '':
+                    consecutive_empty += 1
+                    logger.warning(f"DEBUG: Empty line detected, consecutive count: {consecutive_empty}")
+                    
+                    # SSE messages are separated by blank lines
+                    # If we have buffered data and encounter an empty line, process the message
+                    if self._message_buffer.strip():
+                        logger.warning(f"DEBUG: Processing buffered message: {self._message_buffer[:200]}")
                         await self._handle_complete_message()
+                        # Reset the buffer after processing
+                        self._message_buffer = ''
+                    consecutive_empty = 0
+                else:
+                    # Non-empty line - add to buffer
+                    consecutive_empty = 0
+                    self._message_buffer += line + '\n'
+                    logger.warning(f"DEBUG: Buffer now: {self._message_buffer[:300]}")
+                    
+                    # Don't use auto-detection for now - rely on empty lines only
+                    # The auto-detection was causing messages to be split incorrectly
                     
         except asyncio.CancelledError:
             logger.info(f"Stream processing cancelled for '{self.name}'")
@@ -252,16 +270,22 @@ class SSEMCPClient(AbstractMCPClient):
     async def _handle_complete_message(self) -> None:
         """Handle a complete SSE message from the buffer."""
         try:
-            # The buffer contains the full message ending with \n\n
-            # Extract and clear the buffer
+            # The buffer contains the full message
+            # Make a copy and don't clear buffer here (it's cleared in _process_stream)
             message = self._message_buffer.rstrip('\n')  # Remove trailing newlines
-            self._message_buffer = ''  # Clear buffer for next message
+            
+            if not message:
+                logger.debug("Empty message buffer, skipping")
+                return
             
             # Debug: Log raw message
             logger.warning(f"DEBUG: Raw SSE message received: {message[:200]}")
             
-            # Parse SSE message (add back double newline for parser)
-            msg = SSEMessage.parse(message + '\n\n')
+            # Parse SSE message (add back double newline for parser if needed)
+            if not message.endswith('\n\n'):
+                message = message + '\n\n'
+            
+            msg = SSEMessage.parse(message)
             
             # Debug: Log parsed message
             logger.warning(f"DEBUG: Parsed SSE - Event: {msg.event}, Data: {str(msg.data)[:100]}")
@@ -276,20 +300,30 @@ class SSEMCPClient(AbstractMCPClient):
                     if "session_id=" in self._messages_endpoint:
                         self._session_id = self._messages_endpoint.split("session_id=")[-1]
                     logger.info(f"Got messages endpoint: {self._messages_endpoint}")
+                    logger.warning(f"DEBUG: Set _messages_endpoint to: {self._messages_endpoint}")
                     
             elif msg.event == "message" or msg.event is None:
                 # Handle JSON-RPC response
                 if isinstance(msg.data, dict) and "id" in msg.data:
                     request_id = msg.data["id"]
+                    logger.warning(f"DEBUG [{self._instance_id}]: Checking for request_id '{request_id}' in pending_responses: {list(self._pending_responses.keys())}. Dict id: {id(self._pending_responses)}")
+                    
                     if request_id in self._pending_responses:
+                        logger.warning(f"DEBUG [{self._instance_id}]: About to pop request '{request_id}' from pending_responses")
                         future = self._pending_responses.pop(request_id)
+                        logger.warning(f"DEBUG [{self._instance_id}]: Found and removed future for request '{request_id}'")
+                        
                         if "error" in msg.data:
-                            future.set_exception(MCPProtocolError(msg.data["error"].get("message", "Unknown error")))
+                            error_msg = msg.data["error"].get("message", "Unknown error")
+                            logger.error(f"Setting error for request {request_id}: {error_msg}")
+                            future.set_exception(MCPProtocolError(error_msg))
                         else:
-                            future.set_result(msg.data.get("result"))
+                            result = msg.data.get("result")
+                            logger.info(f"Setting result for request {request_id}: {str(result)[:100]}")
+                            future.set_result(result)
                         logger.debug(f"Resolved response for request {request_id}")
                     else:
-                        logger.warning(f"Received response for unknown request {request_id}")
+                        logger.warning(f"[{self._instance_id}] Received response for unknown request {request_id}. Current pending: {list(self._pending_responses.keys())}")
                         
             elif msg.event == "ping":
                 logger.debug(f"Received ping: {msg.data}")
@@ -309,6 +343,70 @@ class SSEMCPClient(AbstractMCPClient):
         """Generate unique request ID."""
         self._request_id_counter += 1
         return f"req-{self._request_id_counter}"
+    
+    async def _send_request_without_future(self, method: str, params: Dict[str, Any], request_id: str) -> None:
+        """Send request over SSE connection without creating a future (assumes future already exists)."""
+        logger.debug(f"Sending request '{method}' with id '{request_id}' for '{self.name}' (no future creation)")
+        
+        if not self._http_client:
+            raise MCPConnectionError("HTTP client not initialized")
+        
+        # Debug: Check endpoint status
+        logger.warning(f"DEBUG: Current messages_endpoint: {self._messages_endpoint}")
+        logger.warning(f"DEBUG: Session ID: {self._session_id}")
+        logger.warning(f"DEBUG: Received events: {[e.event for e in self._received_events]}")
+        
+        # Wait for messages endpoint if not yet received
+        retries = 0
+        while not self._messages_endpoint and retries < 10:
+            logger.warning(f"DEBUG: Waiting for endpoint, retry {retries}/10, buffer: {self._message_buffer[:100]}")
+            await asyncio.sleep(0.5)
+            retries += 1
+        
+        if not self._messages_endpoint:
+            raise MCPConnectionError("No messages endpoint received from SSE server")
+        
+        # Build full URL for messages endpoint
+        base_url = self.config["url"].rsplit("/sse", 1)[0]
+        messages_url = base_url + self._messages_endpoint
+        
+        # Prepare JSON-RPC request
+        request = {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "method": method,
+            "params": params
+        }
+        
+        try:
+            # Send request via POST to messages endpoint
+            logger.warning(f"DEBUG: Sending POST to {messages_url} with request_id '{request_id}'")
+            response = await self._http_client.post(
+                messages_url,
+                json=request,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            logger.warning(f"DEBUG: POST response status: {response.status_code}")
+            
+            # Accept 200, 202, and 204 as success statuses
+            # 202 Accepted is commonly used for async processing
+            if response.status_code not in [200, 202, 204]:
+                logger.error(f"Failed POST: HTTP {response.status_code}")
+                if request_id in self._pending_responses:
+                    future = self._pending_responses[request_id]
+                    future.set_exception(MCPConnectionError(f"Failed to send request: HTTP {response.status_code}"))
+                    del self._pending_responses[request_id]
+                raise MCPConnectionError(f"Failed to send request: HTTP {response.status_code}")
+            else:
+                logger.info(f"Request '{request_id}' sent successfully (HTTP {response.status_code}). Waiting for SSE response...")
+                
+        except Exception as e:
+            logger.error(f"Failed to send request '{request_id}': {e}")
+            if request_id in self._pending_responses:
+                logger.warning(f"DEBUG [{self._instance_id}]: Removing future for '{request_id}' due to exception")
+                del self._pending_responses[request_id]
+            raise
     
     async def _send_request(self, method: str, params: Dict[str, Any], request_id: str) -> None:
         """Send request over SSE connection."""
@@ -347,24 +445,33 @@ class SSEMCPClient(AbstractMCPClient):
         # Create future for response before sending
         future = asyncio.Future()
         self._pending_responses[request_id] = future
+        logger.warning(f"DEBUG [{self._instance_id}]: Added future for request '{request_id}'. Pending requests: {list(self._pending_responses.keys())}. Dict id: {id(self._pending_responses)}")
         
         try:
             # Send request via POST to messages endpoint
+            logger.warning(f"DEBUG: Sending POST to {messages_url} with request_id '{request_id}'")
             response = await self._http_client.post(
                 messages_url,
                 json=request,
                 headers={"Content-Type": "application/json"}
             )
             
-            if response.status_code != 200 and response.status_code != 204:
-                future.set_exception(MCPConnectionError(f"Failed to send request: HTTP {response.status_code}"))
-                del self._pending_responses[request_id]
-                
-            logger.debug(f"Request '{request_id}' sent successfully")
+            logger.warning(f"DEBUG: POST response status: {response.status_code}")
             
+            # Accept 200, 202, and 204 as success statuses
+            # 202 Accepted is commonly used for async processing
+            if response.status_code not in [200, 202, 204]:
+                logger.error(f"Failed POST: HTTP {response.status_code}, removing future for '{request_id}'")
+                future.set_exception(MCPConnectionError(f"Failed to send request: HTTP {response.status_code}"))
+                logger.warning(f"DEBUG [{self._instance_id}]: Removing future for '{request_id}' due to HTTP error {response.status_code}")
+                del self._pending_responses[request_id]
+            else:
+                logger.info(f"Request '{request_id}' sent successfully (HTTP {response.status_code}). Waiting for SSE response...")
+                
         except Exception as e:
             logger.error(f"Failed to send request '{request_id}': {e}")
             if request_id in self._pending_responses:
+                logger.warning(f"DEBUG [{self._instance_id}]: Removing future for '{request_id}' due to exception")
                 del self._pending_responses[request_id]
             raise
     
@@ -372,7 +479,22 @@ class SSEMCPClient(AbstractMCPClient):
         """Wait for response to a request."""
         logger.debug(f"Waiting for response to '{request_id}' for '{self.name}'")
         
+        logger.warning(f"DEBUG: Current pending requests before wait: {list(self._pending_responses.keys())}")
+        # breakpoint()  # DEBUG 10: Check pending_responses dict
+        
         if request_id not in self._pending_responses:
+            # The response might have already been processed and removed
+            # This can happen if the response arrives very quickly
+            logger.warning(f"Request '{request_id}' not in pending_responses - may have been processed already")
+            # Check if we have the result in received events
+            for event in self._received_events:
+                if hasattr(event, 'data') and isinstance(event.data, dict) and event.data.get('id') == request_id:
+                    logger.info(f"Found already-processed response for '{request_id}'")
+                    if 'error' in event.data:
+                        raise MCPProtocolError(event.data['error'].get('message', 'Unknown error'))
+                    return event.data.get('result')
+            
+            logger.error(f"ERROR: Request '{request_id}' not found in pending or processed responses!")
             raise MCPProtocolError(f"No pending request with ID '{request_id}'")
         
         future = self._pending_responses[request_id]
@@ -390,6 +512,7 @@ class SSEMCPClient(AbstractMCPClient):
         except asyncio.TimeoutError:
             # Clean up on timeout
             if request_id in self._pending_responses:
+                logger.warning(f"DEBUG [{self._instance_id}]: Removing future for '{request_id}' due to timeout")
                 del self._pending_responses[request_id]
             raise MCPProtocolError(f"Request '{request_id}' timed out")
         except Exception as e:
@@ -418,10 +541,23 @@ class SSEMCPClient(AbstractMCPClient):
         }
         
         logger.info(f"Sending MCP initialize request with params: {init_params}")
-        await self._send_request("initialize", init_params, request_id)
+        # breakpoint()  # DEBUG 8: Before sending initialize request
+        # Create future before sending to ensure we don't miss the response
+        future = asyncio.Future()
+        self._pending_responses[request_id] = future
+        logger.warning(f"DEBUG [{self._instance_id}]: Pre-added future for '{request_id}' before sending")
         
-        # Wait for actual response
-        result = await self._wait_for_response(request_id, timeout=30)
+        # Send request but don't add future again (it's already added)
+        await self._send_request_without_future("initialize", init_params, request_id)
+        
+        # breakpoint()  # DEBUG 9: After sending, before waiting for response
+        # Wait for actual response directly on the future
+        try:
+            result = await asyncio.wait_for(future, timeout=30)
+        except asyncio.TimeoutError:
+            if request_id in self._pending_responses:
+                del self._pending_responses[request_id]
+            raise MCPProtocolError(f"Initialize request timed out")
         logger.info(f"Received initialize response: {result}")
         
         # Send initialized notification as required by MCP protocol
