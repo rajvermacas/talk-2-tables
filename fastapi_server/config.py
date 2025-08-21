@@ -46,8 +46,8 @@ class FastAPIServerConfig(BaseSettings):
         default="sse",
         description="Transport protocol for MCP connection (stdio or http)"
     )
-    mcp_mode: str = Field(
-        default="AUTO",
+    mcp_mode: Optional[str] = Field(
+        default="MULTI_SERVER",
         description="MCP mode (SINGLE_SERVER, MULTI_SERVER, or AUTO)"
     )
     mcp_config_path: str = Field(

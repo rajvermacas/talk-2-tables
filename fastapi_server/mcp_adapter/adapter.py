@@ -15,6 +15,7 @@ from fastapi_server.mcp_adapter.aggregator import MCPAggregator
 from fastapi_server.mcp_adapter.config_loader import ConfigurationLoader
 from fastapi_server.mcp_adapter.server_registry import MCPServerRegistry
 from fastapi_server.mcp_adapter.client_factory import MCPClientFactory
+from fastapi_server.mcp_adapter.models import TransportType
 
 logger = logging.getLogger(__name__)
 
@@ -215,38 +216,76 @@ class MCPAdapter:
         other_servers = []
         
         for server_config in config.servers:
-            if server_config.transport == "sse":
+            if server_config.transport == TransportType.SSE:
                 sse_servers.append(server_config)
-            elif server_config.transport == "stdio":
+            elif server_config.transport == TransportType.STDIO:
                 stdio_servers.append(server_config)
             else:
                 other_servers.append(server_config)
         
         logger.info(f"Server types: {len(sse_servers)} SSE, {len(stdio_servers)} stdio, {len(other_servers)} other")
         
-        # Initialize SSE servers first (they need special async handling)
-        for server_config in sse_servers:
-            await self._initialize_single_server_client(
-                server_config, client_factory, registry
-            )
+        # Initialize all servers in parallel with proper error isolation
+        init_tasks = []
+        all_servers = sse_servers + stdio_servers + other_servers
         
-        # Initialize stdio servers separately
-        for server_config in stdio_servers:
-            await self._initialize_single_server_client(
-                server_config, client_factory, registry
+        for server_config in all_servers:
+            # Create task for each server initialization
+            task = asyncio.create_task(
+                self._initialize_single_server_with_timeout(
+                    server_config, client_factory, registry
+                )
             )
+            init_tasks.append((server_config.name, task))
         
-        # Initialize any other transport types
-        for server_config in other_servers:
-            await self._initialize_single_server_client(
-                server_config, client_factory, registry
+        # Wait for all servers to initialize (or fail)
+        if init_tasks:
+            logger.info(f"Initializing {len(init_tasks)} servers in parallel...")
+            results = await asyncio.gather(
+                *[task for _, task in init_tasks], 
+                return_exceptions=True
             )
+            
+            # Log results
+            for (server_name, _), result in zip(init_tasks, results):
+                if isinstance(result, Exception):
+                    logger.error(f"Server {server_name} initialization failed: {result}")
+                else:
+                    logger.info(f"Server {server_name} initialized successfully")
         
         # Create aggregator
         self.backend = MCPAggregator(registry)
         await self.backend.initialize()
         
         logger.info(f"Multi-server backend initialized with {len(config.servers)} servers")
+    
+    async def _initialize_single_server_with_timeout(
+        self,
+        server_config,
+        client_factory: 'MCPClientFactory',
+        registry: 'MCPServerRegistry',
+        timeout: float = 30.0
+    ) -> None:
+        """Initialize a single server with timeout."""
+        try:
+            await asyncio.wait_for(
+                self._initialize_single_server_client(
+                    server_config, client_factory, registry
+                ),
+                timeout=timeout
+            )
+        except asyncio.TimeoutError:
+            logger.error(f"Server {server_config.name} initialization timed out after {timeout}s")
+            if server_config.critical:
+                raise
+            else:
+                logger.warning(f"Continuing without non-critical server {server_config.name}")
+        except Exception as e:
+            logger.error(f"Server {server_config.name} initialization failed: {e}")
+            if server_config.critical:
+                raise
+            else:
+                logger.warning(f"Continuing without non-critical server {server_config.name}")
     
     async def _initialize_single_server_client(
         self, 
@@ -266,15 +305,11 @@ class MCPAdapter:
             
             # breakpoint()  # DEBUG 7: Before connecting to server
             
-            # Connect with proper async isolation
-            if server_config.transport == "sse":
-                # SSE clients need special handling to avoid async context issues
-                # Create a new task to isolate the async context
-                connect_task = asyncio.create_task(client.connect())
-                await connect_task
-            else:
-                # Other transports can connect directly
-                await client.connect()
+            # Connect with proper async isolation for ALL transports
+            # This prevents async context issues with subprocess spawning and SSE
+            logger.debug(f"Connecting to {server_name} with async isolation...")
+            connect_task = asyncio.create_task(client.connect())
+            await connect_task
             
             logger.info(f"Connected to server: {server_name}")
             

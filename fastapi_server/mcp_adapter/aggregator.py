@@ -114,7 +114,9 @@ class MCPAggregator:
         logger.info("Refreshing tools from all servers")
         
         try:
-            servers = self.registry.get_all_servers()
+            server_list = self.registry.get_all_servers()
+            # Convert list to dictionary keyed by server name
+            servers = {server.name: server for server in server_list}
             tools_by_server = {}
             server_priorities = {}
             
@@ -158,7 +160,9 @@ class MCPAggregator:
         logger.info("Refreshing resources from all servers")
         
         try:
-            servers = self.registry.get_all_servers()
+            server_list = self.registry.get_all_servers()
+            # Convert list to dictionary keyed by server name
+            servers = {server.name: server for server in server_list}
             resources_by_server = {}
             server_priorities = {}
             
@@ -189,9 +193,19 @@ class MCPAggregator:
             # Build aggregated resources
             self._resources = []
             for server_name, server in servers.items():
-                for resource_content in (server.resources or []):
+                for resource_item in (server.resources or []):
+                    # Determine if we have ResourceContent or Resource
+                    if hasattr(resource_item, 'content'):
+                        # It's a ResourceContent object
+                        uri = resource_item.uri
+                        content = resource_item.content
+                    else:
+                        # It's a Resource object, content needs to be fetched
+                        uri = resource_item.uri
+                        content = None  # Will be fetched on demand
+                    
                     # Create namespaced URI
-                    namespaced_uri = f"{server_name}:{resource_content.uri}"
+                    namespaced_uri = f"{server_name}:{uri}"
                     
                     # Check cache
                     cached_content = None
@@ -200,22 +214,22 @@ class MCPAggregator:
                     
                     aggregated = AggregatedResource(
                         namespaced_uri=namespaced_uri,
-                        original_uri=resource_content.uri,
+                        original_uri=uri,
                         server_name=server_name,
-                        name=resource_content.uri,
+                        name=uri,
                         description="",
                         mime_type="application/json",
-                        content=cached_content or resource_content.content,
+                        content=cached_content or content,
                         cached_at=datetime.utcnow() if cached_content else None,
                         ttl_seconds=self.config.cache_ttl_seconds
                     )
                     self._resources.append(aggregated)
                     
                     # Cache if not already cached
-                    if self.cache and not cached_content:
+                    if self.cache and not cached_content and content:
                         await self.cache.put(
                             namespaced_uri,
-                            resource_content.content,
+                            content,
                             self.config.cache_ttl_seconds
                         )
             

@@ -19,7 +19,7 @@ from .models import (
     ChatCompletionRequest, ChatCompletionResponse, 
     ErrorResponse, HealthResponse, ErrorDetail
 )
-from .chat_handler import chat_handler
+from .chat_handler_updated import EnhancedChatCompletionHandler
 
 # Import MCP adapter components
 from .mcp_adapter.adapter import MCPAdapter, MCPMode, RuntimeStats, HealthStatus
@@ -31,6 +31,9 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Global chat handler instance
+chat_handler: Optional[EnhancedChatCompletionHandler] = None
 
 
 # Response models for new endpoints
@@ -97,7 +100,7 @@ async def lifespan(app: FastAPI):
         
         app.state.mcp = await initialize_mcp(
             config_path=config_path,
-            mode=None,  # Will use AUTO or environment variable
+            mode=config.mcp_mode,  # Will use AUTO or environment variable
             fallback_enabled=True,
             health_check_interval=60
         )
@@ -108,14 +111,17 @@ async def lifespan(app: FastAPI):
         stats = await app.state.mcp.get_stats()
         logger.info(f"Active servers: {stats.active_servers}, Tools: {stats.total_tools}, Resources: {stats.total_resources}")
         
-        # Update chat handler to use adapter (if needed)
-        # This would require modifying chat_handler to accept an adapter
-        # For now, we'll keep backward compatibility
+        # Initialize chat handler with adapter
+        global chat_handler
+        chat_handler = EnhancedChatCompletionHandler(mcp_adapter=app.state.mcp)
+        logger.info("Chat handler initialized with MCP adapter")
         
     except Exception as e:
         logger.error(f"Failed to initialize MCP adapter: {str(e)}")
-        # Could fall back to legacy mode here
+        # Fall back to legacy mode
         app.state.mcp = None
+        chat_handler = EnhancedChatCompletionHandler(mcp_adapter=None)
+        logger.info("Chat handler initialized in legacy mode without MCP adapter")
     
     # Test LLM connection
     try:
@@ -135,9 +141,9 @@ async def lifespan(app: FastAPI):
     try:
         if hasattr(app.state, 'mcp') and app.state.mcp:
             await shutdown_mcp(app.state.mcp)
-        else:
+        elif chat_handler and hasattr(chat_handler, 'legacy_mcp_client'):
             # Legacy shutdown
-            await chat_handler.mcp_client.disconnect()
+            await chat_handler.legacy_mcp_client.disconnect()
     except Exception as e:
         logger.error(f"Error during shutdown: {str(e)}")
 
@@ -171,7 +177,7 @@ async def get_mcp_adapter() -> Optional[MCPAdapter]:
 
 # Global exception handler
 @app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
+async def global_exception_handler(_request: Request, exc: Exception):
     """Global exception handler."""
     logger.error(f"Unhandled exception: {str(exc)}")
     return JSONResponse(
@@ -182,7 +188,7 @@ async def global_exception_handler(request: Request, exc: Exception):
                 type="internal_error",
                 code="500"
             )
-        ).dict()
+        ).model_dump()
     )
 
 
@@ -198,9 +204,11 @@ async def health_check(mcp: Optional[MCPAdapter] = Depends(get_mcp_adapter)):
             # Use adapter for health check
             health = await mcp.health_check()
             mcp_status = "connected" if health.healthy else "disconnected"
-        else:
+        elif chat_handler and chat_handler.legacy_mcp_client:
             # Legacy health check
-            mcp_status = "connected" if await chat_handler.mcp_client.test_connection() else "disconnected"
+            mcp_status = "connected" if await chat_handler.legacy_mcp_client.test_connection() else "disconnected"
+        else:
+            mcp_status = "disconnected"
         
         return HealthResponse(
             status="healthy",
@@ -302,7 +310,7 @@ async def mcp_status_legacy(mcp: Optional[MCPAdapter] = Depends(get_mcp_adapter)
         # Map to legacy format expected by React frontend
         return {
             "connected": health.healthy,
-            "mode": mcp.get_mode().value,
+            "mode": mcp.get_mode(),
             "servers": stats.active_servers,
             "tools_count": len(tools),
             "resources_count": len(resources),
@@ -363,7 +371,7 @@ async def test_integration(mcp: Optional[MCPAdapter] = Depends(get_mcp_adapter))
         if mcp:
             health = await mcp.health_check()
             mcp_status = "connected" if health.healthy else "error"
-            mcp_mode = mcp.get_mode().value
+            mcp_mode = mcp.get_mode()
         
         # Test LLM (if needed)
         llm_status = "connected"
@@ -402,7 +410,7 @@ async def get_mcp_mode(mcp: Optional[MCPAdapter] = Depends(get_mcp_adapter)):
         raise HTTPException(status_code=503, detail="MCP adapter not initialized")
     
     return MCPModeResponse(
-        mode=mcp.get_mode().value,
+        mode=mcp.get_mode(),
         config_path=str(mcp.config_path) if mcp.config_path else None,
         fallback_enabled=mcp.fallback_enabled
     )
@@ -459,7 +467,7 @@ async def get_mcp_health(mcp: Optional[MCPAdapter] = Depends(get_mcp_adapter)):
                 mode=health.mode.value,
                 servers=health.servers,
                 errors=health.errors
-            ).dict()
+            ).model_dump()
         )
     
     return MCPHealthResponse(
@@ -529,6 +537,8 @@ async def reconnect_mcp_server(
     
     # This functionality might need to be implemented in the adapter
     # For now, return not implemented
+    # Note: server_name parameter will be used when reconnection is implemented
+    _ = server_name  # Acknowledge parameter for future use
     raise HTTPException(
         status_code=501,
         detail="Server reconnection not yet implemented"

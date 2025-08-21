@@ -22,12 +22,19 @@ logger = logging.getLogger(__name__)
 class ChatCompletionHandler:
     """Handles chat completions with database query capabilities."""
     
-    def __init__(self):
-        """Initialize the chat completion handler."""
-        self.llm_client = llm_manager
-        self.mcp_client = mcp_client
+    def __init__(self, mcp_adapter=None):
+        """Initialize the chat completion handler.
         
-        logger.info("Initialized chat completion handler with LLM-based decision system")
+        Args:
+            mcp_adapter: Optional MCP adapter for multi-server support.
+                        If not provided, falls back to legacy single-server client.
+        """
+        self.llm_client = llm_manager
+        self.mcp_adapter = mcp_adapter
+        self.mcp_client = mcp_client if not mcp_adapter else None
+        
+        mode = "MCP adapter (multi-server)" if mcp_adapter else "legacy MCP client"
+        logger.info(f"Initialized chat completion handler with {mode}")
     
     async def process_chat_completion(
         self,
@@ -60,7 +67,7 @@ class ChatCompletionHandler:
                 logger.info("Message appears to need database access")
                 
                 # Get database metadata for context
-                metadata = await self.mcp_client.get_database_metadata()
+                metadata = await self._get_database_metadata()
                 if metadata:
                     mcp_context["database_metadata"] = metadata
                 
@@ -70,7 +77,7 @@ class ChatCompletionHandler:
                 if sql_query:
                     # Execute the explicit query
                     logger.info(f"Executing explicit SQL query: {sql_query}")
-                    query_result = await self.mcp_client.execute_query(sql_query)
+                    query_result = await self._execute_query(sql_query)
                     mcp_context["query_results"] = query_result.__dict__
                 else:
                     # Let the LLM decide what query to run
@@ -81,11 +88,11 @@ class ChatCompletionHandler:
                     
                     if suggested_query:
                         logger.info(f"Executing LLM-suggested query: {suggested_query}")
-                        query_result = await self.mcp_client.execute_query(suggested_query)
+                        query_result = await self._execute_query(suggested_query)
                         mcp_context["query_results"] = query_result.__dict__
                 
                 # Get available tools for context
-                tools = await self.mcp_client.list_tools()
+                tools = await self._list_tools()
                 mcp_context["available_tools"] = [
                     {"name": tool.name, "description": tool.description}
                     for tool in tools
@@ -170,7 +177,7 @@ class ChatCompletionHandler:
             # Get database metadata
             try:
                 logger.debug("Fetching database metadata...")
-                metadata = await self.mcp_client.get_database_metadata()
+                metadata = await self._get_database_metadata()
                 if metadata:
                     resources["database_metadata"] = metadata
                     logger.info(f"Successfully fetched database metadata with {len(metadata.get('tables', {}))} tables")
@@ -182,7 +189,7 @@ class ChatCompletionHandler:
             # Get available resources list
             try:
                 logger.debug("Fetching available resources...")
-                resource_list = await self.mcp_client.list_resources()
+                resource_list = await self._list_resources()
                 resources["available_resources"] = [
                     {"name": res.name, "description": res.description, "uri": res.uri}
                     for res in resource_list
@@ -197,7 +204,7 @@ class ChatCompletionHandler:
             # Get available tools
             try:
                 logger.debug("Fetching available tools...")
-                tools = await self.mcp_client.list_tools()
+                tools = await self._list_tools()
                 resources["available_tools"] = [
                     {"name": tool.name, "description": tool.description}
                     for tool in tools
@@ -520,7 +527,7 @@ Response format:
             results["llm_connection"] = await self.llm_client.test_connection()
             
             # Test MCP connection
-            results["mcp_connection"] = await self.mcp_client.test_connection()
+            results["mcp_connection"] = await self._test_mcp_connection()
             
             # Test full integration
             if results["llm_connection"] and results["mcp_connection"]:
@@ -551,7 +558,68 @@ Response format:
             logger.error(f"Integration test error: {str(e)}")
         
         return results
+    
+    # Wrapper methods for MCP operations (support both adapter and legacy client)
+    
+    async def _get_database_metadata(self):
+        """Get database metadata from adapter or legacy client."""
+        if self.mcp_adapter:
+            # Use adapter to get metadata from appropriate server
+            resources = await self.mcp_adapter.list_resources()
+            for resource in resources:
+                if 'metadata' in resource.uri or 'database' in resource.uri:
+                    # Fetch the resource content
+                    content = await self.mcp_adapter.read_resource(resource.uri)
+                    if content and hasattr(content, 'text'):
+                        return json.loads(content.text)
+            return None
+        else:
+            # Use legacy client
+            return await self.mcp_client.get_database_metadata()
+    
+    async def _execute_query(self, query: str):
+        """Execute a query through adapter or legacy client."""
+        if self.mcp_adapter:
+            # Use adapter to execute query through appropriate tool
+            tools = await self.mcp_adapter.list_tools()
+            for tool in tools:
+                if 'execute_query' in tool.name or 'query' in tool.name.lower():
+                    # Call the tool with the query
+                    result = await self.mcp_adapter.call_tool(
+                        tool.name,
+                        {"query": query}
+                    )
+                    # Convert result to expected format
+                    if result and hasattr(result, 'result'):
+                        return result.result
+                    return result
+            raise ValueError("No query execution tool found in adapter")
+        else:
+            # Use legacy client
+            return await self.mcp_client.execute_query(query)
+    
+    async def _list_tools(self):
+        """List tools from adapter or legacy client."""
+        if self.mcp_adapter:
+            return await self.mcp_adapter.list_tools()
+        else:
+            return await self.mcp_client.list_tools()
+    
+    async def _list_resources(self):
+        """List resources from adapter or legacy client."""
+        if self.mcp_adapter:
+            return await self.mcp_adapter.list_resources()
+        else:
+            return await self.mcp_client.list_resources()
+    
+    async def _test_mcp_connection(self):
+        """Test MCP connection through adapter or legacy client."""
+        if self.mcp_adapter:
+            # Check if adapter has backend
+            return self.mcp_adapter.has_backend()
+        else:
+            return await self.mcp_client.test_connection()
 
 
-# Global chat handler instance
+# Create global chat handler instance (will be updated with adapter in main_updated.py)
 chat_handler = ChatCompletionHandler()

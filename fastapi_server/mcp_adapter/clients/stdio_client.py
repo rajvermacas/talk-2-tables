@@ -182,6 +182,8 @@ class StdioMCPClient(AbstractMCPClient):
         self._request_id_counter += 1
         
         message = request.to_json()
+        logger.debug(f"[{self.name}] Sending request: {message}")
+        
         if len(message) > self.config["buffer_size"]:
             raise ProcessError("Message too large for buffer")
         
@@ -190,21 +192,86 @@ class StdioMCPClient(AbstractMCPClient):
         self._process.stdin.write(framed.encode())
         await self._process.stdin.drain()
         
+        logger.debug(f"[{self.name}] Request sent with ID: {request.id}")
         return request.id
+    
+    async def _send_notification(self, method: str, params: Dict[str, Any]) -> None:
+        """Send JSON-RPC notification (no response expected)."""
+        if not self._process or not self._process.stdin:
+            raise ProcessError("Process not running")
+        
+        # Notifications don't have an ID
+        notification = {
+            "jsonrpc": "2.0",
+            "method": method
+        }
+        
+        # Only add params if not empty
+        if params:
+            notification["params"] = params
+        
+        message = json.dumps(notification)
+        logger.debug(f"[{self.name}] Sending notification: {message}")
+        
+        if len(message) > self.config["buffer_size"]:
+            raise ProcessError("Message too large for buffer")
+        
+        # Send message
+        framed = JSONRPCMessage.frame(message)
+        self._process.stdin.write(framed.encode())
+        await self._process.stdin.drain()
+        
+        logger.debug(f"[{self.name}] Notification sent: {method}")
     
     async def _receive_response(self, request_id: str) -> Any:
         """Receive response for request."""
         if not self._process or not self._process.stdout:
             raise ProcessError("Process not running")
         
-        # Read response
-        line = await self._process.stdout.readline()
-        response = json.loads(line.decode())
+        # Read response with timeout
+        logger.debug(f"[{self.name}] Waiting for response to request ID: {request_id}")
+        
+        try:
+            # Add timeout to readline operation
+            line = await asyncio.wait_for(
+                self._process.stdout.readline(),
+                timeout=5.0  # 5 second timeout for reading response
+            )
+        except asyncio.TimeoutError:
+            logger.error(f"[{self.name}] Timeout waiting for response from process")
+            # Check if process is still alive
+            if self._process.returncode is not None:
+                logger.error(f"[{self.name}] Process died with code: {self._process.returncode}")
+                # Try to read stderr for error info
+                if self._process.stderr:
+                    stderr_data = await self._process.stderr.read()
+                    if stderr_data:
+                        logger.error(f"[{self.name}] Process stderr: {stderr_data.decode()}")
+            raise ProcessError("Timeout waiting for response from process")
+        
+        if not line:
+            logger.error(f"[{self.name}] Empty response received, process may have died")
+            raise ProcessError("Empty response from process")
+        
+        decoded_line = line.decode()
+        logger.debug(f"[{self.name}] Received response: {decoded_line[:500]}")  # Log first 500 chars
+        
+        try:
+            response = json.loads(decoded_line)
+        except json.JSONDecodeError as e:
+            logger.error(f"[{self.name}] Failed to parse JSON response: {e}")
+            logger.error(f"[{self.name}] Raw response: {decoded_line}")
+            raise ProcessError(f"Invalid JSON response: {e}")
         
         if response.get("id") == request_id:
             if "error" in response:
-                raise MCPProtocolError(response["error"].get("message", "Unknown error"))
+                error_msg = response["error"].get("message", "Unknown error")
+                logger.error(f"[{self.name}] Server returned error: {error_msg}")
+                raise MCPProtocolError(error_msg)
+            logger.debug(f"[{self.name}] Successfully received result for request ID: {request_id}")
             return response.get("result")
+        else:
+            logger.warning(f"[{self.name}] Response ID mismatch: expected {request_id}, got {response.get('id')}")
         
         return None
     
@@ -233,8 +300,24 @@ class StdioMCPClient(AbstractMCPClient):
         """Initialize MCP session."""
         logger.info(f"Initializing MCP session for stdio client '{self.name}'")
         
-        request_id = await self._send_request("initialize", {"protocolVersion": "1.0"})
+        # MCP protocol requires capabilities and clientInfo in initialize request
+        init_params = {
+            "protocolVersion": "2024-11-05",  # Updated to match current MCP protocol version
+            "capabilities": {},  # Empty capabilities for now
+            "clientInfo": {
+                "name": "talk-2-tables-mcp-client",
+                "version": "1.0.0"
+            }
+        }
+        
+        logger.debug(f"Sending initialize request for '{self.name}' with params: {init_params}")
+        
+        request_id = await self._send_request("initialize", init_params)
         result = await self._receive_response(request_id)
+        
+        # Send initialized notification (required by MCP protocol)
+        await self._send_notification("notifications/initialized", {})
+        logger.debug(f"Sent initialized notification for '{self.name}'")
         
         return InitializeResult(
             protocolVersion=result.get("protocolVersion", "1.0"),
@@ -262,19 +345,26 @@ class StdioMCPClient(AbstractMCPClient):
         """List resources."""
         logger.debug(f"Listing resources for stdio client '{self.name}'")
         
-        request_id = await self._send_request("resources/list", {})
-        result = await self._receive_response(request_id)
-        
-        resources = []
-        for resource_data in result.get("resources", []):
-            resources.append(Resource(
-                uri=resource_data.get("uri", ""),
-                name=resource_data.get("name", ""),
-                description=resource_data.get("description", ""),
-                mimeType=resource_data.get("mimeType", "application/json")
-            ))
-        
-        return resources
+        try:
+            request_id = await self._send_request("resources/list", {})
+            result = await self._receive_response(request_id)
+            
+            resources = []
+            for resource_data in result.get("resources", []):
+                resources.append(Resource(
+                    uri=resource_data.get("uri", ""),
+                    name=resource_data.get("name", ""),
+                    description=resource_data.get("description", ""),
+                    mimeType=resource_data.get("mimeType", "application/json")
+                ))
+            
+            return resources
+        except MCPProtocolError as e:
+            # Handle "Method not found" error gracefully - server doesn't support resources
+            if "Method not found" in str(e):
+                logger.info(f"Server '{self.name}' does not support resources (Method not found)")
+                return []  # Return empty list when resources not supported
+            raise  # Re-raise other errors
     
     async def _call_tool_impl(self, name: str, arguments: Dict[str, Any]) -> ToolResult:
         """Call tool."""
