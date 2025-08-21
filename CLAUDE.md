@@ -176,8 +176,6 @@ STATELESS_HTTP="false"                   # HTTP session mode
 ALLOW_CORS="true"                        # CORS headers
 
 # === FastAPI Server Configuration ===
-OPENROUTER_API_KEY="your_key_here"      # OpenRouter API key for LLM
-OPENROUTER_MODEL="meta-llama/llama-3.1-8b-instruct:free"  # Default model
 FASTAPI_HOST="0.0.0.0"                  # FastAPI bind address
 FASTAPI_PORT="8001"                     # FastAPI port
 MCP_SERVER_URL="http://localhost:8000/mcp"  # MCP server endpoint

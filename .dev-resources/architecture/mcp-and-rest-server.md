@@ -533,7 +533,7 @@ metadata_service:
   
 llm:
   provider: "openrouter"  # or "gemini"
-  model: "meta-llama/llama-3.1-8b-instruct:free"
+  model: "change-me"
   api_key_env: "OPENROUTER_API_KEY"
   max_tokens: 2000
   temperature: 0.1  # Low temperature for consistent SQL generation

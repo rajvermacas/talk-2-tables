@@ -12,7 +12,7 @@ from uuid import uuid4
 
 from .models import (
     ChatMessage, ChatCompletionRequest, ChatCompletionResponse, 
-    MessageRole
+    MessageRole, MCPQueryResult
 )
 from .llm_manager import llm_manager
 from .mcp_aggregator import MCPAggregator
@@ -48,6 +48,88 @@ class ChatCompletionHandler:
             if self._init_task is None:
                 self._init_task = asyncio.create_task(self.initialize())
             await self._init_task
+    
+    def _transform_mcp_result_to_query_result(self, mcp_result: Any) -> Optional[MCPQueryResult]:
+        """
+        Transform MCP CallToolResult to MCPQueryResult format.
+        
+        Args:
+            mcp_result: Raw result from MCP call_tool
+            
+        Returns:
+            MCPQueryResult object or None if transformation fails
+        """
+        try:
+            logger.debug(f"Transforming MCP result of type: {type(mcp_result)}")
+            
+            # Check if it's already an MCPQueryResult
+            if isinstance(mcp_result, MCPQueryResult):
+                logger.debug("Result is already MCPQueryResult")
+                return mcp_result
+            
+            # Handle CallToolResult from MCP
+            if hasattr(mcp_result, 'content') and mcp_result.content:
+                logger.debug("Processing CallToolResult with content")
+                
+                # Extract the JSON from TextContent
+                text_content = mcp_result.content[0]
+                if hasattr(text_content, 'text'):
+                    # Parse the JSON string
+                    data_json = json.loads(text_content.text)
+                    logger.debug(f"Parsed JSON with keys: {data_json.keys()}")
+                    
+                    # Create MCPQueryResult
+                    result = MCPQueryResult(
+                        success=not getattr(mcp_result, 'isError', False),
+                        data=data_json.get('rows', []),
+                        columns=data_json.get('columns', []),
+                        row_count=data_json.get('row_count', len(data_json.get('rows', []))),
+                        error=None if not getattr(mcp_result, 'isError', False) else "Query execution failed"
+                    )
+                    
+                    logger.info(f"Successfully transformed to MCPQueryResult with {result.row_count} rows")
+                    return result
+            
+            # Handle structuredContent directly if available
+            elif hasattr(mcp_result, 'structuredContent') and mcp_result.structuredContent:
+                logger.debug("Processing CallToolResult with structuredContent")
+                
+                structured = mcp_result.structuredContent
+                result = MCPQueryResult(
+                    success=not getattr(mcp_result, 'isError', False),
+                    data=structured.get('rows', []),
+                    columns=structured.get('columns', []),
+                    row_count=structured.get('row_count', len(structured.get('rows', []))),
+                    error=None if not getattr(mcp_result, 'isError', False) else "Query execution failed"
+                )
+                
+                logger.info(f"Successfully transformed from structuredContent with {result.row_count} rows")
+                return result
+            
+            # If it's a dict-like object, try to use it directly
+            elif isinstance(mcp_result, dict):
+                logger.debug("Processing dict-like result")
+                
+                result = MCPQueryResult(
+                    success=mcp_result.get('success', True),
+                    data=mcp_result.get('data') or mcp_result.get('rows', []),
+                    columns=mcp_result.get('columns', []),
+                    row_count=mcp_result.get('row_count', len(mcp_result.get('data', []))),
+                    error=mcp_result.get('error')
+                )
+                
+                logger.info(f"Successfully transformed dict to MCPQueryResult")
+                return result
+            
+            # Fallback: log warning and return None
+            logger.warning(f"Could not transform MCP result of type {type(mcp_result)}")
+            logger.debug(f"Result attributes: {dir(mcp_result) if mcp_result else 'None'}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error transforming MCP result: {str(e)}")
+            logger.debug(f"Failed result: {mcp_result}")
+            return None
     
     async def process_chat_completion(
         self,
@@ -114,8 +196,23 @@ class ChatCompletionHandler:
                     result = await self.mcp_aggregator.call_tool("database.execute_query", 
                                                                   {"query": sql_query})
                     if result:
-                        query_result = result
-                        mcp_context["query_results"] = result.__dict__ if hasattr(result, '__dict__') else result
+                        # Transform MCP result to MCPQueryResult format
+                        logger.debug(f"Got MCP result of type: {type(result)}")
+                        query_result = self._transform_mcp_result_to_query_result(result)
+                        
+                        if query_result:
+                            logger.info(f"Query executed successfully: {query_result.row_count} rows returned")
+                            # Add to context for LLM
+                            mcp_context["query_results"] = {
+                                "success": query_result.success,
+                                "data": query_result.data,
+                                "columns": query_result.columns,
+                                "row_count": query_result.row_count
+                            }
+                        else:
+                            logger.warning("Failed to transform MCP result to MCPQueryResult")
+                            # Fallback: add raw result to context
+                            mcp_context["query_results"] = result.__dict__ if hasattr(result, '__dict__') else str(result)
                 else:
                     # Let the LLM decide what query to run
                     suggested_query = await self._suggest_sql_query(
@@ -128,8 +225,23 @@ class ChatCompletionHandler:
                         result = await self.mcp_aggregator.call_tool("database.execute_query", 
                                                                       {"query": suggested_query})
                         if result:
-                            query_result = result
-                            mcp_context["query_results"] = result.__dict__ if hasattr(result, '__dict__') else result
+                            # Transform MCP result to MCPQueryResult format
+                            logger.debug(f"Got MCP result of type: {type(result)}")
+                            query_result = self._transform_mcp_result_to_query_result(result)
+                            
+                            if query_result:
+                                logger.info(f"Query executed successfully: {query_result.row_count} rows returned")
+                                # Add to context for LLM
+                                mcp_context["query_results"] = {
+                                    "success": query_result.success,
+                                    "data": query_result.data,
+                                    "columns": query_result.columns,
+                                    "row_count": query_result.row_count
+                                }
+                            else:
+                                logger.warning("Failed to transform MCP result to MCPQueryResult")
+                                # Fallback: add raw result to context
+                                mcp_context["query_results"] = result.__dict__ if hasattr(result, '__dict__') else str(result)
                 
                 # Get available tools for context from aggregator
                 tools = self.mcp_aggregator.list_tools()
@@ -150,7 +262,12 @@ class ChatCompletionHandler:
             
             # If we have query results, add them to the first choice
             if query_result and response.choices:
-                response.choices[0].query_result = query_result
+                # Ensure query_result is an MCPQueryResult instance
+                if isinstance(query_result, MCPQueryResult):
+                    logger.debug(f"Adding MCPQueryResult to response with {query_result.row_count} rows")
+                    response.choices[0].query_result = query_result
+                else:
+                    logger.warning(f"query_result is not MCPQueryResult, got {type(query_result)}")
             
             logger.info("Successfully processed chat completion")
             return response
