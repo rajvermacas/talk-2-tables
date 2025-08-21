@@ -129,29 +129,20 @@ class SSEMCPClient(AbstractMCPClient):
                 headers=self.config.get("headers", {})
             )
             
-            # Establish SSE connection
-            self._response = await self._http_client.get(
-                self.config["url"],
-                headers={"Accept": "text/event-stream"}
-            )
+            # Start the SSE stream processing task
+            self._stream_task = asyncio.create_task(self._start_sse_stream())
             
-            if self._response.status_code != 200:
-                error = f"HTTP {self._response.status_code}: {self._response.text}"
-                logger.error(f"Failed to connect: {error}")
-                return ConnectionResult(success=False, error=error)
+            # Wait briefly for the connection to establish and get initial events
+            await asyncio.sleep(1.0)
             
-            # Check content type
-            content_type = self._response.headers.get("content-type", "")
-            if "text/event-stream" not in content_type:
-                error = f"Endpoint is not an SSE endpoint (content-type: {content_type})"
-                logger.error(error)
-                return ConnectionResult(success=False, error=error)
-            
-            # Start processing the SSE stream in the background
-            self._stream_task = asyncio.create_task(self._process_stream())
-            
-            # Wait briefly for the endpoint event
-            await asyncio.sleep(0.5)
+            # Check if the stream task failed immediately
+            if self._stream_task.done():
+                try:
+                    # This will raise any exception from the stream task
+                    await self._stream_task
+                except Exception as e:
+                    logger.error(f"Stream failed immediately: {e}")
+                    return ConnectionResult(success=False, error=str(e))
             
             logger.info(f"Successfully connected to SSE endpoint for '{self.name}'")
             return ConnectionResult(success=True)
@@ -159,6 +150,45 @@ class SSEMCPClient(AbstractMCPClient):
         except Exception as e:
             logger.error(f"Connection failed for '{self.name}': {e}")
             return ConnectionResult(success=False, error=str(e))
+    
+    async def _start_sse_stream(self) -> None:
+        """Start and manage the SSE stream connection."""
+        logger.debug(f"Starting SSE stream for '{self.name}'")
+        
+        try:
+            # Use stream() method instead of get() for SSE
+            async with self._http_client.stream(
+                "GET",
+                self.config["url"],
+                headers={"Accept": "text/event-stream"}
+            ) as response:
+                self._response = response
+                
+                if response.status_code != 200:
+                    error = f"HTTP {response.status_code}"
+                    logger.error(f"Failed to connect: {error}")
+                    raise MCPConnectionError(error)
+                
+                # Check content type
+                content_type = response.headers.get("content-type", "")
+                if "text/event-stream" not in content_type:
+                    error = f"Endpoint is not an SSE endpoint (content-type: {content_type})"
+                    logger.error(error)
+                    raise MCPConnectionError(error)
+                
+                logger.info(f"SSE stream established for '{self.name}'")
+                
+                # Process the stream
+                await self._process_stream()
+                
+        except asyncio.CancelledError:
+            logger.info(f"SSE stream cancelled for '{self.name}'")
+            raise
+        except Exception as e:
+            logger.error(f"SSE stream error for '{self.name}': {e}")
+            if self.state == ConnectionState.CONNECTED:
+                self.state = ConnectionState.ERROR
+            raise
     
     async def _disconnect_impl(self) -> None:
         """Disconnect from SSE endpoint."""
