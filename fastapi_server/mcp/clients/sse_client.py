@@ -113,6 +113,9 @@ class SSEMCPClient(AbstractMCPClient):
         self._pending_responses: Dict[str, asyncio.Future] = {}
         self._request_id_counter = 0
         self._circuit_breaker_open = False
+        self._messages_endpoint: Optional[str] = None  # Endpoint for sending messages
+        self._session_id: Optional[str] = None  # SSE session ID
+        self._message_buffer = ""  # Buffer for incomplete SSE messages
         
         logger.debug(f"SSE client '{name}' initialized")
     
@@ -127,7 +130,7 @@ class SSEMCPClient(AbstractMCPClient):
             )
             
             # Establish SSE connection
-            self._response = await self._http_client.post(
+            self._response = await self._http_client.get(
                 self.config["url"],
                 headers={"Accept": "text/event-stream"}
             )
@@ -143,6 +146,12 @@ class SSEMCPClient(AbstractMCPClient):
                 error = f"Endpoint is not an SSE endpoint (content-type: {content_type})"
                 logger.error(error)
                 return ConnectionResult(success=False, error=error)
+            
+            # Start processing the SSE stream in the background
+            self._stream_task = asyncio.create_task(self._process_stream())
+            
+            # Wait briefly for the endpoint event
+            await asyncio.sleep(0.5)
             
             logger.info(f"Successfully connected to SSE endpoint for '{self.name}'")
             return ConnectionResult(success=True)
@@ -181,35 +190,77 @@ class SSEMCPClient(AbstractMCPClient):
         
         try:
             async for line in self._response.aiter_lines():
-                if line.startswith(':'):
-                    # Comment/heartbeat
-                    logger.debug(f"Received heartbeat for '{self.name}'")
+                # Skip empty lines and comments
+                if not line or line.startswith(':'):
+                    if line.startswith(':'):
+                        logger.debug(f"Received comment/heartbeat: {line}")
+                    # Check if we have a complete message in buffer
+                    if self._message_buffer and '\n\n' in self._message_buffer:
+                        await self._handle_complete_message()
                     continue
                 
-                if not line:
-                    # Empty line indicates end of message
-                    continue
+                # Add line to buffer
+                self._message_buffer += line + '\n'
                 
-                # Parse message
-                try:
-                    msg = SSEMessage.parse(line + "\n\n")
-                    self._received_events.append(msg)
+                # Check for complete message (double newline)
+                if '\n\n' in self._message_buffer:
+                    await self._handle_complete_message()
                     
-                    # Handle specific events
-                    if msg.event == "error":
-                        error_data = msg.data if isinstance(msg.data, dict) else {"message": str(msg.data)}
-                        raise MCPProtocolError(error_data.get("message", "Server error"))
-                    
-                    logger.debug(f"Received SSE event '{msg.event}' for '{self.name}'")
-                    
-                except SSEParseError as e:
-                    logger.warning(f"Failed to parse SSE message for '{self.name}': {e}")
-                    
-        except ConnectionError as e:
-            logger.error(f"Stream disconnected for '{self.name}': {e}")
-            # Trigger reconnection
+        except asyncio.CancelledError:
+            logger.info(f"Stream processing cancelled for '{self.name}'")
+            raise
+        except Exception as e:
+            logger.error(f"Stream error for '{self.name}': {e}")
             if self.state == ConnectionState.CONNECTED:
-                await self.reconnect()
+                self.state = ConnectionState.ERROR
+    
+    async def _handle_complete_message(self) -> None:
+        """Handle a complete SSE message from the buffer."""
+        try:
+            # Extract complete message
+            message, remainder = self._message_buffer.split('\n\n', 1)
+            self._message_buffer = remainder
+            
+            # Parse SSE message
+            msg = SSEMessage.parse(message + '\n\n')
+            
+            # Handle different event types
+            if msg.event == "endpoint":
+                # Store the messages endpoint
+                if isinstance(msg.data, str):
+                    self._messages_endpoint = msg.data.strip()
+                    # Extract session ID if present
+                    if "session_id=" in self._messages_endpoint:
+                        self._session_id = self._messages_endpoint.split("session_id=")[-1]
+                    logger.info(f"Got messages endpoint: {self._messages_endpoint}")
+                    
+            elif msg.event == "message" or msg.event is None:
+                # Handle JSON-RPC response
+                if isinstance(msg.data, dict) and "id" in msg.data:
+                    request_id = msg.data["id"]
+                    if request_id in self._pending_responses:
+                        future = self._pending_responses.pop(request_id)
+                        if "error" in msg.data:
+                            future.set_exception(MCPProtocolError(msg.data["error"].get("message", "Unknown error")))
+                        else:
+                            future.set_result(msg.data.get("result"))
+                        logger.debug(f"Resolved response for request {request_id}")
+                    else:
+                        logger.warning(f"Received response for unknown request {request_id}")
+                        
+            elif msg.event == "ping":
+                logger.debug(f"Received ping: {msg.data}")
+                
+            elif msg.event == "error":
+                error_msg = msg.data if isinstance(msg.data, str) else str(msg.data)
+                logger.error(f"Server error: {error_msg}")
+                
+            else:
+                logger.debug(f"Received event '{msg.event}': {msg.data}")
+                
+        except Exception as e:
+            logger.error(f"Error handling SSE message: {e}")
+            logger.debug(f"Message buffer: {self._message_buffer[:200]}")
     
     def _generate_request_id(self) -> str:
         """Generate unique request ID."""
@@ -220,18 +271,81 @@ class SSEMCPClient(AbstractMCPClient):
         """Send request over SSE connection."""
         logger.debug(f"Sending request '{method}' with id '{request_id}' for '{self.name}'")
         
-        # This would be implementation-specific
-        # For now, we'll simulate it
-        pass
+        if not self._http_client:
+            raise MCPConnectionError("HTTP client not initialized")
+        
+        # Wait for messages endpoint if not yet received
+        retries = 0
+        while not self._messages_endpoint and retries < 10:
+            await asyncio.sleep(0.5)
+            retries += 1
+        
+        if not self._messages_endpoint:
+            raise MCPConnectionError("No messages endpoint received from SSE server")
+        
+        # Build full URL for messages endpoint
+        base_url = self.config["url"].rsplit("/sse", 1)[0]
+        messages_url = base_url + self._messages_endpoint
+        
+        # Prepare JSON-RPC request
+        request = {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "method": method,
+            "params": params
+        }
+        
+        # Create future for response before sending
+        future = asyncio.Future()
+        self._pending_responses[request_id] = future
+        
+        try:
+            # Send request via POST to messages endpoint
+            response = await self._http_client.post(
+                messages_url,
+                json=request,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            if response.status_code != 200 and response.status_code != 204:
+                future.set_exception(MCPConnectionError(f"Failed to send request: HTTP {response.status_code}"))
+                del self._pending_responses[request_id]
+                
+            logger.debug(f"Request '{request_id}' sent successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to send request '{request_id}': {e}")
+            if request_id in self._pending_responses:
+                del self._pending_responses[request_id]
+            raise
     
     async def _wait_for_response(self, request_id: str, timeout: Optional[float] = None) -> Any:
         """Wait for response to a request."""
         logger.debug(f"Waiting for response to '{request_id}' for '{self.name}'")
         
-        # This would wait for the response from the stream
-        # For now, return mock data
-        await asyncio.sleep(0.01)  # Simulate network delay
-        return {}
+        if request_id not in self._pending_responses:
+            raise MCPProtocolError(f"No pending request with ID '{request_id}'")
+        
+        future = self._pending_responses[request_id]
+        
+        try:
+            # Wait for response with timeout
+            if timeout:
+                result = await asyncio.wait_for(future, timeout=timeout)
+            else:
+                result = await future
+            
+            logger.debug(f"Got response for '{request_id}': {str(result)[:100]}")
+            return result
+            
+        except asyncio.TimeoutError:
+            # Clean up on timeout
+            if request_id in self._pending_responses:
+                del self._pending_responses[request_id]
+            raise MCPProtocolError(f"Request '{request_id}' timed out")
+        except Exception as e:
+            logger.error(f"Error waiting for response '{request_id}': {e}")
+            raise
     
     async def _initialize_impl(self) -> InitializeResult:
         """Initialize MCP session over SSE."""
@@ -240,49 +354,120 @@ class SSEMCPClient(AbstractMCPClient):
         request_id = self._generate_request_id()
         await self._send_request("initialize", {"protocolVersion": "1.0"}, request_id)
         
-        # Mock response for testing
+        # Wait for actual response
+        result = await self._wait_for_response(request_id, timeout=30)
+        
         return InitializeResult(
-            protocolVersion="1.0",
-            capabilities={"tools": True}
+            protocolVersion=result.get("protocolVersion", "1.0"),
+            capabilities=result.get("capabilities", {})
         )
     
     async def _list_tools_impl(self) -> List[Tool]:
         """List tools over SSE."""
         logger.debug(f"Listing tools over SSE for '{self.name}'")
         
-        self._send_request = asyncio.create_task(asyncio.sleep(0))
-        self._wait_for_response = asyncio.create_task(asyncio.sleep(0))
+        request_id = self._generate_request_id()
+        await self._send_request("tools/list", {}, request_id)
         
-        # Return mock data for testing
-        return []
+        # Wait for actual response
+        result = await self._wait_for_response(request_id, timeout=30)
+        
+        tools = []
+        for tool_data in result.get("tools", []):
+            tools.append(Tool(
+                name=tool_data.get("name", ""),
+                description=tool_data.get("description", ""),
+                parameters=tool_data.get("inputSchema", {})
+            ))
+        
+        return tools
     
     async def _list_resources_impl(self) -> List[Resource]:
         """List resources over SSE."""
         logger.debug(f"Listing resources over SSE for '{self.name}'")
-        return []
+        
+        request_id = self._generate_request_id()
+        await self._send_request("resources/list", {}, request_id)
+        
+        # Wait for actual response
+        result = await self._wait_for_response(request_id, timeout=30)
+        
+        resources = []
+        for resource_data in result.get("resources", []):
+            resources.append(Resource(
+                uri=resource_data.get("uri", ""),
+                name=resource_data.get("name", ""),
+                description=resource_data.get("description", ""),
+                mimeType=resource_data.get("mimeType", "application/json")
+            ))
+        
+        return resources
     
     async def _call_tool_impl(self, name: str, arguments: Dict[str, Any]) -> ToolResult:
         """Call tool over SSE."""
         logger.info(f"Calling tool '{name}' over SSE for '{self.name}'")
         
-        self._send_request = asyncio.create_task(asyncio.sleep(0))
-        self._wait_for_response = asyncio.create_task(asyncio.sleep(0))
+        request_id = self._generate_request_id()
+        await self._send_request("tools/call", {"name": name, "arguments": arguments}, request_id)
         
-        return ToolResult(
-            content="Tool executed",
-            isError=False
-        )
+        # Wait for actual response
+        result = await self._wait_for_response(request_id, timeout=60)
+        
+        # Handle tool result
+        if isinstance(result, dict):
+            content = result.get("content", "")
+            if isinstance(content, list) and len(content) > 0:
+                # Extract text content from the first item
+                first_item = content[0]
+                if isinstance(first_item, dict) and "text" in first_item:
+                    content = first_item["text"]
+                else:
+                    content = str(content)
+            
+            return ToolResult(
+                content=str(content),
+                isError=result.get("isError", False)
+            )
+        else:
+            return ToolResult(
+                content=str(result),
+                isError=False
+            )
     
     async def _read_resource_impl(self, uri: str) -> ResourceContent:
         """Read resource over SSE."""
         logger.debug(f"Reading resource '{uri}' over SSE for '{self.name}'")
         
+        request_id = self._generate_request_id()
+        await self._send_request("resources/read", {"uri": uri}, request_id)
+        
+        # Wait for actual response
+        result = await self._wait_for_response(request_id, timeout=30)
+        
+        # Handle resource content
+        contents = result.get("contents", [])
+        if contents and isinstance(contents, list):
+            first_content = contents[0]
+            if isinstance(first_content, dict):
+                content = first_content.get("text", "") or first_content.get("data", "")
+            else:
+                content = str(first_content)
+        else:
+            content = str(result)
+        
         return ResourceContent(
             uri=uri,
-            content=""
+            content=content
         )
     
     async def _ping_impl(self) -> bool:
         """Ping over SSE."""
         logger.debug(f"Pinging over SSE for '{self.name}'")
-        return True
+        
+        try:
+            request_id = self._generate_request_id()
+            await self._send_request("ping", {}, request_id)
+            await self._wait_for_response(request_id, timeout=5)
+            return True
+        except:
+            return False

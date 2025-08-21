@@ -231,27 +231,100 @@ class StdioMCPClient(AbstractMCPClient):
     
     async def _initialize_impl(self) -> InitializeResult:
         """Initialize MCP session."""
+        logger.info(f"Initializing MCP session for stdio client '{self.name}'")
+        
+        request_id = await self._send_request("initialize", {"protocolVersion": "1.0"})
+        result = await self._receive_response(request_id)
+        
         return InitializeResult(
-            protocolVersion="1.0",
-            capabilities={}
+            protocolVersion=result.get("protocolVersion", "1.0"),
+            capabilities=result.get("capabilities", {})
         )
     
     async def _list_tools_impl(self) -> List[Tool]:
         """List tools."""
-        return []
+        logger.debug(f"Listing tools for stdio client '{self.name}'")
+        
+        request_id = await self._send_request("tools/list", {})
+        result = await self._receive_response(request_id)
+        
+        tools = []
+        for tool_data in result.get("tools", []):
+            tools.append(Tool(
+                name=tool_data.get("name", ""),
+                description=tool_data.get("description", ""),
+                parameters=tool_data.get("inputSchema", {})
+            ))
+        
+        return tools
     
     async def _list_resources_impl(self) -> List[Resource]:
         """List resources."""
-        return []
+        logger.debug(f"Listing resources for stdio client '{self.name}'")
+        
+        request_id = await self._send_request("resources/list", {})
+        result = await self._receive_response(request_id)
+        
+        resources = []
+        for resource_data in result.get("resources", []):
+            resources.append(Resource(
+                uri=resource_data.get("uri", ""),
+                name=resource_data.get("name", ""),
+                description=resource_data.get("description", ""),
+                mimeType=resource_data.get("mimeType", "application/json")
+            ))
+        
+        return resources
     
     async def _call_tool_impl(self, name: str, arguments: Dict[str, Any]) -> ToolResult:
         """Call tool."""
-        return ToolResult(content="", isError=False)
+        logger.info(f"Calling tool '{name}' for stdio client '{self.name}'")
+        
+        request_id = await self._send_request("tools/call", {"name": name, "arguments": arguments})
+        result = await self._receive_response(request_id)
+        
+        # Handle tool result
+        if isinstance(result, dict):
+            content = result.get("content", "")
+            if isinstance(content, list) and len(content) > 0:
+                first_item = content[0]
+                if isinstance(first_item, dict) and "text" in first_item:
+                    content = first_item["text"]
+                else:
+                    content = str(content)
+            
+            return ToolResult(
+                content=str(content),
+                isError=result.get("isError", False)
+            )
+        else:
+            return ToolResult(content=str(result), isError=False)
     
     async def _read_resource_impl(self, uri: str) -> ResourceContent:
         """Read resource."""
-        return ResourceContent(uri=uri, content="")
+        logger.debug(f"Reading resource '{uri}' for stdio client '{self.name}'")
+        
+        request_id = await self._send_request("resources/read", {"uri": uri})
+        result = await self._receive_response(request_id)
+        
+        # Handle resource content
+        contents = result.get("contents", [])
+        if contents and isinstance(contents, list):
+            first_content = contents[0]
+            if isinstance(first_content, dict):
+                content = first_content.get("text", "") or first_content.get("data", "")
+            else:
+                content = str(first_content)
+        else:
+            content = str(result)
+        
+        return ResourceContent(uri=uri, content=content)
     
     async def _ping_impl(self) -> bool:
         """Ping."""
-        return True
+        try:
+            request_id = await self._send_request("ping", {})
+            await self._receive_response(request_id)
+            return True
+        except:
+            return False

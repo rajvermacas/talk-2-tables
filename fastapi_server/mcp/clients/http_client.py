@@ -180,8 +180,26 @@ class HTTPMCPClient(AbstractMCPClient):
     
     async def _list_resources_impl(self) -> List[Resource]:
         """List resources."""
+        if self._circuit_breaker_open:
+            raise MCPConnectionError("Circuit breaker open")
+        
         await self._apply_rate_limit()
-        return []
+        
+        if not self._http_client:
+            return []
+        
+        response = await self._http_client.get("/resources")
+        data = response.json()
+        
+        return [
+            Resource(
+                uri=r["uri"],
+                name=r.get("name", ""),
+                description=r.get("description", ""),
+                mimeType=r.get("mimeType", "application/json")
+            )
+            for r in data.get("resources", [])
+        ]
     
     async def _call_tool_impl(self, name: str, arguments: Dict[str, Any]) -> ToolResult:
         """Call tool."""
@@ -215,14 +233,65 @@ class HTTPMCPClient(AbstractMCPClient):
     
     def _handle_server_error(self) -> None:
         """Handle server errors for circuit breaker."""
-        # Simplified circuit breaker
-        # In production, track consecutive failures
-        pass
+        # Simple circuit breaker implementation
+        if not hasattr(self, '_error_count'):
+            self._error_count = 0
+            self._last_error_time = 0
+        
+        import time
+        current_time = time.time()
+        
+        # Reset error count if it's been more than 60 seconds since last error
+        if current_time - self._last_error_time > 60:
+            self._error_count = 0
+        
+        self._error_count += 1
+        self._last_error_time = current_time
+        
+        # Open circuit breaker after 3 consecutive errors
+        if self._error_count >= 3:
+            self._circuit_breaker_open = True
+            logger.warning(f"Circuit breaker opened for '{self.name}' after {self._error_count} errors")
+            
+            # Schedule circuit breaker reset after 30 seconds
+            asyncio.create_task(self._reset_circuit_breaker())
+    
+    async def _reset_circuit_breaker(self) -> None:
+        """Reset circuit breaker after cooldown period."""
+        await asyncio.sleep(30)
+        self._circuit_breaker_open = False
+        self._error_count = 0
+        logger.info(f"Circuit breaker reset for '{self.name}'")
     
     async def _read_resource_impl(self, uri: str) -> ResourceContent:
         """Read resource."""
+        if self._circuit_breaker_open:
+            raise MCPConnectionError("Circuit breaker open")
+        
         await self._apply_rate_limit()
-        return ResourceContent(uri=uri, content="")
+        
+        if not self._http_client:
+            return ResourceContent(uri=uri, content="")
+        
+        # Encode URI for URL path
+        import urllib.parse
+        encoded_uri = urllib.parse.quote(uri, safe='')
+        
+        response = await self._http_client.get(f"/resources/{encoded_uri}")
+        data = response.json()
+        
+        # Handle resource content
+        contents = data.get("contents", [])
+        if contents and isinstance(contents, list):
+            first_content = contents[0]
+            if isinstance(first_content, dict):
+                content = first_content.get("text", "") or first_content.get("data", "")
+            else:
+                content = str(first_content)
+        else:
+            content = data.get("content", "") or str(data)
+        
+        return ResourceContent(uri=uri, content=content)
     
     async def _ping_impl(self) -> bool:
         """Ping."""

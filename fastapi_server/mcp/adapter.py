@@ -205,8 +205,9 @@ class MCPAdapter:
         logger.info("Initializing single-server backend")
         
         if ExistingMCPClient is None:
-            # Create a mock client for testing
-            self.backend = MockSingleClient()
+            # Fallback to a basic implementation if no client available
+            logger.warning("No MCP client available, single-server mode will have limited functionality")
+            self.backend = None
         else:
             # Use the existing MCP client
             self.backend = ExistingMCPClient()
@@ -225,6 +226,10 @@ class MCPAdapter:
         """
         if not self._initialized:
             raise AdapterError("Adapter not initialized")
+            
+        if self.backend is None:
+            logger.warning("No backend available")
+            return []
             
         try:
             self._request_count += 1
@@ -255,6 +260,10 @@ class MCPAdapter:
         if not self._initialized:
             raise AdapterError("Adapter not initialized")
             
+        if self.backend is None:
+            logger.warning("No backend available")
+            return []
+            
         try:
             self._request_count += 1
             
@@ -277,6 +286,10 @@ class MCPAdapter:
         """
         if not self._initialized:
             raise AdapterError("Adapter not initialized")
+            
+        if self.backend is None:
+            logger.warning("No backend available")
+            raise AdapterError("No backend available to execute tool")
             
         try:
             self._request_count += 1
@@ -447,26 +460,8 @@ class MCPAdapter:
         """
         # This is a simplified version for now
         # In production, we'd track more detailed metrics
-        pass
-
-
-class MockSingleClient:
-    """
-    Mock single client for testing when ExistingMCPClient is not available
-    """
-    
-    async def list_tools(self) -> List[Dict[str, Any]]:
-        """Mock list tools"""
-        return [{"name": "execute_query", "description": "Execute SQL"}]
-    
-    async def list_resources(self) -> List[Dict[str, Any]]:
-        """Mock list resources"""
-        return [{"uri": "database://schema", "name": "Database Schema"}]
-    
-    async def call_tool(self, name: str, args: Dict[str, Any]) -> Any:
-        """Mock call tool"""
-        return {"result": "success"}
-    
-    async def read_resource(self, uri: str) -> Any:
-        """Mock read resource"""
-        return {"data": "resource_content"}
+        # Track basic metrics
+        self._request_count += 1
+        if hasattr(self, '_latencies'):
+            # Could add more detailed metrics tracking here
+            pass
