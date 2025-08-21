@@ -36,16 +36,21 @@ async def lifespan(app: FastAPI):
         logger.info(f"OpenRouter model: {config.openrouter_model}")
     elif config.llm_provider == "gemini":
         logger.info(f"Gemini model: {config.gemini_model}")
-    logger.info(f"MCP server URL: {config.mcp_server_url}")
+    logger.info("Using MCP Aggregator for multi-server support")
     
-    # Test connections on startup
+    # Initialize chat handler with MCP aggregator
     try:
-        # Test MCP connection
-        mcp_connected = await chat_handler.mcp_client.test_connection()
-        if mcp_connected:
-            logger.info("✓ MCP server connection successful")
-        else:
-            logger.warning("✗ MCP server connection failed")
+        await chat_handler.initialize()
+        logger.info("✓ MCP Aggregator initialized successfully")
+        
+        # List connected servers
+        if chat_handler.mcp_aggregator:
+            connected_servers = list(chat_handler.mcp_aggregator.sessions.keys())
+            logger.info(f"Connected to {len(connected_servers)} MCP server(s): {connected_servers}")
+            
+            # List available tools
+            tools = chat_handler.mcp_aggregator.list_tools()
+            logger.info(f"Available tools: {tools}")
         
         # Test LLM provider connection
         llm_connected = await chat_handler.llm_client.test_connection()
@@ -56,14 +61,16 @@ async def lifespan(app: FastAPI):
             logger.warning(f"✗ {provider_name} connection failed")
             
     except Exception as e:
-        logger.error(f"Error during startup tests: {str(e)}")
+        logger.error(f"Error during startup: {str(e)}")
     
     yield
     
     # Shutdown
     logger.info("Shutting down FastAPI server")
     try:
-        await chat_handler.mcp_client.disconnect()
+        if chat_handler.mcp_aggregator:
+            await chat_handler.mcp_aggregator.disconnect_all()
+            logger.info("MCP Aggregator disconnected")
     except Exception as e:
         logger.error(f"Error during shutdown: {str(e)}")
 
@@ -107,8 +114,13 @@ async def global_exception_handler(request: Request, exc: Exception):
 async def health_check():
     """Health check endpoint."""
     try:
-        # Test MCP connection
-        mcp_status = "connected" if await chat_handler.mcp_client.test_connection() else "disconnected"
+        # Ensure aggregator is initialized
+        await chat_handler.ensure_initialized()
+        
+        # Test MCP connection - check if aggregator has connected servers
+        mcp_status = "disconnected"
+        if chat_handler.mcp_aggregator and len(chat_handler.mcp_aggregator.sessions) > 0:
+            mcp_status = "connected"
         
         return HealthResponse(
             status="healthy",
@@ -191,8 +203,11 @@ async def list_models():
 async def mcp_status():
     """Get MCP server status and capabilities."""
     try:
-        # Test connection
-        connected = await chat_handler.mcp_client.test_connection()
+        # Ensure aggregator is initialized
+        await chat_handler.ensure_initialized()
+        
+        # Check connection status
+        connected = chat_handler.mcp_aggregator and len(chat_handler.mcp_aggregator.sessions) > 0
         
         if not connected:
             return {
@@ -200,17 +215,28 @@ async def mcp_status():
                 "error": "Cannot connect to MCP server"
             }
         
-        # Get server capabilities
-        tools = await chat_handler.mcp_client.list_tools()
-        resources = await chat_handler.mcp_client.list_resources()
-        metadata = await chat_handler.mcp_client.get_database_metadata()
+        # Get server capabilities from aggregator
+        tools = chat_handler.mcp_aggregator.list_tools()
+        resources = chat_handler.mcp_aggregator.list_resources()
+        servers = list(chat_handler.mcp_aggregator.sessions.keys())
+        
+        # Get database metadata if available
+        metadata = {}
+        try:
+            result = await chat_handler.mcp_aggregator.read_resource("database://metadata")
+            if result and hasattr(result, 'contents'):
+                metadata_text = result.contents[0].text if result.contents else None
+                if metadata_text:
+                    import json
+                    metadata = json.loads(metadata_text)
+        except Exception as e:
+            logger.debug(f"Could not get metadata: {e}")
         
         return {
             "connected": True,
-            "server_url": config.mcp_server_url,
-            "transport": config.mcp_transport,
-            "tools": [{"name": tool.name, "description": tool.description} for tool in tools],
-            "resources": [{"name": res.name, "uri": res.uri} for res in resources],
+            "servers": servers,
+            "tools": tools,
+            "resources": resources,
             "database_metadata": metadata
         }
         

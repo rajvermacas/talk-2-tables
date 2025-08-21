@@ -2,6 +2,7 @@
 Chat completion handler that orchestrates OpenRouter LLM and MCP database queries.
 """
 
+import asyncio
 import logging
 import re
 import time
@@ -14,7 +15,7 @@ from .models import (
     MessageRole
 )
 from .llm_manager import llm_manager
-from .mcp_client import mcp_client
+from .mcp_aggregator import MCPAggregator
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +26,28 @@ class ChatCompletionHandler:
     def __init__(self):
         """Initialize the chat completion handler."""
         self.llm_client = llm_manager
-        self.mcp_client = mcp_client
+        self.mcp_aggregator = None
+        self._init_task = None
         
         logger.info("Initialized chat completion handler with LLM-based decision system")
+    
+    async def initialize(self):
+        """Initialize the MCP aggregator asynchronously."""
+        if self.mcp_aggregator is None:
+            logger.info("Initializing MCP aggregator")
+            # Use absolute path for config file
+            import os
+            config_path = os.path.join(os.path.dirname(__file__), "mcp_servers_config.json")
+            self.mcp_aggregator = MCPAggregator(config_path)
+            await self.mcp_aggregator.connect_all()
+            logger.info("MCP aggregator initialized successfully")
+    
+    async def ensure_initialized(self):
+        """Ensure the handler is initialized before use."""
+        if self.mcp_aggregator is None:
+            if self._init_task is None:
+                self._init_task = asyncio.create_task(self.initialize())
+            await self._init_task
     
     async def process_chat_completion(
         self,
@@ -43,6 +63,9 @@ class ChatCompletionHandler:
             Chat completion response
         """
         try:
+            # Ensure aggregator is initialized
+            await self.ensure_initialized()
+            
             logger.info(f"Processing chat completion with {len(request.messages)} messages")
             
             # Get the latest user message
@@ -59,19 +82,40 @@ class ChatCompletionHandler:
             if needs_database:
                 logger.info("Message appears to need database access")
                 
-                # Get database metadata for context
-                metadata = await self.mcp_client.get_database_metadata()
-                if metadata:
+                # Get database metadata for context using the database server
+                metadata = None
+                try:
+                    # Try to read the database metadata resource
+                    result = await self.mcp_aggregator.read_resource("database://metadata")
+                    if result and hasattr(result, 'contents'):
+                        metadata_text = result.contents[0].text if result.contents else None
+                        if metadata_text:
+                            import json
+                            metadata = json.loads(metadata_text)
+                            mcp_context["database_metadata"] = metadata
+                            logger.debug("Successfully retrieved database metadata via resource")
+                    else:
+                        # Fallback: use basic table info if available
+                        logger.debug("Could not get metadata from resource, using fallback")
+                        metadata = {"tables": {"customers": {}, "products": {}, "orders": {}}}
+                        mcp_context["database_metadata"] = metadata
+                except Exception as e:
+                    logger.warning(f"Could not get database metadata: {e}")
+                    # Fallback metadata
+                    metadata = {"tables": {"customers": {}, "products": {}, "orders": {}}}
                     mcp_context["database_metadata"] = metadata
                 
                 # Check if there's an explicit SQL query in the message
                 sql_query = self._extract_sql_query(user_message.content)
                 
                 if sql_query:
-                    # Execute the explicit query
+                    # Execute the explicit query using namespaced tool
                     logger.info(f"Executing explicit SQL query: {sql_query}")
-                    query_result = await self.mcp_client.execute_query(sql_query)
-                    mcp_context["query_results"] = query_result.__dict__
+                    result = await self.mcp_aggregator.call_tool("database.execute_query", 
+                                                                  {"query": sql_query})
+                    if result:
+                        query_result = result
+                        mcp_context["query_results"] = result.__dict__ if hasattr(result, '__dict__') else result
                 else:
                     # Let the LLM decide what query to run
                     suggested_query = await self._suggest_sql_query(
@@ -81,13 +125,16 @@ class ChatCompletionHandler:
                     
                     if suggested_query:
                         logger.info(f"Executing LLM-suggested query: {suggested_query}")
-                        query_result = await self.mcp_client.execute_query(suggested_query)
-                        mcp_context["query_results"] = query_result.__dict__
+                        result = await self.mcp_aggregator.call_tool("database.execute_query", 
+                                                                      {"query": suggested_query})
+                        if result:
+                            query_result = result
+                            mcp_context["query_results"] = result.__dict__ if hasattr(result, '__dict__') else result
                 
-                # Get available tools for context
-                tools = await self.mcp_client.list_tools()
+                # Get available tools for context from aggregator
+                tools = self.mcp_aggregator.list_tools()
                 mcp_context["available_tools"] = [
-                    {"name": tool.name, "description": tool.description}
+                    {"name": tool, "description": self.mcp_aggregator.get_tool_info(tool)}
                     for tool in tools
                 ]
             
@@ -162,6 +209,9 @@ class ChatCompletionHandler:
             Dictionary containing database metadata and available resources
         """
         try:
+            # Ensure aggregator is initialized
+            await self.ensure_initialized()
+            
             logger.info("Fetching fresh MCP resources (no caching)")
             
             # Fetch fresh resources
@@ -170,41 +220,56 @@ class ChatCompletionHandler:
             # Get database metadata
             try:
                 logger.debug("Fetching database metadata...")
-                metadata = await self.mcp_client.get_database_metadata()
-                if metadata:
-                    resources["database_metadata"] = metadata
-                    logger.info(f"Successfully fetched database metadata with {len(metadata.get('tables', {}))} tables")
-                    logger.debug(f"Tables found: {list(metadata.get('tables', {}).keys())}")
+                # Try to read the database metadata resource
+                result = await self.mcp_aggregator.read_resource("database://metadata")
+                if result and hasattr(result, 'contents'):
+                    metadata_text = result.contents[0].text if result.contents else None
+                    if metadata_text:
+                        import json
+                        metadata = json.loads(metadata_text)
+                        resources["database_metadata"] = metadata
+                        logger.info(f"Successfully fetched database metadata with {len(metadata.get('tables', {}))} tables")
+                        logger.debug(f"Tables found: {list(metadata.get('tables', {}).keys())}")
+                else:
+                    # Fallback metadata
+                    logger.debug("Could not get metadata from resource, using fallback")
+                    resources["database_metadata"] = {"tables": {"customers": {}, "products": {}, "orders": {}}}
             except Exception as e:
-                logger.error(f"Failed to fetch database metadata: {str(e)}")
-                resources["database_metadata"] = {}
+                logger.debug(f"Could not fetch database metadata: {str(e)}")
+                resources["database_metadata"] = {"tables": {"customers": {}, "products": {}, "orders": {}}}
             
-            # Get available resources list
+            # Get available resources list (if database server supports list_resources)
             try:
                 logger.debug("Fetching available resources...")
-                resource_list = await self.mcp_client.list_resources()
-                resources["available_resources"] = [
-                    {"name": res.name, "description": res.description, "uri": res.uri}
-                    for res in resource_list
-                ]
-                logger.info(f"Successfully fetched {len(resource_list)} available resources")
-                for res in resources["available_resources"]:
-                    logger.debug(f"Resource: {res['name']} - {res['description'][:50]}...")
+                # Check if list_resources tool exists
+                if "database.list_resources" in self.mcp_aggregator.list_tools():
+                    result = await self.mcp_aggregator.call_tool("database.list_resources", {})
+                    if result and hasattr(result, 'resources'):
+                        resources["available_resources"] = [
+                            {"name": res.name, "description": res.description, "uri": res.uri}
+                            for res in result.resources
+                        ]
+                        logger.info(f"Successfully fetched {len(result.resources)} available resources")
+                    else:
+                        resources["available_resources"] = []
+                else:
+                    logger.debug("list_resources not available")
+                    resources["available_resources"] = []
             except Exception as e:
-                logger.error(f"Failed to fetch resource list: {str(e)}")
+                logger.debug(f"Could not fetch resource list: {str(e)}")
                 resources["available_resources"] = []
             
-            # Get available tools
+            # Get available tools from aggregator
             try:
                 logger.debug("Fetching available tools...")
-                tools = await self.mcp_client.list_tools()
+                tools = self.mcp_aggregator.list_tools()
                 resources["available_tools"] = [
-                    {"name": tool.name, "description": tool.description}
+                    {"name": tool, "info": self.mcp_aggregator.get_tool_info(tool)}
                     for tool in tools
                 ]
                 logger.info(f"Successfully fetched {len(tools)} available tools")
-                for tool in resources["available_tools"]:
-                    logger.debug(f"Tool: {tool['name']} - {tool['description'][:50]}...")
+                for tool_data in resources["available_tools"]:
+                    logger.debug(f"Tool: {tool_data['name']}")
             except Exception as e:
                 logger.error(f"Failed to fetch tool list: {str(e)}")
                 resources["available_tools"] = []
@@ -516,11 +581,14 @@ Response format:
         }
         
         try:
+            # Ensure aggregator is initialized
+            await self.ensure_initialized()
+            
             # Test LLM connection
             results["llm_connection"] = await self.llm_client.test_connection()
             
-            # Test MCP connection
-            results["mcp_connection"] = await self.mcp_client.test_connection()
+            # Test MCP connection (check if aggregator has any connected servers)
+            results["mcp_connection"] = len(self.mcp_aggregator.sessions) > 0
             
             # Test full integration
             if results["llm_connection"] and results["mcp_connection"]:

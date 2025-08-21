@@ -320,7 +320,7 @@ Run these three commands in separate terminals in venv:
 python -m talk_2_tables_mcp.server --transport sse
 
 2. Start FastAPI Backend (Terminal 2)  
-python3 -m fastapi_server.main
+python -m fastapi_server.main
 
 3. Start React Frontend (Terminal 3)  
 ./start-chatbot.sh

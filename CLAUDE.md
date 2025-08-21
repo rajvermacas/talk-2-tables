@@ -60,9 +60,7 @@ react-chatbot/             # Frontend Interface
 
 ### Remote Access & Deployment
 - **Multiple transport modes**: Local CLI, SSE streaming, HTTP with optional stateless mode
-- **Docker deployment**: Full docker-compose with nginx reverse proxy
 - **Network configuration**: Host/port binding, CORS support, health checks
-- **Production profiles**: Monitoring (Prometheus), production (nginx), security headers
 
 ## Session Context Management
 
@@ -95,7 +93,7 @@ The system requires three components running simultaneously. Use these commands 
 
 ```bash
 # Terminal 1: MCP Server (database interface)
-python -m talk_2_tables_mcp.remote_server
+python -m talk_2_tables_mcp.remote_server --transport sse
 
 # Terminal 2: FastAPI Backend (AI agent with multi-LLM support)
 cd fastapi_server && python main.py
@@ -103,17 +101,6 @@ cd fastapi_server && python main.py
 # Terminal 3: React Frontend (user interface)
 ./start-chatbot.sh
 ```
-
-# Execution Steps
-Run these three commands in separate terminals in venv:
-1. Start remote mcp server with sse transport prtocol at port 8000  
-python3 -m talk_2_tables_mcp.server --transport sse
-
-2. Start FastAPI Backend (Terminal 2) at port 8001  
-python3 -m fastapi_server.main
-
-3. Start React Frontend (Terminal 3) at port 3000  
-./start-chatbot.sh
 
 ### Testing
 
