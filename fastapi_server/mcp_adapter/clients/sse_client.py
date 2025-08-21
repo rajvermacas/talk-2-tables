@@ -401,15 +401,70 @@ class SSEMCPClient(AbstractMCPClient):
         logger.info(f"Initializing MCP session over SSE for '{self.name}'")
         
         request_id = self._generate_request_id()
-        await self._send_request("initialize", {"protocolVersion": "1.0"}, request_id)
+        
+        # Send proper MCP initialization request with required parameters
+        init_params = {
+            "protocolVersion": "2024-11-05",  # Use latest MCP protocol version
+            "capabilities": {
+                "sampling": None,
+                "elicitation": None,
+                "experimental": None,
+                "roots": None
+            },
+            "clientInfo": {
+                "name": "talk2tables-mcp-client",
+                "version": "1.0.0"
+            }
+        }
+        
+        logger.info(f"Sending MCP initialize request with params: {init_params}")
+        await self._send_request("initialize", init_params, request_id)
         
         # Wait for actual response
         result = await self._wait_for_response(request_id, timeout=30)
+        logger.info(f"Received initialize response: {result}")
+        
+        # Send initialized notification as required by MCP protocol
+        await self._send_initialized_notification()
         
         return InitializeResult(
-            protocolVersion=result.get("protocolVersion", "1.0"),
+            protocolVersion=result.get("protocolVersion", "2024-11-05"),
             capabilities=result.get("capabilities", {})
         )
+    
+    async def _send_initialized_notification(self) -> None:
+        """Send initialized notification as required by MCP protocol."""
+        logger.info(f"Sending initialized notification for '{self.name}'")
+        
+        # Note: Notifications don't have response IDs and don't expect responses
+        notification_request = {
+            "jsonrpc": "2.0",
+            "method": "notifications/initialized",
+            "params": None
+        }
+        
+        try:
+            # Send notification via POST to messages endpoint
+            if not self._http_client or not self._messages_endpoint:
+                logger.warning("Cannot send notification: no HTTP client or messages endpoint")
+                return
+                
+            base_url = self.config["url"].rsplit("/sse", 1)[0]
+            messages_url = base_url + self._messages_endpoint
+            
+            response = await self._http_client.post(
+                messages_url,
+                json=notification_request,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            if response.status_code in [200, 204]:
+                logger.info(f"Initialized notification sent successfully for '{self.name}'")
+            else:
+                logger.warning(f"Unexpected response to notification: HTTP {response.status_code}")
+                
+        except Exception as e:
+            logger.error(f"Failed to send initialized notification for '{self.name}': {e}")
     
     async def _list_tools_impl(self) -> List[Tool]:
         """List tools over SSE."""

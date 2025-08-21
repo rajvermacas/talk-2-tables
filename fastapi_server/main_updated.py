@@ -229,6 +229,14 @@ async def create_chat_completion(
     try:
         logger.info(f"Received chat completion request with {len(request.messages)} messages")
         
+        # Debug: Check MCP adapter status
+        mcp = app.state.mcp if hasattr(app.state, 'mcp') else None
+        if mcp:
+            mode = mcp.get_mode() if hasattr(mcp, 'get_mode') else 'unknown'
+            logger.info(f"MCP adapter available: mode={mode}, has_backend={mcp.backend is not None}")
+        else:
+            logger.warning("No MCP adapter available!")
+        
         # Validate request
         if not request.messages:
             raise HTTPException(

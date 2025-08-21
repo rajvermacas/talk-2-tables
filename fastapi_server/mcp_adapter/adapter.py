@@ -16,13 +16,15 @@ from fastapi_server.mcp_adapter.config_loader import ConfigurationLoader
 from fastapi_server.mcp_adapter.server_registry import MCPServerRegistry
 from fastapi_server.mcp_adapter.client_factory import MCPClientFactory
 
+logger = logging.getLogger(__name__)
+
 # Fallback for single-server mode - import existing client
 try:
-    from ..mcp_client import MCPClient as ExistingMCPClient
-except ImportError:
+    from ..mcp_client import MCPDatabaseClient as ExistingMCPClient
+    logger.info(f"✅ Successfully imported ExistingMCPClient: {ExistingMCPClient}")
+except ImportError as e:
+    logger.error(f"❌ Failed to import MCPDatabaseClient: {e}")
     ExistingMCPClient = None
-
-logger = logging.getLogger(__name__)
 
 
 class MCPMode(str, Enum):
@@ -110,37 +112,56 @@ class MCPAdapter:
         """
         Initialize the adapter and determine actual mode
         """
+        logger.info("🚀🚀🚀 INITIALIZE START 🚀🚀🚀")
+        logger.info(f"🔍 _initialized = {self._initialized}")
+        logger.info(f"🔍 requested_mode = {self.requested_mode}")
+        logger.info(f"🔍 config_path = {self.config_path}")
+        
         if self._initialized:
-            logger.warning("Adapter already initialized")
+            logger.warning("⚠️ Adapter already initialized")
             return
             
-        logger.info(f"Initializing MCP adapter with requested mode: {self.requested_mode}")
+        logger.info(f"📋 Initializing MCP adapter with requested mode: {self.requested_mode}")
         
         # Determine actual mode
         if self.requested_mode == MCPMode.AUTO:
+            logger.info("🔍 Mode is AUTO, detecting...")
             self.actual_mode = await self._detect_mode()
         else:
+            logger.info(f"📌 Using requested mode directly: {self.requested_mode}")
             self.actual_mode = self.requested_mode
             
-        logger.info(f"Using actual mode: {self.actual_mode}")
+        logger.info(f"🎯 Using actual mode: {self.actual_mode}")
         
         # Initialize backend based on mode
+        logger.info("🔧🔧🔧 BACKEND INIT START 🔧🔧🔧")
+        
         try:
             if self.actual_mode == MCPMode.MULTI_SERVER:
+                logger.info("🌐 MULTI_SERVER mode selected")
                 await self._initialize_multi_server()
             else:
+                logger.info("🔨 SINGLE_SERVER mode selected")
                 await self._initialize_single_server()
                 
+            logger.info(f"🔍🔍🔍 Backend after init = {self.backend}")
+            logger.info(f"🔍🔍🔍 Backend is None? {self.backend is None}")
+            logger.info(f"🔍🔍🔍 Backend type = {type(self.backend)}")
+                
             self._initialized = True
-            logger.info(f"MCP adapter initialized successfully in {self.actual_mode} mode")
+            logger.info(f"✅✅✅ MCP adapter initialized successfully in {self.actual_mode} mode")
             
         except Exception as e:
-            logger.error(f"Failed to initialize adapter: {e}")
+            logger.error(f"❌❌❌ Failed to initialize adapter: {e}")
+            logger.error(f"❌ Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"❌ Full traceback:\n{traceback.format_exc()}")
             
             if self.fallback_enabled and self.actual_mode == MCPMode.MULTI_SERVER:
-                logger.info("Attempting fallback to single-server mode")
+                logger.info("🔄🔄🔄 Attempting fallback to single-server mode")
                 self.actual_mode = MCPMode.SINGLE_SERVER
                 await self._initialize_single_server()
+                logger.info(f"🔍 Fallback backend = {self.backend}")
                 self._initialized = True
             else:
                 raise AdapterError(f"Failed to initialize adapter: {e}")
@@ -222,17 +243,22 @@ class MCPAdapter:
         """
         Initialize single-server backend with existing MCP client
         """
-        logger.info("Initializing single-server backend")
+        logger.info("🔍 DEBUG: Initializing single-server backend")
+        logger.info(f"🔍 DEBUG: ExistingMCPClient = {ExistingMCPClient}")
+        logger.info(f"🔍 DEBUG: ExistingMCPClient is None? {ExistingMCPClient is None}")
         
         if ExistingMCPClient is None:
             # Fallback to a basic implementation if no client available
-            logger.warning("No MCP client available, single-server mode will have limited functionality")
+            logger.warning("⚠️ No MCP client available, single-server mode will have limited functionality")
+            logger.warning("⚠️ This means backend will be None!")
             self.backend = None
         else:
             # Use the existing MCP client
+            logger.info(f"✅ Creating ExistingMCPClient instance")
             self.backend = ExistingMCPClient()
+            logger.info(f"✅ Backend created: {self.backend}")
             
-        logger.info("Single-server backend initialized")
+        logger.info(f"🔍 DEBUG: Single-server backend initialized, backend = {self.backend}")
     
     def get_mode(self) -> MCPMode:
         """

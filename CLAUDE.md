@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+You have full access to tmux + pdb (debug session + breakpoints). Use it as much as you want.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
