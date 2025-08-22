@@ -1,6 +1,6 @@
 {
   "servers": {
-    "database": {
+    "mherb": {
       "transport": "sse",
       "endpoint": "http://localhost:8000/sse",
       "description": "SQLite database query server for customer, product, and order data"
