@@ -10,6 +10,11 @@ import json
 from typing import List, Dict, Any, Optional, Tuple
 from uuid import uuid4
 
+from langchain.tools import Tool
+from langchain.agents import create_openai_tools_agent, AgentExecutor
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_openai import ChatOpenAI
+
 from .models import (
     ChatMessage, ChatCompletionRequest, ChatCompletionResponse, 
     MessageRole, MCPQueryResult
@@ -48,6 +53,280 @@ class ChatCompletionHandler:
             if self._init_task is None:
                 self._init_task = asyncio.create_task(self.initialize())
             await self._init_task
+    
+    async def _build_resource_catalog(self) -> Dict[str, Any]:
+        """
+        Build comprehensive resource catalog from all MCP servers.
+        Resources are passed as-is to LLM for intelligent decision making.
+        NO hardcoded domain logic or pattern matching!
+        """
+        logger.info("Building resource catalog from all MCP servers")
+        catalog = {}
+        
+        try:
+            # Get all resources (this method already exists)
+            all_resources = await self.mcp_aggregator.read_all_resources()
+            
+            if not all_resources:
+                logger.warning("No resources found from any MCP server")
+                return catalog
+            
+            # Process each resource
+            for resource_uri, content in all_resources.items():
+                # Parse server name from URI format
+                server_name = 'default'
+                for server in self.mcp_aggregator.sessions.keys():
+                    if resource_uri.startswith(f"{server}."):
+                        server_name = server
+                        break
+                
+                if server_name not in catalog:
+                    catalog[server_name] = {
+                        "resources": {},
+                        "server_name": server_name
+                    }
+                
+                # Store resources as-is, no processing or categorization
+                catalog[server_name]["resources"][resource_uri] = content
+                logger.debug(f"Added resource {resource_uri} to catalog for server {server_name}")
+            
+            logger.info(f"Built catalog with {len(all_resources)} resources from {len(catalog)} servers")
+            
+        except Exception as e:
+            logger.error(f"Error building resource catalog: {str(e)}")
+            logger.exception("Full error trace:")
+        
+        return catalog
+    
+    async def _create_langchain_tools(self) -> List[Tool]:
+        """
+        Convert MCP tools to LangChain tools with FULL resource context.
+        NO domain logic - let LLM decide based on resources!
+        """
+        logger.info("Creating LangChain tools from MCP tools")
+        tools = []
+        
+        try:
+            # Get all resources for context
+            all_resources = await self.mcp_aggregator.read_all_resources()
+            logger.info(f"Fetched {len(all_resources)} resources for tool context")
+            
+            # Create a tool for each MCP tool
+            for tool_name in self.mcp_aggregator.list_tools():
+                tool_info = self.mcp_aggregator.get_tool_info(tool_name)
+                
+                # Extract server name from tool
+                server_name = tool_name.split('.')[0] if '.' in tool_name else 'default'
+                
+                # Get all resources for this server
+                server_resources = {
+                    uri: content 
+                    for uri, content in all_resources.items() 
+                    if uri.startswith(f"{server_name}.")
+                }
+                
+                # Create rich description with ALL resource information
+                resource_json = json.dumps(server_resources, indent=2)
+                # Truncate for token limits if needed
+                if len(resource_json) > 2000:
+                    resource_json = resource_json[:2000] + "\n... [truncated]"
+                
+                description = f"""Tool: {tool_name}
+Server: {server_name}
+Base Description: {tool_info.get('description', 'MCP tool') if tool_info else 'MCP tool'}
+
+Available Resources for this tool:
+{resource_json}
+
+The LLM should analyze these resources to understand what data this tool can access.
+Use this tool when the user's query relates to the data described in these resources."""
+                
+                logger.debug(f"Creating LangChain tool for {tool_name}")
+                
+                # Create the async function that will call the MCP tool
+                async def create_tool_func(tool_name=tool_name):
+                    async def execute_tool(**kwargs):
+                        """Generic execution - no assumptions about tool type!"""
+                        logger.info(f"Executing tool {tool_name} with args: {kwargs}")
+                        try:
+                            result = await self.mcp_aggregator.call_tool(tool_name, kwargs)
+                            formatted = self._format_mcp_tool_result(result)
+                            logger.info(f"Tool {tool_name} execution completed successfully")
+                            return formatted
+                        except Exception as e:
+                            logger.error(f"Error executing tool {tool_name}: {str(e)}")
+                            return f"Error executing tool: {str(e)}"
+                    return execute_tool
+                
+                # Create the tool with the async function
+                tool_func = await create_tool_func(tool_name)
+                
+                # Create Tool instance
+                # Need to capture tool_func in closure properly
+                def make_sync_func(async_func):
+                    def sync_wrapper(**kwargs):
+                        return asyncio.run(async_func(**kwargs))
+                    return sync_wrapper
+                
+                tool = Tool(
+                    name=tool_name.replace('.', '_'),  # Replace dots for compatibility
+                    description=description,
+                    func=make_sync_func(tool_func),
+                    coroutine=tool_func
+                )
+                
+                tools.append(tool)
+                logger.debug(f"Added tool {tool_name} to LangChain tools")
+            
+            logger.info(f"Created {len(tools)} LangChain tools")
+            
+        except Exception as e:
+            logger.error(f"Error creating LangChain tools: {str(e)}")
+            logger.exception("Full error trace:")
+        
+        return tools
+    
+    def _format_mcp_tool_result(self, result: Any) -> str:
+        """Format any MCP result for LLM consumption."""
+        logger.debug(f"Formatting MCP result of type: {type(result)}")
+        
+        try:
+            if hasattr(result, 'content'):
+                # Handle MCP CallToolResult
+                if result.content and hasattr(result.content[0], 'text'):
+                    text_content = result.content[0].text
+                    # Try to parse as JSON for better formatting
+                    try:
+                        data = json.loads(text_content)
+                        formatted = json.dumps(data, indent=2)
+                        logger.debug("Formatted MCP result as JSON")
+                        return formatted
+                    except json.JSONDecodeError:
+                        logger.debug("MCP result is plain text")
+                        return text_content
+                return str(result.content)
+            elif isinstance(result, dict):
+                formatted = json.dumps(result, indent=2)
+                logger.debug("Formatted dict result as JSON")
+                return formatted
+            else:
+                logger.debug("Returning string representation of result")
+                return str(result)
+        except Exception as e:
+            logger.error(f"Error formatting result: {str(e)}")
+            return str(result)
+    
+    async def _initialize_agent(self):
+        """Initialize LangChain agent with tools that include resource context."""
+        logger.info("Initializing LangChain agent with MCP tools")
+        
+        try:
+            # Get tools (which already include resource context in descriptions)
+            self.tools = await self._create_langchain_tools()
+            
+            if not self.tools:
+                logger.warning("No tools available for agent")
+                return
+            
+            # Create prompt that emphasizes resource-based decision making
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", """You are an AI assistant with access to multiple tools from different MCP servers.
+
+IMPORTANT: Each tool's description includes the resources and data it can access.
+Carefully analyze these resources to determine which tool can answer the user's question.
+
+When selecting a tool:
+1. Read the tool's Available Resources section
+2. Look at table names, column names, and data descriptions
+3. Match the user's query to the appropriate resources
+4. Select the tool that has access to the needed data
+
+Do NOT make assumptions based on keywords. Instead, look at the actual data structure
+described in each tool's resources.
+
+When you receive tool results, format them clearly for the user.
+
+{agent_scratchpad}"""),
+                MessagesPlaceholder(variable_name="chat_history"),
+                ("human", "{input}")
+            ])
+            
+            # Create agent using existing LLM configuration
+            from .config import config
+            
+            # Use existing OpenRouter configuration via LangChain
+            llm = ChatOpenAI(
+                model=config.openrouter_model if config.llm_provider == "openrouter" else config.gemini_model,
+                openai_api_key=config.openrouter_api_key if config.llm_provider == "openrouter" else config.gemini_api_key,
+                openai_api_base="https://openrouter.ai/api/v1" if config.llm_provider == "openrouter" else None,
+                temperature=0.1  # Low temperature for consistent tool selection
+            )
+            
+            logger.info(f"Creating agent with {len(self.tools)} tools")
+            agent = create_openai_tools_agent(llm, self.tools, prompt)
+            
+            self.agent_executor = AgentExecutor(
+                agent=agent,
+                tools=self.tools,
+                verbose=True,  # For debugging
+                handle_parsing_errors=True,
+                max_iterations=3,  # Prevent infinite loops
+                return_intermediate_steps=True  # For debugging
+            )
+            
+            logger.info("LangChain agent initialized successfully")
+            
+        except Exception as e:
+            logger.error(f"Error initializing agent: {str(e)}")
+            logger.exception("Full error trace:")
+            self.agent_executor = None
+    
+    def _convert_to_langchain_messages(self, messages: List[ChatMessage]) -> List:
+        """Convert ChatMessage list to LangChain message format for chat history."""
+        from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+        
+        lc_messages = []
+        for msg in messages:
+            if msg.role == MessageRole.SYSTEM:
+                lc_messages.append(SystemMessage(content=msg.content))
+            elif msg.role == MessageRole.USER:
+                lc_messages.append(HumanMessage(content=msg.content))
+            elif msg.role == MessageRole.ASSISTANT:
+                lc_messages.append(AIMessage(content=msg.content))
+        
+        return lc_messages
+    
+    def _create_response_from_agent_result(self, result: Dict[str, Any], request: ChatCompletionRequest) -> ChatCompletionResponse:
+        """Convert agent result to ChatCompletionResponse format."""
+        from .models import Choice
+        
+        # Extract the final output from agent result
+        output = result.get('output', 'I apologize, but I was unable to process your request.')
+        
+        # Log intermediate steps for debugging
+        if 'intermediate_steps' in result:
+            logger.debug(f"Agent intermediate steps: {len(result['intermediate_steps'])} steps")
+            for i, step in enumerate(result['intermediate_steps']):
+                if isinstance(step, tuple) and len(step) >= 2:
+                    action, observation = step[0], step[1]
+                    logger.debug(f"Step {i}: Action={action}, Result length={len(str(observation))}")
+        
+        # Create response
+        response = ChatCompletionResponse(
+            id=f"chatcmpl-{uuid4()}",
+            created=int(time.time()),
+            model=request.model or self.llm_client._get_model_name(),
+            choices=[Choice(
+                index=0,
+                message=ChatMessage(
+                    role=MessageRole.ASSISTANT,
+                    content=output
+                ),
+                finish_reason="stop"
+            )]
+        )
+        
+        return response
     
     def _transform_mcp_result_to_query_result(self, mcp_result: Any) -> Optional[MCPQueryResult]:
         """
@@ -136,7 +415,7 @@ class ChatCompletionHandler:
         request: ChatCompletionRequest
     ) -> ChatCompletionResponse:
         """
-        Process a chat completion request with potential database integration.
+        Process chat using LangChain agent with resource-aware tools.
         
         Args:
             request: Chat completion request
@@ -145,150 +424,73 @@ class ChatCompletionHandler:
             Chat completion response
         """
         try:
-            # Ensure aggregator is initialized
+            # Ensure initialization
             await self.ensure_initialized()
             
-            logger.info(f"Processing chat completion with {len(request.messages)} messages")
+            logger.info(f"Processing chat completion with {len(request.messages)} messages using LangChain agent")
             
-            # Get the latest user message
+            # Initialize agent if not already done
+            if not hasattr(self, 'agent_executor') or self.agent_executor is None:
+                logger.info("Agent not initialized, initializing now")
+                await self._initialize_agent()
+                
+                # If still no agent (no tools available), fall back to simple LLM response
+                if not self.agent_executor:
+                    logger.warning("No agent available (no tools), falling back to simple LLM response")
+                    return await self.llm_client.create_chat_completion(
+                        messages=request.messages,
+                        model=request.model,
+                        max_tokens=request.max_tokens,
+                        temperature=request.temperature,
+                        stream=request.stream
+                    )
+            
+            # Get user message
             user_message = self._get_latest_user_message(request.messages)
             if not user_message:
                 raise ValueError("No user message found in request")
             
-            # Check if this looks like a database query
-            needs_database = await self._needs_database_query(user_message.content)
+            logger.info(f"Processing user message: {user_message.content[:100]}...")
             
-            mcp_context = {}
-            query_result = None
+            # Convert chat history (excluding the last user message)
+            chat_history = []
+            if len(request.messages) > 1:
+                # Get all messages except the last user message
+                history_messages = request.messages[:-1] if request.messages[-1].role == MessageRole.USER else request.messages
+                chat_history = self._convert_to_langchain_messages(history_messages)
+                logger.debug(f"Including {len(chat_history)} messages in chat history")
             
-            if needs_database:
-                logger.info("Message appears to need database access")
+            # Execute via LangChain agent
+            # Note: Resources are already embedded in tool descriptions
+            logger.info("Invoking LangChain agent")
+            
+            try:
+                result = await self.agent_executor.ainvoke({
+                    "input": user_message.content,
+                    "chat_history": chat_history
+                })
                 
-                # Dynamically get all resources for context
-                metadata = None
-                try:
-                    logger.debug("Dynamically fetching all resources for context...")
-                    all_resources = await self.mcp_aggregator.read_all_resources()
-                    
-                    # Add all resources to context
-                    if all_resources:
-                        mcp_context["available_resources"] = {}
-                        
-                        # Process each resource
-                        for resource_uri, content in all_resources.items():
-                            # Store in context with clean key
-                            clean_key = resource_uri
-                            for server in self.mcp_aggregator.sessions.keys():
-                                if resource_uri.startswith(f"{server}."):
-                                    clean_key = resource_uri[len(f"{server}."):]
-                                    break
-                            
-                            mcp_context["available_resources"][clean_key] = content
-                            
-                            # Check if this is a metadata resource
-                            if "metadata" in resource_uri.lower() and isinstance(content, dict):
-                                metadata = content
-                                mcp_context["database_metadata"] = metadata
-                                logger.debug(f"Found metadata resource: {resource_uri}")
-                        
-                        logger.info(f"Added {len(all_resources)} resources to context")
-                    
-                    # Ensure we have at least empty metadata
-                    if not metadata:
-                        logger.debug("No metadata resource found, using empty metadata")
-                        metadata = {"tables": {}}
-                        mcp_context["database_metadata"] = metadata
-                        
-                except Exception as e:
-                    logger.warning(f"Could not fetch resources dynamically: {e}")
-                    # Fallback metadata
-                    metadata = {"tables": {}}
-                    mcp_context["database_metadata"] = metadata
+                logger.info("Agent execution completed successfully")
                 
-                # Check if there's an explicit SQL query in the message
-                sql_query = self._extract_sql_query(user_message.content)
+                # Convert result to expected format
+                response = self._create_response_from_agent_result(result, request)
                 
-                if sql_query:
-                    # Execute the explicit query using namespaced tool
-                    logger.info(f"Executing explicit SQL query: {sql_query}")
-                    result = await self.mcp_aggregator.call_tool("database.execute_query", 
-                                                                  {"query": sql_query})
-                    if result:
-                        # Transform MCP result to MCPQueryResult format
-                        logger.debug(f"Got MCP result of type: {type(result)}")
-                        query_result = self._transform_mcp_result_to_query_result(result)
-                        
-                        if query_result:
-                            logger.info(f"Query executed successfully: {query_result.row_count} rows returned")
-                            # Add to context for LLM
-                            mcp_context["query_results"] = {
-                                "success": query_result.success,
-                                "data": query_result.data,
-                                "columns": query_result.columns,
-                                "row_count": query_result.row_count
-                            }
-                        else:
-                            logger.warning("Failed to transform MCP result to MCPQueryResult")
-                            # Fallback: add raw result to context
-                            mcp_context["query_results"] = result.__dict__ if hasattr(result, '__dict__') else str(result)
-                else:
-                    # Let the LLM decide what query to run
-                    suggested_query = await self._suggest_sql_query(
-                        user_message.content, 
-                        metadata
-                    )
-                    
-                    if suggested_query:
-                        logger.info(f"Executing LLM-suggested query: {suggested_query}")
-                        result = await self.mcp_aggregator.call_tool("database.execute_query", 
-                                                                      {"query": suggested_query})
-                        if result:
-                            # Transform MCP result to MCPQueryResult format
-                            logger.debug(f"Got MCP result of type: {type(result)}")
-                            query_result = self._transform_mcp_result_to_query_result(result)
-                            
-                            if query_result:
-                                logger.info(f"Query executed successfully: {query_result.row_count} rows returned")
-                                # Add to context for LLM
-                                mcp_context["query_results"] = {
-                                    "success": query_result.success,
-                                    "data": query_result.data,
-                                    "columns": query_result.columns,
-                                    "row_count": query_result.row_count
-                                }
-                            else:
-                                logger.warning("Failed to transform MCP result to MCPQueryResult")
-                                # Fallback: add raw result to context
-                                mcp_context["query_results"] = result.__dict__ if hasattr(result, '__dict__') else str(result)
+                logger.info("Successfully processed chat completion with LangChain agent")
+                return response
                 
-                # Get available tools for context from aggregator
-                tools = self.mcp_aggregator.list_tools()
-                mcp_context["available_tools"] = [
-                    {"name": tool, "description": self.mcp_aggregator.get_tool_info(tool)}
-                    for tool in tools
-                ]
-            
-            # Create the completion with MCP context
-            response = await self.llm_client.create_completion_with_mcp_context(
-                messages=request.messages,
-                mcp_context=mcp_context,
-                model=request.model,
-                max_tokens=request.max_tokens,
-                temperature=request.temperature,
-                stream=request.stream
-            )
-            
-            # If we have query results, add them to the first choice
-            if query_result and response.choices:
-                # Ensure query_result is an MCPQueryResult instance
-                if isinstance(query_result, MCPQueryResult):
-                    logger.debug(f"Adding MCPQueryResult to response with {query_result.row_count} rows")
-                    response.choices[0].query_result = query_result
-                else:
-                    logger.warning(f"query_result is not MCPQueryResult, got {type(query_result)}")
-            
-            logger.info("Successfully processed chat completion")
-            return response
+            except Exception as agent_error:
+                logger.error(f"Agent execution error: {str(agent_error)}")
+                logger.exception("Full agent error trace:")
+                
+                # Fall back to simple LLM response on agent error
+                logger.info("Falling back to simple LLM response due to agent error")
+                return await self.llm_client.create_chat_completion(
+                    messages=request.messages,
+                    model=request.model,
+                    max_tokens=request.max_tokens,
+                    temperature=request.temperature,
+                    stream=request.stream
+                )
             
         except Exception as e:
             logger.error(f"Error processing chat completion: {str(e)}")
@@ -336,6 +538,9 @@ class ChatCompletionHandler:
                 return message
         return None
     
+    # DEPRECATED: The following methods are no longer used with LangChain agent implementation
+    # They are kept here temporarily for reference and potential rollback
+    '''
     async def _get_mcp_resources(self) -> Dict[str, Any]:
         """
         Get MCP resources fresh on every call (no caching).
@@ -718,6 +923,8 @@ Response format:
             return response
         
         return None
+    '''
+    # END DEPRECATED METHODS
     
     async def test_integration(self) -> Dict[str, Any]:
         """

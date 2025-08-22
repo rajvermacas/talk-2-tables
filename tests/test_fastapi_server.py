@@ -12,7 +12,7 @@ from fastapi_server.main import app
 from fastapi_server.models import ChatMessage, ChatCompletionRequest, MessageRole
 from fastapi_server.config import FastAPIServerConfig
 from fastapi_server.llm_manager import LLMManager
-from fastapi_server.mcp_client import MCPDatabaseClient
+from fastapi_server.mcp_aggregator import MCPAggregator
 from fastapi_server.chat_handler import ChatCompletionHandler
 
 
@@ -70,7 +70,8 @@ class TestFastAPIServer:
     @patch('fastapi_server.main.chat_handler')
     async def test_health_endpoint(self, mock_chat_handler, client):
         """Test health endpoint."""
-        mock_chat_handler.mcp_client.test_connection = AsyncMock(return_value=True)
+        mock_chat_handler.mcp_aggregator = MagicMock()
+        mock_chat_handler.mcp_aggregator.sessions = {"test": MagicMock()}
         
         response = client.get("/health")
         assert response.status_code == 200
@@ -121,10 +122,11 @@ class TestFastAPIServer:
     async def test_mcp_status_endpoint(self, mock_chat_handler, client):
         """Test MCP status endpoint."""
         # Mock MCP client responses
-        mock_chat_handler.mcp_client.test_connection = AsyncMock(return_value=True)
-        mock_chat_handler.mcp_client.list_tools = AsyncMock(return_value=[])
-        mock_chat_handler.mcp_client.list_resources = AsyncMock(return_value=[])
-        mock_chat_handler.mcp_client.get_database_metadata = AsyncMock(return_value={})
+        mock_chat_handler.mcp_aggregator = MagicMock()
+        mock_chat_handler.mcp_aggregator.sessions = {"test": MagicMock()}
+        mock_chat_handler.mcp_aggregator.list_tools = MagicMock(return_value=[])
+        mock_chat_handler.mcp_aggregator.list_resources = MagicMock(return_value=[])
+        mock_chat_handler.mcp_aggregator.read_all_resources = AsyncMock(return_value={})
         
         response = client.get("/mcp/status")
         assert response.status_code == 200
@@ -212,13 +214,15 @@ class TestMCPClient:
             mock_config.mcp_server_url = "http://localhost:8000"
             yield mock_config
     
-    def test_mcp_client_init(self, mock_config):
-        """Test MCP client initialization."""
-        client = MCPDatabaseClient()
-        assert client.transport_type == "http"
-        assert client.server_url == "http://localhost:8000"
-        assert not client.connected
+    def test_mcp_aggregator_init(self, mock_config):
+        """Test MCP aggregator initialization."""
+        aggregator = MCPAggregator()
+        assert aggregator.sessions == {}
+        assert aggregator.tools == {}
+        assert aggregator.resources == {}
     
+    # The following tests are deprecated with the new aggregator architecture
+    '''
     @patch('fastapi_server.mcp_client.sse_client')
     @patch('fastapi_server.mcp_client.ClientSession')
     async def test_mcp_client_connect_http(self, mock_session, mock_sse_client, mock_config):
@@ -249,6 +253,8 @@ class TestChatCompletionHandler:
         mock_client.test_connection = AsyncMock(return_value=True)
         return mock_client
     
+    # Deprecated MCP client test fixtures
+    '''
     @pytest.fixture
     def mock_mcp_client(self):
         """Mock MCP client."""
@@ -301,6 +307,8 @@ class TestChatCompletionHandler:
         query = handler._extract_sql_query("This is just regular text")
         assert query is None
     
+    # This test is deprecated with the new LangChain agent architecture
+    '''
     async def test_test_integration(self, mock_openrouter_client, mock_mcp_client):
         """Test integration testing."""
         with patch('fastapi_server.chat_handler.chat_handler.openrouter_client', mock_openrouter_client), \
@@ -321,6 +329,7 @@ class TestChatCompletionHandler:
             assert results["openrouter_connection"] is True
             assert results["mcp_connection"] is True
             assert results["integration_test"] is True
+    '''
 
 
 # Pytest configuration
